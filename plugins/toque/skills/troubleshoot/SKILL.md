@@ -196,12 +196,20 @@ if same severity:            score += 5
 
 | Correlation | Score | Action |
 |------------|-------|--------|
-| **HIGH** | >= 50 | "This matches a previous incident: {title} ({date}). The fix was: {resolution}. Apply the same fix? [Y/n/investigate]" |
+| **HIGH** | >= 50 | "This matches a previous incident: {title} ({date}). Its root cause was: {cause}; the fix was: {resolution}. That cause is the first hypothesis for Phase 1: start by checking whether it is present here. Start there? [Y/n]" |
 | **MEDIUM** | 30-49 | "This may be related to: {title}. Root cause was: {cause}. Check this path first? [Y/n]" |
 | **LOW** | < 30 | No match surfaced. Proceed to Phase 1. |
 
-For HIGH matches, also check: was the previous fix sufficient?
-If the same pattern recurred, say so (see Recurrence Detection in Step 5).
+A match, at any score, is a lead, not a diagnosis. The Iron Law holds: the
+earlier fix is not re-applied until Phase 1 has shown the same cause is present
+in THIS codebase now. Correlation says the symptoms rhyme; only the
+investigation says why. A match that shortcuts Phase 1 by pointing at the
+right file first is the whole value of the knowledge base; a match that
+replaces Phase 1 is how the same incident comes back a third time.
+
+For HIGH matches, once Phase 1 confirms the same cause: the earlier fix was
+insufficient. Log it as a recurrence (see Recurrence Detection in Step 5) and
+say so before proposing anything.
 
 ### 0.3: Backward-Compatible Fallback
 

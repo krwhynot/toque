@@ -104,7 +104,7 @@ You have to manually read the audit, fix the plan, and re-audit. This manual loo
 
 - **Wire plan-auditor output back into plan-scaffolder as a revision loop.** The auditor's findings become the scaffolder's revision instructions. This is a mechanical connection, not an architectural change — the auditor already produces structured findings, and the scaffolder already accepts instructions.
 
-- **In `/toque:quick-plan`**: After scaffolder completes, auto-run auditor. If any applicable criterion is UNMET after evidence validation, or gap-checked = NO, feed audit findings back to scaffolder for targeted revision. The scaffolder receives one line per unmet criterion — "{criterion_id} UNMET: {defect}. Location: {file}:{line}." — never the rubric, totals, or bands. It revises only the failing sections and resubmits to a fresh auditor instance.
+- **In `/toque:quick-plan`**: After the scaffolder completes, run the shared `<design_gate>` block of the Stage 2 file with the scaffolder bound as the generator. The revision loop is part of that block: if any applicable criterion is UNMET after evidence validation, or gap-checked = NO, the scaffolder receives one line per unmet criterion — "{criterion_id} UNMET: {defect}. Location: {file}:{line}." — never the rubric, totals, or bands. It revises only the failing sections and resubmits to a fresh auditor instance. The command restates none of this; the block is the single definition.
 
 - **In `/toque:plan` Phase 5**: If audit finds gaps, auto-suggest revisions to Phase 4 spec before proceeding to Phase 6. This catches gaps before Build begins, when they are cheapest to fix. A gap caught in Phase 5 costs one revision cycle. A gap caught in Phase 7 (after Build) costs a code change, a re-test, and a re-audit.
 

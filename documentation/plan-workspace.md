@@ -40,6 +40,8 @@ docs/plans/YYYY-MM-DD-{plan-name}/
 
 Stage instructions call for committing the planning records, including `audit.md` and `evidence/`. Canary scratch and the export zip are excluded. These are workflow requirements, not an automatic Git enforcement hook.
 
+Two paths are immutable once written: `changes/CR-*.md` and `snapshots/**`. A mistake in one is corrected by adding a new record, never by editing the old one. Every other file is living state that changes only in the way its stage describes: accepted `intent.md` and approved `spec.md` are superseded by a Change Record plus one banner line, `plan.md` collects departures during Build, and `status.json` and `manifest.md` are bookkeeping that every stage updates. Toque's own repository refuses edits to the two immutable paths in CI; in your repository the rule is a workflow instruction unless you add the same check.
+
 Design can also create project documents outside the folder:
 
 | Document | Location |
@@ -90,9 +92,9 @@ Illustrative state, with placeholder dates and names:
 
 At a completed stage transition, record the completion time, the next stage's start, the new `current_phase`, and the required approver and date. Update the manifest to match.
 
-A mid-stage approval—such as Design scope lock or approval of `plan.md`—does not complete that stage. Maintain stays in `steady_state` without a completion timestamp.
+A mid-stage approval—such as Design scope lock or approval of `plan.md`—does not complete that stage. Deploy records two events: `authorized_by` and `authorized_at` when a named human authorizes the release (status `authorized`), then `released_by` and `released_at` when a human confirms it happened (status `complete`). Maintain starts at `released_at` and stays in `steady_state` without a completion timestamp.
 
-Recorded times support intent-to-spec, spec-to-plan, and plan-to-release elapsed-time reporting. Required human decisions need the actual name; a timestamp alone is not approval.
+Recorded times support intent-to-spec, spec-to-plan, plan-to-authorization, and, once `released_at` is recorded, plan-to-release elapsed-time reporting. Required human decisions need the actual name; a timestamp alone is not approval.
 
 ## Resuming
 

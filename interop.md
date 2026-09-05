@@ -32,7 +32,7 @@ The table format is a tested contract: one artifact per row, a bare path in colu
 
 Two special references share the directory but are not external analysis inputs:
 
-- `docs/audit/plan-audit.md` is a forbidden fallback named by quick-audit. Nothing writes it; standalone quick audits report in the conversation.
+- `docs/audit/plan-audit.md` is a forbidden fallback named by quick-audit. Nothing writes it; a standalone quick audit writes its gate record (`audit.md`, `evidence/`, `gate.json`) to a folder beside the audited file, named after it without the extension, and a plan's own spec is audited into its plan folder.
 - `docs/audit/impact-review-*.md` is a legacy read-only location. Troubleshooting first checks the current plan's `impact-review.md`, then uses this fallback for older plans. Current Build writes into the plan folder.
 
 ## Not inputs

@@ -256,9 +256,13 @@ Independent tickets may be batched after dependency analysis and confirmation.
 
 The living-plan rule requires departures in `plan.md` in the same commit as
 the code; material changes also get a Change Record. Accepted scope is preserved
-through supersession records. The broad immutability prose is not literal
-immutability of every file: the stage explicitly updates the living build plan.
-There is no shipped write-blocking hook.
+through supersession records. The immutable set is enumerated, not implied:
+`changes/CR-*.md` and `snapshots/**` are never edited once written, accepted
+documents are superseded through a Change Record and one banner line, and
+`plan.md`, `status.json` and `manifest.md` are living state that each stage
+updates in a named way. Toque's own repository refuses edits to the two
+immutable paths at the diff in CI (`.github/protected-artifacts.sh`); a consumer
+repository has no shipped write-blocking hook.
 
 Impact review examines integration edges, cross-layer effects, scale,
 transition state, test delta, string paths after moves, and backward
@@ -310,10 +314,10 @@ from Toque's instructions; broad adoption labels in the guide are not calibratio
 
 Separate AI implementation and test authorship is a Toque workflow requirement.
 It adapts independent checking; it is not a guarantee against correlated model
-errors. The guide's TDD paragraph also permits one agent to write both, conflicting
-with that requirement. The active stage and registry request separation; this
-documentation does not resolve the underlying instruction conflict by changing
-policy. [Thoughtworks: AI-aided test-first development (2023 Assess entry)](https://www.thoughtworks.com/radar/techniques/ai-aided-test-first-development) is related test-first experience, not proof that
+errors. The guide's TDD entry now follows the same rule: a separate agent or a
+human generates the test suite from the spec first, and the implementation agent
+makes it pass. The red-green ordering of TDD is kept; only the author changes.
+The stage files, the registry (LINT-18) and the guide agree. [Thoughtworks: AI-aided test-first development (2023 Assess entry)](https://www.thoughtworks.com/radar/techniques/ai-aided-test-first-development) is related test-first experience, not proof that
 Toque's separate-author or batch-first variation is superior.
 
 ### Stage 5: Deploy
@@ -326,11 +330,14 @@ Authorized, Rejected, or Deferred decision in `review.md`.
 The plan skill prohibits running production deployment, publishing, release,
 tag-push, merge-to-production, and migration commands. The human performs the
 release; the skill may verify confirmed steps. This is a workflow restriction,
-not an installed permission boundary. The final-summary instruction marks the
-stage complete after authorization and prints “Released”; therefore its state
-alone does not establish that release occurred.
+not an installed permission boundary. Authorization and release are recorded
+as two events: `authorized_by`/`authorized_at` leave the stage in status
+`authorized`, and only a named human's later confirmation writes
+`released_by`/`released_at` and marks the stage complete. A recorded
+authorization still does not establish that a deployment happened; the
+separate confirmation is a human statement, not an observation of production.
 
-**Implementation:** [plugins/toque/skills/plan/stages/stage-5-deploy.md](plugins/toque/skills/plan/stages/stage-5-deploy.md) (Steps A-D). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
+**Implementation:** [plugins/toque/skills/plan/stages/stage-5-deploy.md](plugins/toque/skills/plan/stages/stage-5-deploy.md) (Steps A-E). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
 
 ### Stage 6: Maintain
 
@@ -340,8 +347,8 @@ pattern alert. It links lesser incidents and records counts. No continuous
 monitor, scheduler, or automatic acceptance is installed.
 
 Released content remains the delivery record while status, manifest links and
-incident bookkeeping can change. Maintain stays `steady_state` with no completion
-timestamp. [Google SRE: Postmortem Culture](https://sre.google/sre-book/postmortem-culture/) supports learning from incidents and tracked actions;
+incident bookkeeping can change. Maintain starts at the confirmed
+`released_at` and stays `steady_state` with no completion timestamp. [Google SRE: Postmortem Culture](https://sre.google/sre-book/postmortem-culture/) supports learning from incidents and tracked actions;
 Toque's trigger thresholds and intent routing are its own adaptation.
 
 **Implementation:** [plugins/toque/skills/plan/stages/stage-6-maintain.md](plugins/toque/skills/plan/stages/stage-6-maintain.md) (Trigger rule, Metrics, Steady state). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
@@ -356,10 +363,13 @@ withdrawn; the workflow's rationale is explicit decisions and reviewable evidenc
 #### Shortcuts, intake, and document generation
 
 `quick-plan` writes a standalone spec (optionally linked to an existing plan),
-calls the scaffolder and auditor, and attaches findings after at most two
-revisions. `quick-audit` calls the auditor, using Full or Lite inputs as available.
-Neither command wires the complete Design-stage canary/validator sequence.
-A shortcut's displayed PASS is not evidence of the full Design gate.
+calls the scaffolder, then runs the design gate with at most two revisions.
+`quick-audit` runs the design gate against one file, with no revision loop.
+Both execute the `<design_gate>` block of the Stage 2 file with their own
+bindings for the document, the gate folder and the generator, so the canary,
+the evidence validator, the lint registry and the gate expression are defined
+once and there is no lighter copy. A shortcut's PASS is a design-gate pass for
+that document; it is not human review, scope lock, or authorization.
 
 `quick-cleanup` inventories and interviews before schema-based extraction,
 then verifies fields against sources, writes a source index, marks unreadable
@@ -381,9 +391,11 @@ explicit breaking changes; they do not authorize a release.
 credits ADR context, decisions, consequences and supersession; [Conventional Commits contributors: Specification 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
 defines commit markers used in release-note classification. Toque's layouts,
 intake schemas, and cross-document suggestions are adaptations, not prescribed
-standards. The BRD template contains a conflicting instruction to update the
-external baseline despite its explicit read-only rule; read-only consumption
-cannot be claimed as mechanically guaranteed.
+standards. Imported analysis baselines are read-only inputs everywhere: the
+BRD deep scan records what it verified in the BRD's own coverage table, never
+in the baseline file, so a later reader can tell what the external tool
+reported from what Toque checked. Read-only consumption remains a workflow
+rule, not a mechanically guaranteed one.
 
 **Implementation:** [plugins/toque/commands/quick-plan.md](plugins/toque/commands/quick-plan.md), [plugins/toque/commands/quick-audit.md](plugins/toque/commands/quick-audit.md), [plugins/toque/commands/quick-cleanup.md](plugins/toque/commands/quick-cleanup.md), [plugins/toque/skills/documentation/SKILL.md](plugins/toque/skills/documentation/SKILL.md).
 **Verification:** [tests/layer4-behavioral-smoke.sh](tests/layer4-behavioral-smoke.sh) checks structure
@@ -643,8 +655,8 @@ project release controls remain separately owned.
 ### Why Plans Need Auditing Too
 
 The [plan auditor](plugins/toque/agents/plan-auditor.md) requires per-criterion verdicts, evidence, explicit
-gaps and recommendations. It is reachable from Design, quick-audit and quick-plan.
-The latter two do not invoke the whole Design-stage gate. Its evidence-first
+gaps and recommendations. It is reachable from Design, quick-audit and quick-plan;
+all three execute the same `<design_gate>` block of the Stage 2 file. Its evidence-first
 record order, hidden author context and defect-only feedback are Toque design
 choices, related to [Erik S. and Barry Zhang, Anthropic: Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)' evaluator-optimizer pattern.
 
@@ -659,9 +671,10 @@ These lenses are Toque's taxonomy, not an industry standard or proof of coverage
 ### The Evidence Requirement
 
 The workflow requires evidence, then reasoning, then a MET/UNMET/N_A verdict.
-Unverified findings are separated and cannot support a verdict. Full-mode callers
-write one record per criterion beside audit.md; conversation-only callers report
-inline and do not create that evidence directory.
+Unverified findings are separated and cannot support a verdict. Every caller,
+Full or Lite, writes one record per criterion to `evidence/` beside `audit.md`
+in its gate folder; a standalone document's gate folder sits beside it. There
+is no conversation-only mode.
 
 [W3C: PROV Overview](https://www.w3.org/TR/prov-overview/) distinguishes entities, activities and responsibility in provenance.
 Toque adapts provenance ideas with repository-relative paths, exact line ranges,
@@ -736,7 +749,7 @@ These are instructed checks, not a shipped general-purpose executable plan linte
 | LINT-05 | Every new endpoint/API has a contract or test entry | 5 |
 | LINT-06 | Backward compatibility claimed but no mixed-state scenario | 5 |
 | LINT-07 | Every new behavior has a test or test delta | 5 |
-| LINT-08 | No unverified HIGH-impact assumption exists | 5 (hard gate) |
+| LINT-08 | No unverified or falsified HIGH-impact assumption exists | 5 (hard gate) |
 | LINT-09 | No unaddressed cross-cutting concern for in-scope features | 5 |
 | LINT-10 | Every phase has go/no-go criteria | 5 |
 | LINT-11 | Every code change maps to a plan ticket | 7 (Full only) |
@@ -934,9 +947,12 @@ The workflow requires local code evidence, one tested hypothesis at a time,
 working-versus-broken comparison, a failing test before a focused fix (subject
 to approval), and regression verification. It records timestamps, dead ends,
 evidence and missing safeguards. Optional exact-error research informs local
-investigation without replacing it. Its KB HIGH-match prompt asks whether to
-reuse a past fix before the four phases, in tension with its root-cause rule;
-correlation is not causal verification.
+investigation without replacing it. A knowledge-base match at any score is a
+lead, not a diagnosis: a HIGH match names the earlier cause as the first
+hypothesis for Phase 1, and the earlier fix is not re-applied until Phase 1
+has shown the same cause is present now. A confirmed match is logged as a
+recurrence, since it means the earlier fix was insufficient. Correlation is
+not causal verification.
 
 For SEV1/SEV2 it requests status updates (30/60-minute cadence), a blameless
 postmortem, owned action items and linked draft intent. [Google SRE: Postmortem Culture](https://sre.google/sre-book/postmortem-culture/) supplies
@@ -973,8 +989,9 @@ decay limit or that multiple agents are necessary for every task.
 The caller assigns bounded objectives and inputs, gathers reports, then resolves
 agreements and conflicts. Plan research writes into the plan's research folder;
 Build uses temporary reports; troubleshooting records specialist findings in its
-log. Conversation-only audits need not write files. The old universal
-`docs/audit/` output claim described removed scanners.
+log. Every design-gate run, including a standalone `quick-audit`, writes
+`audit.md` and `evidence/` into its gate folder; nothing writes to
+`docs/audit/`, whose old universal-output claim described removed scanners.
 **Implementation:** [plugins/toque/skills/plan/SKILL.md](plugins/toque/skills/plan/SKILL.md) (parallel_execution_strategy). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
 
 ### Agent Deployment Across Commands

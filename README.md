@@ -65,7 +65,7 @@ The lifecycle draws on [Anthropic's AI-Native SDLC playbook](https://claude.com/
 | **Design** | Write `spec.md`; record the audit and evidence. | Scope lock, automated design gate, and recorded review or eligible waiver; approved spec. |
 | **Build** | Approve `plan.md`, implement, write `impact-review.md`. | Approval before code; user confirms impact review afterward. |
 | **Test** | Write `test-plan.md` and collect results. | Automated tests pass; a human confirms manual checks. |
-| **Deploy** | Write `review.md` and prepare the release checklist. | Named human authorizes and performs the production release. |
+| **Deploy** | Write `review.md` and prepare the release checklist. | Named human authorizes, performs, and then confirms the production release. |
 | **Maintain** | Link incidents and draft follow-up intent when thresholds are met. | Stays open; new work returns to Plan for acceptance. |
 
 [Walk through each stage →](documentation/the-plan-workflow.md)
@@ -108,7 +108,7 @@ When ready for the full workflow:
 /toque:plan-status
 ```
 
-For a smaller, auto-audited draft, try `/toque:quick-plan Add scheduled reports`. It is not a substitute for the full design gate or production approval.
+For a smaller draft that still goes through the design gate, try `/toque:quick-plan Add scheduled reports`. It is not a substitute for human review or production approval.
 
 [Complete your first workflow →](documentation/quickstart.md)
 

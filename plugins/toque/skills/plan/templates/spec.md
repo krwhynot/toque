@@ -59,15 +59,44 @@ impact tier (High | Medium | Low) with rationale.>
 
 <Answered or deferred, with owners and due dates.>
 
+## Assumption register
+
+<Every assumption the plan rests on. Impact is HIGH, MEDIUM or LOW; Status starts
+unverified. An unverified or falsified HIGH-impact assumption blocks the design
+gate. The design gate keys on this table.>
+
+| # | Assumption | Impact If False | How to Verify | By When | Owner | Status |
+|---|-----------|----------------|---------------|---------|-------|--------|
+| 1 | <assumption> | <what breaks> | <check> | <phase or date> | <name> | unverified |
+
+## Dependencies
+
+<One row per dependency: other teams, systems, approvals, vendors, licenses,
+environments. Owner is the team that owns it; the design gate keys on an owned
+row.>
+
+| Dependency | Owner | Status |
+| --- | --- | --- |
+| <dependency> | platform team | <confirmed / open> |
+
 ## Verification plan
 
 <Testing methodology (tdd | characterization | expand_contract | contract_testing |
 shadow_parallel | property_based | bdd | snapshot_approval | mutation_testing) per
-deliverable, and how this will be tested at build time and in Stage 4.>
+deliverable, and how this will be tested at build time and in Stage 4. Name the
+test file for every coverage claim, e.g. tests/<name>.test.js; the design gate
+verifies the file exists.>
 
 ## Delivery
 
+<Tickets, timeline and critical path. Then one block per phase in the shapes the
+design gate keys on: a line starting `Rollback:` and a line starting `Go/No-Go:`.>
+
 - Tickets: <ID, title, deliverable, depends on>
-- Timeline: <phases with dates or effort>
-- Rollback per phase: <trigger and steps for each phase>
-- Go/no-go: <criteria a human checks before each phase proceeds>
+- Timeline: <phases with dates or effort, dependencies, critical path>
+
+### Phase 1: <name>
+
+Deliverables: <what this phase produces>
+Rollback: <trigger and the steps that undo this phase>
+Go/No-Go: <the measurable condition a human checks before the next phase starts>

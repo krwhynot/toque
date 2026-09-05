@@ -80,11 +80,14 @@ Each methodology carries an evidence tier:
 stored procedures with defined inputs/outputs
 **Protects against:** Logic errors, refactoring regressions, missing edge cases
 **Does NOT protect against:** Integration failures, UI mismatches, external deps
-**Who writes tests:** Implementation agent writes tests FIRST, then code. Or:
-human writes test, AI writes implementation.
+**Who writes tests:** A separate agent, or a human, generates the tests from the
+spec FIRST; the implementation agent then writes code to make them pass. One
+agent never authors both sides of an AI-generated deliverable (LINT-18). The
+red-green ordering is kept; only the author changes.
 **AI adaptation:** Spec-Generate-Implement-Verify-Refactor cycle replaces
-traditional Red-Green-Refactor. Generate the FULL test suite from the spec
-before any implementation, rather than incrementally.
+traditional Red-Green-Refactor. A test-writer agent generates the FULL test
+suite from the spec before any implementation, rather than incrementally; the
+implementer receives the suite, not the spec's answers.
 **Enterprise evidence:** ThoughtWorks Radar Vol. 32 (Assess ring). ThoughtWorks
 experiments validated TDD + AI produces production-grade code. SPARC methodology.
 

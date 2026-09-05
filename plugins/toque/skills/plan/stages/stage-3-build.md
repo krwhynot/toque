@@ -174,8 +174,18 @@ CODEBASE ACTIONS (approval required per action):
 - "Create branch description for Phase 1 tickets? [Y/n]"
 
 CHANGE CONTROL (backward flow rules with immutable records):
-After the Stage 2 (Design) scope lock, accepted plan documents are immutable.
-Changes require a formal Change Record, not silent edits.
+Two paths in the plan folder are immutable once written: `changes/CR-*.md` and
+`snapshots/**`. They are never edited, renamed, or deleted; a mistake in one is
+corrected by adding a new record. Everything else is living state, and each file
+changes only in the way its stage names:
+- intent.md after acceptance and spec.md after approval: not edited in place.
+  A change travels as a Change Record, and the original receives one
+  SUPERSEDED banner line at the top and nothing else.
+- plan.md: living during Build. Departures are appended in the same commit as
+  the code (see below); the approved steps themselves are superseded by a CR.
+- status.json, manifest.md, and the audit baseline: bookkeeping, updated by
+  every stage and by Maintain.
+Changes to accepted content require a formal Change Record, not silent edits.
 
 - Minor discovery during build:
   1. Create docs/plans/{date}-{name}/changes/CR-{N}.md with:

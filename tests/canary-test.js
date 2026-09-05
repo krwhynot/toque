@@ -48,6 +48,35 @@ console.log('\n1. Injection actually mutates');
   check('the error names the class that could not apply', /rollback-strip/.test(msg), `msg=${msg}`);
 }
 
+// A stress run found the planted assumption inside a Risk Assessment table: the
+// class anchored on the first "| 1 |" row in the document, and a risk table came
+// first. The row must land in the assumption register, or LINT-08 has nothing to
+// catch and the canary is measuring nothing.
+{
+  const risky = [
+    '# Plan', '',
+    '## Risk Assessment', '',
+    '| # | Risk | Likelihood | Impact | Mitigation |',
+    '|---|------|-----------|--------|-----------|',
+    '| 1 | Index bloat | Medium | High | Rebuild nightly |', '',
+    '## Assumptions', '',
+    '| # | Assumption | Impact If False | Status |',
+    '|---|-----------|----------------|--------|',
+    '| 1 | Indexes cover the new query | Slow reads | verified |', '',
+  ].join('\n');
+  const out = canary.inject(risky, 'assumption-inject');
+  const lines = out.text.split('\n');
+  const planted = lines.findIndex((l) => /^\| 2 \| Peak write throughput/.test(l));
+  const register = lines.findIndex((l) => /^\| 1 \| Indexes cover/.test(l));
+  check('assumption-inject lands after the assumption register row, not the risk row',
+    planted === register + 1, `planted at ${planted}, register row at ${register}`);
+
+  const noRegister = '# Plan\n\n## Risk Assessment\n\n| # | Risk |\n|---|------|\n| 1 | Index bloat |\n';
+  let threw = false;
+  try { canary.inject(noRegister, 'assumption-inject'); } catch (err) { threw = true; }
+  check('assumption-inject with numbered rows but no assumption register THROWS', threw, 'it planted into a table that is not an assumption register');
+}
+
 console.log('\n2. Every class in the bank is live');
 
 // Rotation is the only thing raising the cost of pre-empting the canary, and it is
@@ -73,6 +102,22 @@ console.log('\n2. Every class in the bank is live');
   const criteria = Object.values(seen);
   check('each class targets a distinct criterion',
     new Set(criteria).size === criteria.length, JSON.stringify(seen));
+}
+
+console.log('\n2b. The shipped spec template carries every canary shape');
+
+// A spec written from the plan skill's own template must be markable by every
+// class, or Stage 2's gate refuses its own specs with "no canary class could be
+// applied". The template is read from disk so a template edit that drops a
+// shape fails here, not in a user's plan folder.
+{
+  const tplPath = path.join(__dirname, '..', 'plugins', 'toque', 'skills', 'plan', 'templates', 'spec.md');
+  const tpl = fs.readFileSync(tplPath, 'utf8').replace(/\r\n/g, '\n');
+  for (const name of canary.CLASS_NAMES) {
+    let ok = false, msg = '';
+    try { ok = canary.inject(tpl, name).text !== tpl; } catch (err) { msg = err.message; }
+    check(`templates/spec.md carries the shape for ${name}`, ok, msg || 'mutation did not change the text');
+  }
 }
 
 console.log('\n3. Detection');

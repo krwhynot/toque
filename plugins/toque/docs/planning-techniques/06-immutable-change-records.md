@@ -16,7 +16,7 @@ The key principle: decisions are append-only, never edit-in-place. Silent edits 
 
 ## How It Works
 
-1. **When a plan decision is accepted** (Stage 1 Plan acceptance, Stage 2 Design approval), the document is timestamped and marked ACCEPTED. From this point forward, the document's content is frozen.
+1. **When a plan decision is accepted** (Stage 1 Plan acceptance, Stage 2 Design approval), the document is timestamped and marked ACCEPTED. From this point forward it is not edited in place: a change travels as a Change Record, and the original receives one SUPERSEDED banner line and nothing else.
 
 2. **The accepted document cannot be edited directly.** Any attempt to modify the content of an accepted document must go through the change record process.
 
@@ -58,8 +58,8 @@ This has concrete consequences: when a build encounters a problem that was actua
 - **Add a `changes/` subdirectory** to the plan folder structure:
   ```
   docs/plans/{date}-{name}/
-    intent.md                <- Becomes immutable after Stage 1 (Plan) acceptance
-    spec.md                  <- Becomes immutable after Stage 2 (Design) approval
+    intent.md                <- Superseded only via CR after Stage 1 (Plan) acceptance
+    spec.md                  <- Superseded only via CR after Stage 2 (Design) approval
     changes/
       CR-001.md              <- First change record
       CR-002.md              <- Second change record

@@ -49,8 +49,12 @@ BRD for [Domain] will cover [N] features:
 
 **Step 2: Deep Scan (if chosen)**
 
-For each feature below 0.90 confidence in this domain, read the source files,
-verify entry points and database tables, and update confidence in the baseline.
+For each feature below 0.90 confidence in this domain, read the source files
+and verify entry points and database tables. Record what was verified, and the
+confidence you now hold, in the BRD's Feature Coverage table (Notes column):
+`verified {date}: {what was checked}`. Never edit the baseline file; it belongs
+to the tool that produced it, and a later reader must be able to tell what that
+tool reported from what this BRD verified.
 
 **Step 3: Generate BRD**
 
@@ -108,7 +112,7 @@ and what it costs when it fails. 3-5 sentences, grounded in baseline data.}
 
 | Feature | Confidence | PRD | Test coverage | Notes |
 |---------|-----------|-----|---------------|-------|
-| {name} | {score} | {link or "missing"} | {status} | {[ASSUMPTION] if below 0.90} |
+| {name} | {baseline score} | {link or "missing"} | {status} | {[ASSUMPTION] if below 0.90 and not verified; otherwise "verified {date}: {what was checked}"} |
 
 ## Success Metrics
 

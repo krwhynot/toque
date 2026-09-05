@@ -5,15 +5,36 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Task
 ---
 
 <plan_awareness>
-If $ARGUMENTS contains --plan {name}, write output to
-docs/plans/{date}-{name}/audit.md and update docs/plans/{date}-{name}/manifest.md
-with a link to the audit. Also update status.json.
+Every audit has a gate folder that receives audit.md, evidence/, gate.json and
+the .canary/ scratch copy (deleted by the gate once used). Which folder depends
+on what is being audited:
 
-If the file path starts with docs/plans/, auto-detect the plan context and write
-audit output into that plan's folder: docs/plans/{date}-{name}/audit.md.
+The plan's own spec.md (the path is docs/plans/{date}-{name}/spec.md, with or
+without --plan): the gate folder is that plan folder, and the auditor runs in
+Full mode. While phases.design.status is still in_progress this is the plan's
+Stage 2 gate run again and overwrites its record. Once design is complete, the
+Stage 2 record is history: write the rerun to
+docs/plans/{date}-{name}/reaudits/{date}/ (audit.md, evidence/, gate.json) and
+add a manifest.md row for it. Either way, add the audit to that status.json's
+`documents` object.
 
-If no --plan flag and no auto-detect, present the audit results directly in the
-conversation. Do NOT create docs/audit/plan-audit.md.
+Any other file, including another file inside a plan folder: the gate folder
+sits beside the audited file, named after it without the extension
+(docs/specs/pricing.md is audited into docs/specs/pricing/; docs/adr/x.md into
+docs/adr/x/), and the auditor runs in Lite mode. With --plan {name}, also add a
+manifest.md row in that plan linking the audit; nothing is written into the
+plan's own gate record.
+
+A plan written outside the spec template can be audited, and the findings are
+the value. It can PASS only if it carries the shapes the checks key on (a
+`Rollback:` and a `Go/No-Go:` line per phase, a dependency row with an owning
+team, an assumption register, a cited test file, an Evidence section): the
+canary attaches to them and the registry's rules ask for them. When it cannot,
+the gate says so in its result rather than skipping a check.
+
+If the plan was pasted rather than given as a path, write it to
+docs/specs/{slug}.md first and say so; the gate needs a file to mutate and
+evidence records need a file to cite. Do NOT create docs/audit/plan-audit.md.
 </plan_awareness>
 
 <context>
@@ -45,25 +66,42 @@ If no plan is found, ask the user to provide the plan:
 2. Provide the exact file path
 3. Describe what plan you want audited"
 
-## Step 2: Deploy Plan Auditor
+## Step 2: Design gate (the same gate as /toque:plan Stage 2)
 
-Spawn the plan-auditor agent with:
-- The full plan text
-- The codebase root path (so it can verify claims against actual files)
-- If linked to a plan: write output to docs/plans/{date}-{name}/audit.md
-- If standalone: present results in conversation (no file creation)
+Do not spawn the plan-auditor on your own terms. The gate is defined once, in
+the stage file, and this command runs that definition:
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/plan/stages/stage-2-design.md` and execute
+its `<design_gate>` block, verbatim, with these bindings:
+
+  {doc}        the file located in Step 1
+  {gate_dir}   the gate folder chosen in <plan_awareness>
+  {generator}  none
+
+The block spawns the plan-auditor on a canary-mutated working copy, checks that
+the planted defect was found, validates every evidence record mechanically,
+applies the lint registry and the gap outputs, and derives PASS or NOT PASS
+from its gate expression. With no generator bound there is no revision loop:
+NOT PASS is reported with the unmet criteria named, and the document's author
+decides what to do. If the block and this description ever disagree, the block
+wins.
 
 ## Step 3: Present Results
 
-After the auditor completes, present:
+After the gate completes, present:
 1. The canonical gate result: `PASS` — passed the pass, or `NOT PASS` — back to
    the kitchen, with the criteria that failed. For each criterion, add the
    kitchen translation after its canonical token: `MET` — passed the pass;
    `UNMET` — back to the kitchen; `N_A` — not on this plate.
-2. Findings by severity, each citing file:line evidence
-3. Top 3 gaps that must be addressed
-4. Go/No-Go recommendation
-5. If linked to a plan, link to full report at docs/plans/{date}-{name}/audit.md
+2. Canary found, missed, not applicable (the document has none of the shapes
+   a canary attaches to), or no-isolation (no fresh auditor could be spawned),
+   and the evidence validator's exit code; a canary missed twice means the
+   audit could not be trusted and its findings are not shown as findings
+3. Findings by severity, each citing file:line evidence
+4. Top 3 gaps that must be addressed
+5. Go/No-Go recommendation
+6. The gate record: {gate_dir}/audit.md, {gate_dir}/evidence/ and
+   {gate_dir}/gate.json, to be committed with the audited document
 
 If the user mentioned presenting to leadership, also highlight:
 - The 5-6 slide outline from the report

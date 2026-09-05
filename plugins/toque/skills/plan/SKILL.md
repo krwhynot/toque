@@ -26,8 +26,10 @@ Hard rules, in every stage:
 <parallel_execution_strategy>
 USE PARALLEL AGENTS WHENEVER POSSIBLE.
 
-RULE: If a stage has 2+ tasks that don't depend on each other,
-run them as parallel subagents. Do NOT run them sequentially.
+RULE: If a stage has 3+ tasks that don't depend on each other, run them as
+parallel subagents. Do NOT run them one after another. Two independent tasks
+run inline, in either order; the subagent overhead is not worth it for two
+(scaling rules below).
 
 When to parallelize (by stage):
 - Stage 1 (Plan): the 3 research tracks are independent -> 3 parallel subagents
@@ -185,7 +187,8 @@ This will create: docs/plans/2026-03-07-worldpay-canada/
 
 Create initial status.json (schema 2). Every stage entry records `status` and,
 when it changes, ISO `started` and `completed` timestamps. The timestamps are the
-playbook's metrics: intent-to-spec, spec-to-plan, plan-to-release elapsed.
+playbook's metrics: intent-to-spec, spec-to-plan, plan-to-authorization, and,
+once a release is confirmed, plan-to-release elapsed.
 ```json
 {
   "schema_version": 2,
@@ -256,6 +259,11 @@ Intent -> spec: {elapsed or pending}   Spec -> plan: {elapsed or pending}
 Continue from {stage}?
 ```
 
+If phases.deploy.status is `authorized`, ask first: "Release authorized by
+{authorized_by} on {authorized_at}. Has it been released? Enter the name of the
+person confirming and the release time to record it, or continue waiting."
+Record per Stage 5 Step E; do not mark the release on the user's behalf.
+
 ## Stages 1-6: load the stage file on entry
 
 The six stages live in one file each under `${CLAUDE_SKILL_DIR}/stages/`. Skill
@@ -280,10 +288,18 @@ after any compaction. Read only the current stage; do not read ahead.
 Paths use forward slashes on every platform. If a stage file cannot be read, stop
 and report the path; do not improvise the stage from memory.
 
-Gate bookkeeping, every time a gate is passed: set the stage's `completed`
-timestamp, set the next stage to `in_progress` with `started`, set
-`current_phase`, and record who approved (`accepted_by`, `approved_by`,
-`authorized_by`) with the date. A gate without a recorded name is not passed.
+Gate bookkeeping, every time a gate is passed (Stage 5 excepted; see the next
+paragraph): set the stage's `completed` timestamp, set the next stage to
+`in_progress` with `started`, set `current_phase`, and record who approved
+(`accepted_by`, `approved_by`, `authorized_by`) with the date. A gate without a
+recorded name is not passed.
+
+Stage 5 records two events, never one: `phases.deploy.authorized_by` and
+`authorized_at` when a named human authorizes the release (status
+`authorized`), then `released_by` and `released_at` when a human confirms the
+release happened (status `complete`, `completed` = `released_at`,
+`phases.maintain.started` = `released_at`). Authorization is not rounded up to
+release.
 </workflow>
 
 <staleness_rules>

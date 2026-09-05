@@ -16,5 +16,7 @@ desktop.ini
 *.local.md
 *.local.json
 
-# Design-gate canary working copies — never committed (plan workspace spec)
-docs/plans/*/.canary/
+# Design-gate canary working copies — never committed (plan workspace spec).
+# A gate folder can sit in a plan folder or beside any audited document, so the
+# pattern is path-agnostic; the gate also deletes the folder once it is used.
+**/.canary/

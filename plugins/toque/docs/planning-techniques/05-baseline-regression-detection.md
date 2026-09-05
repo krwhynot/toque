@@ -6,6 +6,10 @@ Baseline Regression Detection is a technique that compares the current state of 
 
 A baseline is a point-in-time snapshot stored as structured data (JSON) that represents the "known good" state. Each element in the plan — every coverage item, every assumption, every scenario, every lint rule — is tracked individually so that changes in any single element are visible regardless of what happens to the overall score.
 
+## How Toque applies it
+
+In the design gate (Stage 2 of `/toque:plan`, and the same block run by `quick-plan` and `quick-audit`) the baseline comparison does two things: it drives LINT-14 (a regression against the previous baseline fails the audit) and it reports improvements and new items as progress. It never softens the gate. `VERIFIED` requires every applicable criterion to be MET or N_A, so a pre-existing gap is still an unmet criterion and still blocks Build, whether or not it was in the baseline. The "gate only on regressions" policy described below is the technique's origin in coverage tooling, where known debt is tolerated; Toque keeps the separate reporting and not the tolerance.
+
 ## Enterprise Origin
 
 **Cypress UI Coverage Results API and baseline comparison framework.** Cypress tracks tested element COUNTS per view (not percentages), compares against stored baselines, and separately reports regressions vs improvements vs new items. Their documentation states: "testing one new element might reveal many more elements that aren't tested yet, the score isn't useful for a fine-grained baseline comparison between runs. Comparing the number of tested elements gives a more accurate sense of whether one run has added or removed coverage."
@@ -64,7 +68,7 @@ A baseline is a point-in-time snapshot stored as structured data (JSON) that rep
    - **NEW**: item didn't exist in baseline (report for awareness)
    - **MISSING**: item was in baseline but gone from current (flag as potential issue)
 
-4. **Fail the build/gate ONLY on regressions** (not on pre-existing gaps). Pre-existing gaps are tech debt to be closed incrementally; regressions are new damage that must be addressed immediately.
+4. **Report regressions separately from pre-existing gaps.** Regressions are new damage and are flagged HIGH priority. In the technique's origin only regressions block and pre-existing gaps are tech debt closed incrementally; in Toque's design gate both block (see How Toque applies it above).
 
 5. **Generate a new baseline** after each comparison for future use.
 
@@ -73,8 +77,8 @@ A baseline is a point-in-time snapshot stored as structured data (JSON) that rep
 ## Why It Prevents Gaps
 
 - **Catches regressions that aggregate scores mask.** Improving 3 areas while regressing 2 produces the same total score. Per-element comparison surfaces both the improvements and the regressions independently.
-- **Allows incremental gap closure.** Fix existing gaps over time without blocking deployments. The baseline only gates on regressions from the known-good state, not on pre-existing gaps.
-- **Separates "new gaps introduced" from "existing gaps."** Regressions (new gaps) always block. Existing gaps (tech debt) are fixed incrementally. This distinction is critical for maintaining velocity while improving quality.
+- **Separates new damage from known debt.** The baseline tells a reader which gaps a revision introduced and which were already there, so each can be reported and prioritized on its own. Whether known debt blocks is the gate's rule, not the baseline's; in coverage tooling it does not, in Toque's design gate it does.
+- **Separates "new gaps introduced" from "existing gaps."** Regressions (new gaps) are flagged HIGH priority in the audit output. Existing gaps stay listed as gaps. This distinction keeps a revision from being credited for fixing what it broke.
 - **Per-element tracking provides actionable specificity.** "Scenario 5: Scale/volume edge regressed from covered to partial" is actionable. "Score dropped 2 points" is not.
 - **Baseline history creates a trend line** showing plan health over time. Multiple baselines stored as an array reveal whether quality is steadily improving, plateauing, or oscillating.
 - **Branch-specific baselines** allow different standards for main vs feature branches, similar to Cypress profiles. A feature branch baseline can be more permissive during development while the main branch baseline enforces the strictest standard.

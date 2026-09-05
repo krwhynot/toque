@@ -18,8 +18,8 @@ Nine user-facing entrypoints. `plan`, `troubleshoot`, and `documentation` are sk
 | --- | --- | --- |
 | `/toque:help` | Show capabilities and usage | Conversation output |
 | `/toque:plan {name}` | Start or resume full delivery workflow | Plan workspace |
-| `/toque:quick-plan {objective}` | Draft and audit a smaller plan | `docs/specs/{name}.md` |
-| `/toque:quick-audit {path}` | Review an existing plan | Findings; `audit.md` when plan-linked |
+| `/toque:quick-plan {objective}` | Draft a smaller plan and run it through the design gate | `docs/specs/{name}.md` plus its gate record in `docs/specs/{name}/` |
+| `/toque:quick-audit {path}` | Run the design gate against an existing plan | Gate result; `audit.md`, `evidence/`, `gate.json` in the plan folder or a gate folder beside the file |
 | `/toque:plan-status [name]` | Inspect progress | Status summary |
 | `/toque:quick-cleanup {folder} {topic}` | Extract usable source references | Plan intake files |
 | `/toque:plan-export {name}` | Package a plan for another developer | Export zip |
@@ -46,11 +46,11 @@ This is not a draft-only command: after approval it can implement and test. It m
 /toque:quick-plan Extract pricing logic from Order.vb
 ```
 
-Clarifies a vague request as needed, uses the scaffolder, writes a spec, then runs an audit/revision loop with up to two revisions. Remaining findings are delivered for review.
+Clarifies a vague request as needed, uses the scaffolder, writes a spec to `docs/specs/{name}.md`, then runs the design gate with up to two revisions. The gate record (`audit.md`, `evidence/`) is written beside the spec in `docs/specs/{name}/`; commit it with the spec. `.canary/` in that folder is scratch.
 
-`--plan {name}` links output to an existing plan and updates its records; it does not create a full plan workspace on its own.
+`--plan {name}` links output to an existing plan and adds rows to its manifest; it does not create a full plan workspace on its own, and it does not write into the plan folder's own gate record.
 
-The command claims the same gate as Design, but does not explicitly orchestrate Stage 2's canary and evidence tools. Treat its result as an audited draft, not a full design-gate pass or authorization to build or deploy.
+The gate is the same one Stage 2 runs, executed from the same `<design_gate>` block in the stage file: canary, evidence validation, lint registry, gap outputs, and the gate expression. A `PASS` here is a design-gate pass for that document. It is not a human review, and it does not authorize a build or a release.
 
 ### Quick audit
 
@@ -59,9 +59,9 @@ The command claims the same gate as Design, but does not explicitly orchestrate 
 /toque:quick-audit docs/plans/YYYY-MM-DD-scheduled-reports/spec.md --plan scheduled-reports
 ```
 
-Runs the auditor and reports criterion verdicts and findings. A named or detected plan receives `audit.md` and index/state updates. Standalone results stay in the conversation; there is no fallback report in `docs/audit/`.
+Runs the design gate against one file and reports criterion verdicts, canary result, evidence validation, and findings. A named or detected plan receives `audit.md` and index/state updates in its own folder. Any other file gets a gate folder beside it, named after the file without its extension (`docs/specs/pricing.md` is audited into `docs/specs/pricing/`); there is no conversation-only result and no fallback report in `docs/audit/`. A pasted plan is written to `docs/specs/` first.
 
-Quick audit does not itself explicitly run the complete Stage 2 tool sequence. A reported pass is not a substitute for that gate, human review, or production authorization.
+There is no generator to revise the document, so `NOT PASS` is reported with the unmet criteria named. A pass is a design-gate pass for that file, not human review or production authorization.
 
 ### Status
 
@@ -125,7 +125,7 @@ The lifecycle reference is [Anthropic's AI-Native SDLC playbook](https://claude.
 | Design | `spec.md`, `audit.md`, `evidence/` | Scope lock; automated gate; review or eligible waiver; approved spec. |
 | Build | `plan.md`, code, `impact-review.md` | Approve plan before implementation; confirm impact afterward. |
 | Test | `test-plan.md`, results | Automated pass and human-confirmed manual checks. |
-| Deploy | `review.md`, release checklist | Named human authorizes and performs production release. |
+| Deploy | `review.md`, release checklist | Named human authorizes, performs, then confirms production release; authorization and release are recorded separately. |
 | Maintain | Incident records; new draft intent when warranted | Steady state, not a completion gate. |
 
 [Stage-by-stage contracts](https://github.com/krwhynot/toque/blob/main/documentation/the-plan-workflow.md) cover assumptions, parallel work, Change Records, and incident recurrence.
@@ -193,15 +193,20 @@ flowchart LR
   P -->|"runs"| EV
   P -->|"writes"| PLAN
   QP -->|"invokes"| SC
+  QP -->|"runs"| CAN
   QP -->|"invokes"| AU
+  QP -->|"runs"| EV
   QP -->|"writes"| SPEC
+  QA -->|"runs"| CAN
   QA -->|"invokes"| AU
+  QA -->|"runs"| EV
   EV -->|"validates evidence/"| PLAN
+  EV -->|"validates evidence/"| SPEC
   AU -->|"reads if present"| AUDIT
   SC -->|"reads if present"| AUDIT
 ```
 
-The plan skill drives the six stages and, in Stage 2, runs the canary tool, invokes the plan-auditor, and runs the evidence validator against the plan folder's `evidence/` directory. Quick-plan invokes the scaffolder then the auditor and writes a spec under `docs/specs/`; quick-audit invokes the auditor alone. Both agents may read optional analysis under `docs/audit/` and both load the `self-audit-knowledge` skill. The other entrypoints call no agent: `/toque:troubleshoot` writes logs, `/toque:documentation` writes documents and links them from a plan's manifest, and `plan-status`, `plan-export`, `quick-cleanup`, and `help` read or package files. The three hooks are listed in [The 3 hooks](#the-3-hooks): Claude Code starts them on its own events, two read the newest plan's `status.json`, and the SubagentStop handler appends a log line only when a plan's `troubleshooting/` folder already exists.
+The plan skill drives the six stages and, in Stage 2, runs the design gate: the canary tool, the plan-auditor, and the evidence validator against the plan folder's `evidence/` directory. Quick-plan invokes the scaffolder, writes a spec under `docs/specs/`, then runs that same gate against it with the gate record in `docs/specs/{name}/`; quick-audit runs the same gate against one file, into the plan folder or a gate folder beside the file. All three execute the `<design_gate>` block of the Stage 2 file. Both agents may read optional analysis under `docs/audit/` and both load the `self-audit-knowledge` skill. The other entrypoints call no agent: `/toque:troubleshoot` writes logs, `/toque:documentation` writes documents and links them from a plan's manifest, and `plan-status`, `plan-export`, `quick-cleanup`, and `help` read or package files. The three hooks are listed in [The 3 hooks](#the-3-hooks): Claude Code starts them on its own events, two read the newest plan's `status.json`, and the SubagentStop handler appends a log line only when a plan's `troubleshooting/` folder already exists.
 
 ## The 2 agents
 
@@ -264,7 +269,7 @@ node scripts/tq-canary.js detected <canary.json> <unmet-csv> <applicable-csv>
 node scripts/tq-evidence-validate.js <evidence-dir> [root-dir]
 ```
 
-Injection prepares scratch; it does not establish detection. The `detected` command checks the audit's unmet criteria against the planted defect. Supply the complete applicable-criteria list so blanket rejection can be rejected. Stage 2 owns the full sequence.
+Injection prepares scratch; it does not establish detection. The `detected` command checks the audit's unmet criteria against the planted defect. Supply the complete applicable-criteria list so blanket rejection can be rejected. The full sequence is defined once, in the `<design_gate>` block of the Stage 2 file, and run from there by `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit`.
 
 The evidence validator exits 0 with no failing validation flags, 1 for validation failures, and 2 for missing/unusable input such as an empty evidence directory. An existing `UNMET` can coexist with exit 0: the caller must still evaluate `VERIFIED`.
 

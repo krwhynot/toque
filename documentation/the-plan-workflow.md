@@ -48,10 +48,10 @@ Each stage reads the previous artifact, writes its own, and stops at a decision 
 | Design | `intent.md` (Accepted), `research/findings.md`, `research/reference-data.json` | `spec.md`, `audit.md`, `evidence/`, `.canary/` (scratch) | `tq-canary.js` and `tq-evidence-validate.js`, run by the caller | Scope lock; reviewer name or eligible solo waiver; `Status: Approved` |
 | Build | `spec.md` (Approved), `audit.md`, assumptions in `status.json` | `plan.md`, `changes/CR-{N}.md`, `impact-review.md`; code only on approval | None (the assumption gate is an instruction) | Approve `plan.md`; approve each codebase action; waive a HIGH assumption; confirm impact review |
 | Test | `spec.md` Verification plan, `plan.md` Proof and Verification, `audit.md`, `impact-review.md`, `status.json` | `test-plan.md`, `status.json` test gate | Tier 1 automated tests, run with approval | Confirm every Tier 2 manual check by name |
-| Deploy | `intent.md` Constraints, `plan.md`, `test-plan.md`, `status.json`, `git diff` | `review.md`, `plan.md` Departures from plan | Fresh subagent compares diff with plan (a report, not a check) | Named human records Authorized, Rejected, or Deferred, then performs the release |
+| Deploy | `intent.md` Constraints, `plan.md`, `test-plan.md`, `status.json`, `git diff` | `review.md`, `plan.md` Departures from plan | Fresh subagent compares diff with plan (a report, not a check) | Named human records Authorized, Rejected, or Deferred, performs the release, then confirms it; `status.json` records authorization and release as two separate events |
 | Maintain | The plan folder, `troubleshooting/` logs, `docs/troubleshooting/knowledge-base.md` | `status.json` maintain metrics; a new draft `intent.md` when the trigger fires | None | Accept or reject the new intent back in Plan; never auto-accepted |
 
-The canary and evidence validator are the only executable checks in the workflow; every other gate is an instruction to the agent plus a recorded human decision. A recorded release authorization is the instruction to a human, not proof that a deployment happened.
+The canary and evidence validator are the only executable checks in the workflow; every other gate is an instruction to the agent plus a recorded human decision. A recorded release authorization is the instruction to a human, not proof that a deployment happened; the deployment is recorded separately, as `released_at`, when a human confirms it, and Deploy stays `authorized` until then.
 
 ## Stage 1 — Plan
 
@@ -98,7 +98,7 @@ The prep list belongs in `spec.md`. Project instructions such as `CLAUDE.md`, wh
 
 The spec records requirements, design, standards applied, gotchas, evidence, and open questions. Deferred questions retain an owner and due date.
 
-The user confirms scope before delivery detail is added. The locked sections become immutable; subsequent changes require a Change Record. This is a **mid-stage gate**, not completion of Design.
+The user confirms scope before delivery detail is added. The locked sections are not edited in place afterwards; a change travels as a Change Record with a supersession notice on the original. This is a **mid-stage gate**, not completion of Design.
 
 ### Plan verification and delivery
 

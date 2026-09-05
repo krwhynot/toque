@@ -37,8 +37,8 @@ this is how to read them:
 
 | Command | What It Does |
 |---------|-------------|
-| `/toque:quick-plan` | Create a plan directly from an objective (skips brainstorm/research). |
-| `/toque:quick-audit` | Audit any spec or plan file against the design gate's criteria. Reports PASS or NOT PASS with the criteria that failed. |
+| `/toque:quick-plan` | Create a spec directly from an objective and run it through the design gate (skips intent/research/review). |
+| `/toque:quick-audit` | Run the design gate against any spec or plan file. Reports PASS or NOT PASS with the criteria that failed, plus the canary and evidence results. |
 | `/toque:quick-cleanup` | Clean up a folder of messy docs into structured reference files. |
 | `/toque:troubleshoot` | AI-guided debugging. Suggests diagnostics, logs every step tried, builds a knowledge base. Auto-links to active plan. |
 
@@ -49,9 +49,9 @@ this is how to read them:
 | **What** | Guided six-stage workflow | One-shot plan generation |
 | **Stages** | All 6 (Plan through Maintain) | None — a one-shot spec, outside the stage workflow |
 | **Asks questions?** | Yes, walks you through interactively | No, takes objective and generates immediately |
-| **Creates plan folder?** | Yes: `docs/plans/2026-03-07-{name}/` | No, just writes `docs/specs/{name}.md` |
+| **Creates plan folder?** | Yes: `docs/plans/2026-03-07-{name}/` | No; writes `docs/specs/{name}.md` plus its gate record in `docs/specs/{name}/` (`audit.md`, `evidence/`, `gate.json`) |
 | **Research?** | Yes, scans codebase + docs + web | No, uses existing context |
-| **Audit?** | Yes, the full design gate | Yes, auto-audits with revision loop (up to 2 iterations) |
+| **Audit?** | Yes, the design gate plus human review | Yes, the same design gate with a revision loop (up to 2 iterations); no human review |
 | **Build help?** | Yes, tracks tickets and assists | No, plan is delivered |
 | **Resumes?** | Yes, come back anytime | No, one and done |
 | **Time** | 30-60 min full workflow | 5-10 min |
@@ -157,5 +157,5 @@ are read and by which file.
 | Specs | `docs/specs/` |
 | ADRs | `docs/adr/` |
 | PRDs | `docs/prd/` |
-| Plan audits | `docs/audit/` |
+| Plan audits (gate record) | The plan folder's `audit.md` + `evidence/`, or `{dir}/{name}/` beside a standalone file |
 | Codebase analysis Toque reads but does not write | `docs/audit/` |

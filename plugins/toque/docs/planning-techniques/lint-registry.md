@@ -28,7 +28,7 @@ file defined 16, and `agents/plan-auditor.md` claimed 14 in one place and 15 in 
 | LINT-05 | Every new endpoint/API has a contract or test entry | 5 (Audit) | Full + Lite |
 | LINT-06 | Backward compatibility claimed but no mixed-state scenario | 5 (Audit) | Full + Lite |
 | LINT-07 | Every new behavior has a test or test delta | 5 (Audit) | Full + Lite |
-| LINT-08 | No unverified HIGH-impact assumption exists | 5 (Audit) | Full + Lite |
+| LINT-08 | No unverified or falsified HIGH-impact assumption exists | 5 (Audit) | Full + Lite |
 | LINT-09 | No unaddressed cross-cutting concern for in-scope features | 5 (Audit) | Full + Lite |
 | LINT-10 | Every phase has go/no-go criteria | 5 (Audit) | Full + Lite |
 | LINT-11 | Every code change maps to a plan ticket | 7 (Impact) | Full only |
@@ -63,7 +63,7 @@ records are left as they were rather than rewritten, because they record what ra
 
 | Rule | Gate Type | Behavior |
 |------|-----------|----------|
-| LINT-08 | **Hard gate** (Phase 6 entry) | Blocks Build if any HIGH-impact assumption is unverified. Waiver requires documented risk acceptance. |
+| LINT-08 | **Hard gate** (Phase 6 entry) | Blocks Build if any HIGH-impact assumption is unverified or falsified. Waiver requires documented risk acceptance; a falsified assumption is not waivable, the plan changes. |
 | LINT-11 | Advisory (Phase 7) | Flags orphan code changes for review. Does not block. |
 | LINT-12 | Advisory (Phase 7) | Flags orphan tickets for review. Does not block. |
 | LINT-14 | Audit quality (Phase 5) | Fails if any previously-passing element now fails. Skipped on first audit (no baseline). |

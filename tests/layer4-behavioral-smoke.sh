@@ -163,6 +163,9 @@ for ref_pair in "quick-plan.md:plan-scaffolder" "quick-audit.md:plan-auditor"; d
                 fail "B4: commands/$CMD references $AGENT but agents/$AGENT.md missing"
                 BROKEN_REFS=$((BROKEN_REFS + 1))
             fi
+        else
+            fail "B4: commands/$CMD no longer references $AGENT"
+            BROKEN_REFS=$((BROKEN_REFS + 1))
         fi
     fi
 done

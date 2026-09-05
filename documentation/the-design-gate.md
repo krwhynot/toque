@@ -131,6 +131,6 @@ Evidence validation establishes citation integrity, not semantic truth, requirem
 
 Toque's workflow rules are also not operating-system or deployment permissions. Use separate controls for production access.
 
-The quick-plan and quick-audit entrypoints invoke review, but their commands do not explicitly orchestrate the full Stage 2 canary/evidence sequence. Use `/toque:plan` when you need this gate, not merely an audit-shaped report.
+The quick-plan and quick-audit entrypoints run this same gate, from the same `<design_gate>` block of the Stage 2 file, and write the same `audit.md` and `evidence/` record beside the document they audit. What they lack is what surrounds the gate in `/toque:plan`: accepted intent, scope lock, human review, and the build that follows.
 
 [Stage workflow](the-plan-workflow.md) · [Evidence files and resume](plan-workspace.md) · [Formal methodology](../METHODOLOGY.md)

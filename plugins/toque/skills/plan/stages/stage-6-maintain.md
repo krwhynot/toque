@@ -14,7 +14,9 @@ as a new intent, through the same acceptance gate as the original.
 
 After release the plan folder is the record of what was intended, specified,
 planned, built, tested, and authorized. Nothing in it is rewritten after
-Stage 5; new facts go in new files.
+Stage 5; new facts go in new files. status.json and manifest.md are the
+bookkeeping exception: they keep recording release confirmation, linked
+incidents, and proposed intents.
 
 Incidents against this release are handled by `/toque:troubleshoot` with
 `--plan {plan-name}`, which writes its log under the plan's troubleshooting/
@@ -62,7 +64,7 @@ Record in status.json phases.maintain, updated on every linked incident:
 ```json
 "maintain": {
   "status": "steady_state",
-  "started": "{ISO, set when deploy completed}",
+  "started": "{ISO, = phases.deploy.released_at, set when the human confirms the release}",
   "incidents_linked": 0,
   "intents_proposed": [],
   "repeat_incidents": 0

@@ -79,7 +79,15 @@ Show:
 4. Design gate result (PASS / NOT PASS, kitchen translation, unmet criteria count)
    if audit.md exists
 5. Playbook metrics from the stage timestamps: intent -> spec, spec -> plan,
-   plan -> release elapsed; plan match from review.md if present
+   plan -> authorization (phases.deploy.authorized_at), and plan -> release
+   only when phases.deploy.released_at exists; plan match from review.md if
+   present. A Deploy stage with status `authorized` is shown as
+   "Authorized by {name}, {date}; release not yet confirmed", never as
+   Complete or Released. A Deploy stage that is `complete` with no
+   `released_at` was recorded before release confirmation existed, when
+   completion was written at authorization: print
+   "Plan -> release: {phases.deploy.completed - phases.build.started}
+   (recorded at authorization)" rather than pending.
 6. Recommended next action with reasoning
 
 ```
@@ -87,7 +95,7 @@ Plan: worldpay-canada
 Created: 2026-03-07
 Current Stage: 3 - Build (in_progress)
 Design gate: PASS — passed the pass (0 unmet criteria, canary found)
-Intent -> spec: 2d 4h   Spec -> plan: 1d 1h   Plan -> release: pending
+Intent -> spec: 2d 4h   Spec -> plan: 1d 1h   Plan -> authorization: pending   Plan -> release: pending
 
 | # | Stage | Status | Freshness | Artifact |
 |---|-------|--------|-----------|----------|

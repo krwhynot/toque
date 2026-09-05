@@ -99,7 +99,7 @@ See [Plan workspace](plan-workspace.md) for file contracts and recovery.
 /toque:quick-plan Add scheduled reports
 ```
 
-This produces `docs/specs/{name}.md`, runs an audit, and allows up to two revisions. Review any remaining findings. It does not create a full six-stage workspace. `--plan {name}` can link the draft to an existing plan; that link does not establish the full Stage 2 canary/evidence gate.
+This produces `docs/specs/{name}.md`, runs the same design gate as Stage 2, and allows up to two revisions. The gate record lands beside the spec in `docs/specs/{name}/`; commit it with the spec. Review any remaining findings. It does not create a full six-stage workspace, and a pass is not human review. `--plan {name}` can link the draft to an existing plan.
 
 Already have a plan? Try `/toque:quick-audit path/to/plan.md`.
 

@@ -2,6 +2,8 @@
 
 **Status: documentation corrected; qualified conformance, not an unconditional PASS.** Shipped instruction conflicts remain documented for owner decisions. No plugin behavior, existing historical plan, commit or remote state was changed.
 
+**Update, September 5, 2026:** the six owner decisions were made and applied; see [decisions.md](decisions.md). The audit records above describe the state before those changes.
+
 ## Frozen scope
 
 Repository `krwhynot/toque`; checkout HEAD `95c53af1663e4eee57bddb4f32579fefd136e4ef`. Published marketplace subdirectory `plugins/toque`, version `11.0.1`, pin `63a05063ed87b2a9168127ca715208c4cad74d5a`. The baseline included existing user edits to METHODOLOGY.md and 17 other tracked files plus untracked documentation/assets/CI work. Baseline hashes and original methodology were captured before editing; final preservation check is in verification.md. The package delta was seven pre-existing documentation/display files, not new gate handlers.
@@ -19,6 +21,7 @@ The audit reads active instructions and scripts first, invocation and tests seco
 | [industry-alignment.md](industry-alignment.md) | Per-method industry comparison, adaptations and gaps. |
 | [findings.md](findings.md) | Correction plan, applied changes, contradictions and owner decisions. |
 | [verification.md](verification.md) | Commands, results, links, anchors, negative controls and preservation. |
+| [decisions.md](decisions.md) | The six owner decisions (D1–D6), rationale, and where each change landed. Added 2026-09-05. |
 
 ## Counts
 

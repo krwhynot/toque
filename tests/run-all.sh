@@ -78,7 +78,8 @@ QUICK=false
 for arg in "$@"; do
     case $arg in
         --quick) QUICK=true ;;
-        [1-7]) RUN_LAYERS="$RUN_LAYERS $arg" ;;
+        [1-8]) RUN_LAYERS="$RUN_LAYERS $arg" ;;
+        *) echo "run-all.sh: unknown argument: $arg (expected --quick or a layer number 1-8)" >&2; exit 2 ;;
     esac
 done
 

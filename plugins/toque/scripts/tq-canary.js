@@ -54,8 +54,15 @@ const CLASSES = {
     describe: 'added an unverified HIGH-impact assumption',
     apply(text) {
       const lines = text.split('\n');
-      const i = lines.findIndex((l) => /^\|\s*1\s*\|/.test(l));
-      if (i === -1) return null;
+      // Anchor on the assumption register, not on the first numbered row in the
+      // document: a Risk Assessment table usually precedes it and also starts
+      // its rows with "| 1 |", and a row planted there is a malformed risk, not
+      // an unverified assumption, so LINT-08 has nothing to catch.
+      const header = lines.findIndex((l) => /^\|.*\bAssumption\b/i.test(l));
+      if (header === -1) return null;
+      const rel = lines.slice(header + 1).findIndex((l) => /^\|\s*1\s*\|/.test(l));
+      if (rel === -1) return null;
+      const i = header + 1 + rel;
       lines.splice(i + 1, 0,
         '| 2 | Peak write throughput fits the current connection pool | Writes stall at launch | unverified |');
       return lines.join('\n');

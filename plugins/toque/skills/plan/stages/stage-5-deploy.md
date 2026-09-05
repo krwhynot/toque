@@ -13,7 +13,8 @@ Gate: Named human release authorization. The skill never runs a deploy command.
 - Step A: Diff-versus-plan check (fresh subagent)
 - Step B: review.md
 - Step C: Release authorization (hard rule)
-- Step D: Final summary
+- Step D: Authorization summary
+- Step E: Release confirmation
 
 READINESS CHECK before entering this stage:
 - Test stage complete (status.json phases.test.status = complete, test_gate has no pending manual items)
@@ -127,32 +128,59 @@ Who is authorizing this release, and what is the decision? (name, Authorized | R
   The skill may run the VERIFICATION steps from the checklist after the human
   confirms each deployment step is done; it never runs the deployment steps.
 
-## Step D: Final summary
+## Step D: Authorization summary
 
-After authorization is recorded, update manifest.md with final status, decisions
-made, and lessons learned. Update status.json: phases.deploy.status -> complete,
-completed -> ISO timestamp. Then present:
+Authorization and release are two events, recorded separately. Authorization is
+the human's decision; release is the human's later report that the deployment
+happened. Neither is inferred from the other.
+
+After authorization is recorded, update manifest.md with the decision and
+lessons learned so far. Update status.json: phases.deploy.status -> authorized
+(NOT complete; the release has not happened yet). Then present:
 
 ```
-Plan: {name} - Released
+Plan: {name} - Release authorized
 
 Stages: 5/6 (Maintain is the steady state)
-Duration: {phases.plan.started} to {phases.deploy.completed}
+Duration so far: {phases.plan.started} to {phases.deploy.authorized_at}
 Plan match: {N} of {M} planned files changed, {K} unplanned
 Intent -> spec: {phases.design.started - phases.plan.started}
 Spec -> plan: {phases.build.started - phases.design.started}
-Plan -> release: {phases.deploy.completed - phases.build.started}
+Plan -> authorization: {phases.deploy.authorized_at - phases.build.started}
+Plan -> release: pending (recorded when you confirm the release)
 Tickets: {done}/{total}
 Authorized by: {name}, {date}
 
 Key decisions: [from spec.md ## Gotchas and change records]
 Change records: {count} (see changes/ folder)
 Departures from plan: {count} (see plan.md)
-What shipped: [summary]
+What is ready to ship: [summary]
 What's deferred: [if anything]
 ```
 
 Elapsed values are computed from status.json ISO timestamps; print "n/a" for
 any stage missing a timestamp rather than guessing.
 
-Proceed to Stage 6.
+## Step E: Release confirmation
+
+The human performs the release. When they report that it is done, in this
+session or on a later `/toque:plan {name}` resume, ask for the name of the
+person confirming and the release time, then record:
+
+- status.json phases.deploy: released_by (name), released_at (ISO),
+  status -> complete, completed -> the same ISO as released_at
+- status.json phases.maintain: status -> steady_state, started -> released_at;
+  current_phase -> maintain (this is the stage transition; authorization was
+  not one)
+- review.md ## Release authorization: one line "Released by {name} on {date}"
+- manifest.md: the review.md row reads Released
+
+Then present the same summary with the title `Plan: {name} - Released` and
+`Plan -> release: {phases.deploy.released_at - phases.build.started}`.
+
+Until that confirmation arrives, the plan stays in Stage 5 with status
+`authorized`. A plan authorized but never confirmed is reported that way by
+/toque:plan-status; it is not rounded up to released. If the release was
+abandoned, record the decision as Deferred or Rejected in Step C instead.
+
+Proceed to Stage 6 after the release is confirmed.

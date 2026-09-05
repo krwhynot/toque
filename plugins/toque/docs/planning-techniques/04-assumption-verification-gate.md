@@ -117,7 +117,7 @@ A waiver is not a bypass. It is explicit, documented risk acceptance by a named 
 
 ## Status Before Implementation
 
-Our Assumption Register (Audit Output B) lists assumptions with impact-if-false and verification methods. LINT-08 checks "No unverified HIGH-impact assumption exists." But LINT-08 is advisory only -- it produces a PASS/FAIL but does not actually BLOCK Phase 6 Build entry. A plan can have 5 unverified HIGH-impact assumptions and still proceed to Build. The gap-checked boolean requires LINT-08 to pass, but gap-checked itself is informational, not a hard gate.
+Our Assumption Register (Audit Output B) lists assumptions with impact-if-false and verification methods. LINT-08 checks "No unverified or falsified HIGH-impact assumption exists." But LINT-08 is advisory only -- it produces a PASS/FAIL but does not actually BLOCK Phase 6 Build entry. A plan can have 5 unverified HIGH-impact assumptions and still proceed to Build. The gap-checked boolean requires LINT-08 to pass, but gap-checked itself is informational, not a hard gate.
 
 This means a plan can enter Build with assumptions like:
 - "triPOS SDK supports Canada" (unverified, blocks entire plan if false)

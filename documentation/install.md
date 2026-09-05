@@ -66,7 +66,7 @@ Installing adds capabilities to Claude Code; nothing is written into your projec
 | Your Claude Code settings for the chosen scope (`user`, `project`, or `local`) | The enabled-plugin entry that makes `/toque:*` available | At install; `--scope project` writes to the repository's shared settings |
 | Every session in a project | Three informational hooks run on SessionStart, SubagentStop, and PreCompact; they read `docs/plans/` and never create files | Automatically, after install and reload |
 | `docs/plans/YYYY-MM-DD-{name}/` in your project | The plan workspace (`intent.md`, `spec.md`, `audit.md`, `evidence/`, `plan.md`, `review.md`, …) | Only when you run `/toque:plan`, `/toque:quick-cleanup`, or a plan-linked command |
-| `docs/specs/{name}.md` | A standalone spec | Only when you run `/toque:quick-plan` |
+| `docs/specs/{name}.md` and `docs/specs/{name}/` | A standalone spec and its gate record (`audit.md`, `evidence/`, `gate.json`) | Only when you run `/toque:quick-plan`; `/toque:quick-audit` writes the same gate record beside whatever file it audits |
 | `docs/troubleshooting/` | Standalone troubleshooting logs and `knowledge-base.md` | Only when you run `/toque:troubleshoot` without a plan |
 | `{plan-name}-export.zip` at the project root | A portable plan package | Only when you run `/toque:plan-export` |
 | `docs/audit/` | Nothing. Toque reads analysis another tool left there; it does not write it | Never written by Toque |

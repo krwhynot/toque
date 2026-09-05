@@ -5,12 +5,22 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Task
 ---
 
 <plan_awareness>
+The spec is written to docs/specs/{name}.md. Its gate record lives beside it in
+the gate folder docs/specs/{name}/: audit.md, evidence/ (committed with the
+spec) and .canary/ (scratch, never committed).
+
 If $ARGUMENTS contains --plan {name}:
-  1. Write spec to docs/specs/{name}.md
-  2. If docs/plans/*-{name}/ exists: update its manifest.md and status.json
+  1. Write spec to docs/specs/{name}.md; the gate folder is still docs/specs/{name}/
+  2. If docs/plans/*-{name}/ exists: add a row for the spec and its audit.md to
+     that plan's manifest.md and add both paths to that status.json's
+     `documents` object (the object every stage writes linked documents to).
+     Do NOT write into the plan folder's own audit.md or evidence/; those
+     belong to the plan's Stage 2 run of the gate against its spec.md, and the
+     auditor runs in Lite mode against this spec, not the plan's.
   3. If docs/plans/*-{name}/ does NOT exist: do NOT create a plan folder.
-     Quick-plan is a spec generator, not a plan workflow. The spec is the
-     only output. If the user wants a full plan folder, use /toque:plan.
+     Quick-plan is a spec generator, not a plan workflow. The spec and its gate
+     folder are the only output. If the user wants a full plan folder, use
+     /toque:plan.
   4. Note in output: "Spec linked to plan: {name}" or "Spec created standalone"
 
 If no --plan flag, use the default docs/specs/ location.
@@ -59,58 +69,54 @@ Spawn the plan-scaffolder agent with:
 - Any audit data found in Step 2
 - Clarifications from Step 1 (if any)
 
-## Step 4: Auto-Audit (Evaluator)
+## Step 4: Design gate (the same gate as /toque:plan Stage 2)
 
-After the scaffolder completes, automatically run the plan-auditor agent against
-the generated plan. Do NOT ask the user to run /toque:quick-audit separately.
+After the scaffolder completes, run the design gate. Do NOT ask the user to run
+/toque:quick-audit separately, and do NOT spawn the auditor on your own terms.
 
-Spawn the plan-auditor agent with:
-- The generated plan at docs/specs/[plan-name].md
-- The codebase root path
-- Instruction: produce structured findings — one verdict per criterion (MET,
-  UNMET or N_A) with evidence, never a score
+This is the same gate as `/toque:plan` Stage 2 (Design), not a lighter one. It
+has to be: a command that accepted a plan on a review the model shaped for
+itself would be a way around the gate rather than a lighter version of it, and
+the way around is the one that gets used. So the gate is defined once, in the
+stage file, and this command runs that definition:
 
-Record the audit results:
-- Findings by severity with evidence, reported only — they do not gate anything
-- Gap-checked status (YES/NO)
-- Specific gaps found, each named by criterion id with a location
+Read `${CLAUDE_PLUGIN_ROOT}/skills/plan/stages/stage-2-design.md` and execute
+its `<design_gate>` block, verbatim, with these bindings:
 
-## Step 5: Revision Loop (Optimizer)
+  {doc}        docs/specs/{name}.md
+  {gate_dir}   docs/specs/{name}/
+  {generator}  the plan-scaffolder agent
 
-This uses the same gate as `/toque:plan` Stage 2 (Design). It has to: a command that
-accepted a plan on a score the model gave itself would be a way around the gate
-rather than a lighter version of it, and the way around is the one that gets used.
+The block spawns the plan-auditor on a canary-mutated working copy, checks that
+the planted defect was found, validates every evidence record mechanically,
+applies the lint registry and the gap outputs, and derives PASS or NOT PASS
+from its gate expression. Nothing in this command restates any of that; if the
+block and this description ever disagree, the block wins.
 
-If every applicable criterion is MET or N_A after validation, and gap-checked = YES:
-  -> Skip revision, proceed to Step 6
+## Step 5: Revision loop
 
-Otherwise:
-  -> Feed audit findings back to the plan-scaffolder for targeted revision
-  -> The scaffolder receives one line per unmet criterion, in the form
-     "{criterion_id} UNMET: {what is missing}. Location: {file}:{line}."
-     Never the rubric, the totals, the bands, or how close the plan came
-  -> The scaffolder revises ONLY the failing sections (not the entire plan)
-  -> Re-run the plan-auditor on the revised plan, as a FRESH instance
-
-Maximum 2 revision iterations. After 2 iterations, accept the plan at its
-current quality with audit findings attached.
-
-Track iteration history in the plan file:
-```markdown
-## Revision History
-| Version | Verdict | Gap-Checked | Gaps Found | Action |
-|---------|-------|-------------|------------|--------|
-| v1      | NOT PASS | NO          | 7          | Revised sections 4, 5, 7 |
-| v2      | PASS     | YES         | 0          | Accepted |
-```
+The revision loop is part of the block: on NOT PASS it sends the
+plan-scaffolder one line per unmet criterion (id, what is missing, location),
+never the rubric or the totals, and re-runs the auditor as a FRESH instance on
+the revised spec. Maximum 2 revision iterations. After 2 iterations, deliver
+the plan at its current quality with the unmet criteria named; a plan does not
+"usably pass with known gaps". The block writes the revision history into
+docs/specs/{name}/audit.md after the loop; do not keep a second copy in the
+spec.
 
 ## Step 6: Present Results
 
 After the loop completes:
 1. Show the plan summary (problem, phases, timeline, key risks)
-2. Show the final gate verdict (PASS / NOT PASS), the MET/UNMET/N_A counts, and whether gap-checked
+2. Show the final gate result (`PASS` — passed the pass, or `NOT PASS` — back to
+   the kitchen), the MET/UNMET/N_A counts, canary found, missed, not applicable
+   or no-isolation, evidence validation exit code, and whether gap-checked
 3. If revisions occurred, note: "Plan was revised {N} time(s). {X} criteria moved from UNMET to MET."
-4. Show the Revision History table
+4. Show the Revision History table from docs/specs/{name}/audit.md
 5. Note evidence basis distribution (should be <40% Tier C)
-6. Note: "This plan has been auto-audited. Review with your team before presenting."
+6. Point at the gate record: docs/specs/{name}/audit.md, evidence/ and
+   gate.json. Commit them with the spec; an audit whose evidence is not
+   committed did not happen. The .canary/ scratch is already deleted.
+7. Note: "This spec passed the design gate; it has not been reviewed by a person
+   and nothing here authorizes a build or a release."
 </workflow>

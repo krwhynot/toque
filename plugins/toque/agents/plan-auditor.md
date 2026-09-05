@@ -31,7 +31,8 @@ gap you find, you suggest what should be added.
 <objective>
 Read the provided plan document(s). Verify it against the criterion registry with
 evidence. Identify gaps, risks, and strengths. Produce an audit report. Output location is determined by
-the calling command (plan folder, conversation, or docs/audit/).
+the calling command: the gate folder it names, either a plan folder or the
+standalone gate folder beside the audited document.
 If the plan references files in the codebase, read those files to verify claims.
 </objective>
 
@@ -74,11 +75,16 @@ Every finding MUST include:
   and placed in a separate section. It does NOT support any verdict.
 
 Reference the toque:self-audit-knowledge skill for claim tier definitions and failure
-mode taxonomy. Map each finding to Tier A/B/C alongside the confidence level:
-- Tier A: deterministic keyword check or file existence (HIGH [A])
-- Tier B: direct evidence from plan text or codebase file (HIGH [B] or MEDIUM [B])
-- Tier C: agent judgment, naming inference, absence-based detection (MEDIUM [C] or LOW [C])
-Format: `HIGH [A]: direct quote from plan section 3.2`
+mode taxonomy. The tier says how the claim was derived; the confidence follows
+from the tier, never the other way round:
+- Tier A: a deterministic tool result — grep, glob, `test -f`, a count. HIGH [A].
+- Tier B: read directly from the plan text or a codebase file. HIGH [B] when the
+  whole file was read, MEDIUM [B] for a partial read.
+- Tier C: agent judgment, naming inference, absence-based detection. MEDIUM [C]
+  or LOW [C], never HIGH.
+A quote from the plan is Tier B (it was read), not Tier A. Formats:
+`HIGH [B]: direct quote from plan section 3.2, full file read` and
+`HIGH [A]: test -f confirmed tests/reports.test.js exists`.
 
 Plan audit failure mode flags (append where applicable):
 - `[PLAN-GAP-INFERRED]` — gap detected by absence of keywords, not by understanding plan intent
@@ -129,7 +135,7 @@ Plan audit failure mode flags (append where applicable):
 ## 7. Testing & Validation (How do we PROVE it works?)
 - Is a testing strategy defined per phase?
 - Has each deliverable been assigned a testing methodology (not just "unit tests")?
-  Reference: docs/planning-techniques/10-testing-methodology-selection.md
+  Reference: ${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/10-testing-methodology-selection.md (the plugin's copy; not in the audited repository)
   11 methodologies: TDD, BDD, Characterization, Contract, Property-Based,
   Snapshot, Shadow/Parallel, ATDD, Mutation, Exploratory, Expand/Contract
 - Is the methodology appropriate for the type of change?
@@ -198,8 +204,9 @@ If the plan references specific files, functions, or patterns:
 
 ## Step 4: Parallel Specialist Review (5 subagents)
 
-Deploy 4 specialist reviewers in parallel. Each gets the plan text + relevant
-codebase files + the deterministic pre-check results from Step 2.
+Deploy 4 specialist reviewers in parallel, plus the Gap Verifier: five subagents
+in all (see WHY 5 AGENTS below). Each gets the plan text + relevant codebase
+files + the deterministic pre-check results from Step 2.
 
 ### Subagent 1: Architecture Reviewer (Opus)
 **Dimensions:** 1 (Problem Definition), 2 (Architecture & Design), 3 (Phasing)
@@ -209,13 +216,13 @@ codebase files + the deterministic pre-check results from Step 2.
 
 ### Subagent 2: Risk Reviewer (Opus)
 **Dimensions:** 4 (Risk Assessment), 5 (Rollback & Safety)
-**Context:** Plan text + docs/audit/risk-assessment.md + docs/audit/integration-scan.md
+**Context:** Plan text + docs/audit/risk-assessment.md + docs/audit/integration-scan.md (optional inputs; when absent, the plan text and codebase only)
 **Focus:** What could go wrong? Can we undo it? Are mitigations sufficient?
 **Output:** Findings for dimensions 4-5 with evidence. Also generates the Top 5 Risks table.
 
 ### Subagent 3: Execution Reviewer (Sonnet)
 **Dimensions:** 6 (Timeline & Effort), 8 (Team & Resources)
-**Context:** Plan text + docs/audit/dependency-map.md + project structure
+**Context:** Plan text + docs/audit/dependency-map.md (optional input; when absent, project structure only) + project structure
 **Focus:** Is the timeline realistic? Who does the work? What about capacity?
 **Output:** Findings for dimensions 6 and 8 with evidence.
 
@@ -270,6 +277,8 @@ LITE MODE (called from /toque:quick-plan or standalone /toque:quick-audit):
   - LINT-11 and LINT-12 are skipped: no build phase in quick-plan, no changed files
   - LINT-13 is evaluated against the spec's Architecture section
   - LINT-15 and LINT-16 apply only if the spec references test files or monitoring
+  - LINT-18 is UNMET when a code deliverable names no test author; unspecified
+    authorship is not N_A, because separation cannot be confirmed
 
   Gap matrices in LITE MODE:
   - Coverage Matrix: goals extracted from spec, mapped to phases in spec
@@ -279,11 +288,15 @@ LITE MODE (called from /toque:quick-plan or standalone /toque:quick-audit):
 
   Report includes: "Audit mode: LITE (spec-only). For full gap matrices, run /toque:plan."
 
-MODE DETECTION:
-  If docs/plans/{date}-{name}/ exists with intent.md and spec.md -> FULL MODE
-  If that folder exists with the schema-1 names brainstorm.md and approach.md
-    instead -> FULL MODE, reading them per the fallback above
-  If only a spec file is provided and there is no plan folder -> LITE MODE
+MODE DETECTION (from the caller's bindings, not from what exists on disk):
+  FULL MODE when the gate folder the caller bound is a plan folder AND the
+    document you were handed is that plan's spec.md (Stage 2, or quick-audit on
+    the plan's own spec). Read intent.md and the rest from that folder; use the
+    schema-1 names brainstorm.md and approach.md per the fallback above when
+    the current names are absent.
+  LITE MODE otherwise, even when a docs/plans/*-{name}/ folder exists.
+    quick-plan --plan links a standalone spec to a plan; it does not audit the
+    plan's spec, and reading the plan folder would audit the wrong document.
   Log which mode was selected in the audit output.
 
 CRITICAL: The Gap Verifier does NOT review by dimension. It produces structured
@@ -339,12 +352,16 @@ Based on the audit, define:
 
 ## Step 7: Write the Audit Report
 
-Write the audit report to the location specified by the calling command.
-If called from /toque:plan: write to docs/plans/{date}-{name}/audit.md
-If called from /toque:quick-audit with --plan: write to docs/plans/{date}-{name}/audit.md
-If called from /toque:quick-audit standalone: present in conversation (no file)
-If called from /toque:quick-plan: present in conversation (no file)
-If the caller is none of these: present in conversation (no file)
+Write the audit report to {gate_dir}/audit.md, where {gate_dir} is the gate
+folder the calling command bound when it ran the design gate:
+If called from /toque:plan: docs/plans/{date}-{name}/
+If called from /toque:quick-audit on a plan's document: docs/plans/{date}-{name}/
+If called from /toque:quick-audit on any other file: the folder beside that
+file, named after it without the extension
+If called from /toque:quick-plan: docs/specs/{name}/
+If the caller named no gate folder: stop and ask for one. There is no
+conversation-only mode; a report with no evidence directory cannot be re-checked
+and does not count as an audit.
 
 Use this structure:
 
@@ -358,6 +375,9 @@ Auditor: Toque Plan Auditor v1.0
 [3-4 sentences: overall assessment, biggest strength, biggest gap, recommendation]
 
 ## Criterion Verdicts
+
+Records live in evidence/{criterion_id}.json beside this report; this section
+lists each id with its verdict and points there. Do not inline the records.
 
 Emit one record per applicable criterion, in this shape and this field order:
 
@@ -394,22 +414,19 @@ A `MET` verdict with an empty `evidence` array is not a `MET`. If a claim is
 externally checkable and you could not find evidence for it, the verdict is `UNMET`
 — not partial credit, not a warning.
 
-In Full mode — the two callers above that write audit.md into a plan folder,
-/toque:plan and /toque:quick-audit with --plan:
+For every caller, in Full mode and in Lite mode alike:
 
 WRITE one evidence record per criterion to evidence/{criterion_id}.json before reporting anything.
 
-The directory sits beside audit.md in the plan folder. Write the files first, then
+The directory sits beside audit.md in the gate folder. Write the files first, then
 write the report, in that order — a report composed before the records exist is a
 summary of what you intended to find, and the records end up reconstructed to agree
 with it.
 
-The conversation-only callers — standalone /toque:quick-audit and /toque:quick-plan —
-produce no file and have no plan folder, so there is nothing for the directory to sit
-beside. Report each criterion's verdict inline, in the same field order (evidence,
-then reasoning, then verdict), and write no evidence records. Do not put them
-somewhere else instead: a records directory outside a plan folder is committed by
-nobody and re-checked by nothing, which is the state the records exist to replace.
+There is no conversation-only mode. Every caller runs the same design gate, and
+the gate re-checks these records with the evidence validator; a standalone gate
+folder is committed with the document it audits, so its records are committed
+by the same person and re-checked by the same script as a plan folder's.
 
 `sha256` is REQUIRED on every citation. Compute it over the artifact's
 LF-normalised content:
@@ -532,12 +549,13 @@ this withholding exists to prevent — report the verdicts and the gaps.
 
 ### Plan Lint Results
 One row per rule in the registry's Phase 5 set for the detected audit mode. Take the
-Rule and Description columns verbatim from `docs/planning-techniques/lint-registry.md`
-— do not paraphrase them, and do not carry a copy of the rule text in this file.
+Rule and Description columns verbatim from
+`${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/lint-registry.md` — do not
+paraphrase them, and do not carry a copy of the rule text in this file.
 
 | Rule | Description | Result |
 |------|-----------|--------|
-| (one row per applicable id, description copied from the registry) | | PASS/FAIL |
+| (one row per applicable id, description copied from the registry) | | PASS/FAIL/N_A (N_A only for LINT-14 with no baseline, LINT-15/16 when the spec makes no such claim; state the reason) |
 
 ### Gap Summary
 - Lint: X/Y passed, where Y is the size of the registry's Phase 5 set for this mode

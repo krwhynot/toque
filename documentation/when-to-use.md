@@ -12,8 +12,8 @@ Use enough preparation for the risk. Not every change needs the whole brigade.
 | --- | --- | --- |
 | Deliver a feature, migration, integration, or substantial refactor | `/toque:plan {name}` | Six-stage workflow with recorded approvals |
 | Clarify an idea without starting design or build | `/toque:plan intent {name}` | Plan stage only; stops after intent work |
-| Get a smaller technical draft | `/toque:quick-plan {objective}` | Spec under `docs/specs/`, audit, up to two revisions |
-| Challenge an existing plan | `/toque:quick-audit {path}` | Criterion verdicts and findings; not production approval |
+| Get a smaller technical draft | `/toque:quick-plan {objective}` | Spec under `docs/specs/`, the design gate, up to two revisions |
+| Challenge an existing plan | `/toque:quick-audit {path}` | The design gate against one file: verdicts, canary, evidence check; not production approval |
 | Find where work stopped | `/toque:plan-status` | Plan status and next-step context |
 | Turn messy source documents into usable references | `/toque:quick-cleanup {folder} {topic}` | Cleaned intake files in a plan homebase |
 | Hand a plan to another developer | `/toque:plan-export {name}` | Portable zip for a compatible codebase and vanilla Claude Code |
@@ -35,7 +35,7 @@ Start with the [quickstart](quickstart.md). Read the [workflow](the-plan-workflo
 
 A quick plan is useful for exploring an approach. A quick audit is useful when a plan already exists. Cleanup can be the entire task; creating a homebase does not mean you have agreed to build anything.
 
-Quick-plan runs an audit/revision loop. Do not confuse that with a full design-gate pass: its command does not explicitly run the complete canary/evidence orchestration used by Stage 2. Remaining findings may be delivered for you to resolve.
+Quick-plan and quick-audit run the same design gate as Stage 2, from the same block of the stage file: canary, evidence validation, lint registry, gap outputs, gate expression. What they skip is everything around the gate: no intent, no research, no scope lock, no human review, no build. Remaining findings may be delivered for you to resolve.
 
 Export prepares a package; it does not establish that another codebase is identical or that secret redaction is infallible. Inspect the archive before sharing it.
 

@@ -44,7 +44,7 @@ Verify inside a Claude Code session:
 | Command | Description |
 | ------- | ----------- |
 | `/toque:plan` | Plan, Design, Build, Test, Deploy, Maintain. Recorded human approvals; Maintain stays open |
-| `/toque:quick-plan` | Lightweight plan for small changes |
+| `/toque:quick-plan` | Spec for a small change, run through the same design gate as Stage 2 |
 | `/toque:plan-status` | Check plan progress and stage status |
 | `/toque:plan-export` | Export a plan as a portable package |
 
@@ -52,7 +52,7 @@ Verify inside a Claude Code session:
 
 | Command | Description |
 | ------- | ----------- |
-| `/toque:quick-audit` | Audit any technical plan or spec through 8 review dimensions with evidence |
+| `/toque:quick-audit` | Run the design gate against any technical plan or spec: verdicts with evidence, canary, evidence validation |
 
 ### Documentation and Support
 
@@ -76,7 +76,7 @@ pit feedback. Each stage below names the actual artifact and approval it needs.
 | 2. Design | `spec.md`, `audit.md`, `evidence/` | Scope lock, then the design gate |
 | 3. Build | `plan.md`, code, `impact-review.md` | `plan.md` approved before code; impact review confirmed |
 | 4. Test | `test-plan.md`, results | Automated tier passes; every manual check confirmed by a human |
-| 5. Deploy | `review.md` with a release checklist | Release authorization. The agent never crosses the production gate |
+| 5. Deploy | `review.md` with a release checklist | Release authorization, then a separate human confirmation that the release happened. The agent never crosses the production gate |
 | 6. Maintain | A new `intent.md` from incidents | Intent accepted or declined |
 
 ## The Design Gate
@@ -143,7 +143,9 @@ pass without them.
 | Audit evidence | `docs/plans/{date}-{name}/evidence/` | Yes |
 | Canary working copy | `docs/plans/{date}-{name}/.canary/` | No |
 | Troubleshooting logs, postmortems, knowledge base | `docs/troubleshooting/` or the plan's `troubleshooting/` | Yes |
-| Specifications and quick plans | `docs/specs/` | Yes |
+| Specifications and quick plans | `docs/specs/{name}.md` | Yes |
+| Gate record for a standalone spec or audited file | `{dir}/{name}/audit.md`, `evidence/`, `gate.json` beside the document (`docs/specs/{name}/` for a quick-plan spec) | Yes |
+| Canary working copy for a standalone gate run | `{dir}/{name}/.canary/`, deleted by the gate once used | No |
 | ADRs, BRDs, PRDs | `docs/adr/`, `docs/brd/`, `docs/prd/` | Yes |
 | Runbooks | `docs/runbooks/` or the plan folder | Yes |
 | Plan export | `{plan-name}-export.zip` at project root | No |
@@ -156,7 +158,7 @@ pass without them.
 - **5 skills** - plan and troubleshoot (each a router plus one file per stage or phase), documentation, MCP research, self-audit knowledge
 - **7 doc templates** - ADR, BRD, PRD, README, runbook, release notes, spec, each with a fill-in document skeleton
 - **3 hook handlers** - `scripts/tq-session-start.js`, `tq-subagent-stop.js`, `tq-pre-compact.js`
-- **2 design-gate tools** - `scripts/tq-canary.js` and `tq-evidence-validate.js`, invoked by Stage 2 of `/toque:plan`, not by hooks
+- **2 design-gate tools** - `scripts/tq-canary.js` and `tq-evidence-validate.js`, run by the Stage 2 `<design_gate>` block, which `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit` all execute; never by hooks
 
 ## Version History
 

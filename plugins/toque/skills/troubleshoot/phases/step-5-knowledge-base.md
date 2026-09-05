@@ -175,10 +175,15 @@ alone. "3 bugs missed by unit-tests:not-present" is actionable.
 
 ### Detect Recurrence (Correlation-Driven)
 
-When a new KB entry has a HIGH correlation (>= 50) with a past entry:
+When a new KB entry has a HIGH correlation (>= 50) with a past entry AND Phase 1
+confirmed the same root cause:
 
 1. Increment the `Recurrence count` on both the new and matched entries.
 2. Add bidirectional links in `Related incidents` on both entries.
+
+A HIGH match whose Phase 1 found a different cause gets the `Related incidents`
+link only; leave `Recurrence count` unchanged. Correlation says the symptoms
+rhyme; the count records that the same cause came back.
 3. If recurrence count reaches 3+:
 
 "RECURRENCE ALERT: This is the {N}th occurrence of this pattern:

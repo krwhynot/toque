@@ -139,8 +139,9 @@ Write docs/specs/[plan-name].md with this structure:
 **Exit Criteria:** [What must be true to finish]
 **Deliverables:** [Concrete outputs]
 **Estimated Effort:** [X days/weeks, with basis for estimate]
-**Tests Required:** [Specific tests to write]
-**Rollback:** [How to undo if needed]
+**Tests Required:** [Specific tests to write, naming the test file path, e.g. tests/reports.test.js]
+Rollback: [How to undo if needed — a line that starts with "Rollback:", not bold; the design gate keys on this shape]
+Go/No-Go: [The measurable condition that lets the next phase start — a line that starts with "Go/No-Go:"]
 
 ### Phase 2: [Name] (MEDIUM risk)
 [same structure]
@@ -153,6 +154,12 @@ Write docs/specs/[plan-name].md with this structure:
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|-----------|--------|-----------|
 [rows]
+
+## Assumption Register
+
+| # | Assumption | Impact If False | How to Verify | By When | Owner | Status |
+|---|-----------|----------------|---------------|---------|-------|--------|
+[one row per assumption the plan rests on; Impact is HIGH, MEDIUM or LOW; Status starts unverified. An unverified HIGH-impact assumption blocks the design gate.]
 
 ## Rollback Strategy
 **Feature Flag:** [Name and location]
@@ -176,7 +183,7 @@ Write docs/specs/[plan-name].md with this structure:
 |-------|------------|----------|-------|----------------|
 [rows per phase - select methodology based on deliverable type]
 
-**Methodology Selection** (reference: docs/planning-techniques/10-testing-methodology-selection.md):
+**Methodology Selection** (reference: ${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/10-testing-methodology-selection.md, the plugin's copy):
 
 For each deliverable, select methodology based on the type of change:
 - New code with clear spec -> TDD
@@ -217,9 +224,39 @@ For each deliverable, select methodology based on the type of change:
 [conditions that would stop the project]
 
 ## Dependencies
-**Internal:** [Other teams, systems, approvals needed]
-**External:** [APIs, vendors, licenses]
-**Environment:** [Staging, test DB, CI/CD changes]
+
+| Dependency | Owner | Status |
+| --- | --- | --- |
+[one row per dependency: internal (other teams, systems, approvals), external (APIs, vendors, licenses), environment (staging, test DB, CI/CD). Owner is the team that owns it, e.g. "platform team"; the design gate keys on an owned row.]
+
+## Evidence
+Created: [date] (quick-plan)
+
+> This section explains WHY the tools, methods, and patterns in this plan
+> are industry-proven choices. Each entry defines what it is, who uses it
+> at scale, and why it works — then briefly connects it to this plan.
+
+### Dependencies & Tools
+
+#### [Package/Tool Name] [version]
+**Impact:** [HIGH|MEDIUM|LOW] — [one-line rationale]
+**What it is:** [1-2 sentence definition]
+**Who uses it at scale:** [companies and outcomes]
+**Why it works:** [the engineering reason]
+**Reference:** [title](url)
+**Connection to this plan:** [why this choice serves which goal]
+
+### Methods & Patterns
+
+#### [Method/Pattern Name]
+**Impact:** [HIGH|MEDIUM|LOW] — [one-line rationale]
+**What it is:** [1-2 sentence definition]
+**Origin:** [who created or popularized it]
+**Why it works:** [the engineering principle and the tradeoff it makes explicit]
+**Reference:** [title](url)
+**Connection to this plan:** [which phase or decision it grounds]
+
+[One entry per new dependency, pattern, or practice the plan introduces. Mark a reference you could not verify [URL VERIFICATION DEFERRED]. The design gate's LINT-20 requires this section with these fields; LINT-19 blocks on a HIGH-impact entry marked [SOURCE NEEDED], [LINK DEAD], or [UNVERIFIED].]
 
 ## Open Questions
 [Things that need answers before Phase 1 starts]
