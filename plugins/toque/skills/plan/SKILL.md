@@ -211,6 +211,14 @@ once a release is confirmed, plan-to-release elapsed.
 either schema. Write the initial manifest.md from the template above with every
 row Pending.
 
+The design gate adds three top-level fields the template does not seed:
+`baseline` (the comparison record regression detection reads), `history[]` (one
+baseline per gate run), and `holistic_pass` (`runs`, `candidates_filed[]`, and
+`candidates[]` holding the rubric-free pass's full entries — the only copy of those
+findings; the plugin's own lint-candidates.md is owner-curated and project-agnostic). Hooks and plan-status read only `current_phase` and `phases`;
+every other field is tolerated and ignored by them, so adding one needs no schema
+bump.
+
 UPDATE MANIFEST AT EVERY STAGE: when any stage creates or links a document,
 update both manifest.md (status and date in the row) and status.json (documents
 object, stage status, timestamps).

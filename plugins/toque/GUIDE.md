@@ -288,7 +288,7 @@ The [workspace reference](https://github.com/krwhynot/toque/blob/main/documentat
 | Quick plans / standalone specs | `docs/specs/` |
 | Standalone troubleshooting logs | `docs/troubleshooting/YYYY-MM-DD-{slug}.md` |
 | Shared troubleshooting knowledge base | `docs/troubleshooting/knowledge-base.md` |
-| Proposed lint rules | `docs/planning-techniques/lint-candidates.md` |
+| Proposed lint rules | `holistic_pass.candidates[]` in the gate record (status.json or gate.json), committed with the plan. The plugin's own `docs/planning-techniques/lint-candidates.md` is owner-curated and project-agnostic — the pass never writes it — and never a lint-candidates.md in the audited project |
 | Export archive | `{plan-name}-export.zip` at project root |
 
 Planning records and evidence are intended for version control. Canary scratch and export archives are not.

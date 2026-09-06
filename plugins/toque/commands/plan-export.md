@@ -159,7 +159,7 @@ match, this plan was likely exported for a DIFFERENT codebase.
 | Framework | {.NET 4.6.2 or React 18 or Django 4 etc.} | [CHECK] |
 | Project count | {N projects/packages} | [CHECK] |
 | Key directory | {src/ or POS/ or app/ etc.} | [CHECK] |
-| Key unique file | {a file that only THIS codebase would have, e.g. HungerRush.sln or crispy-crm/package.json} | [CHECK] |
+| Key unique file | {a file that only THIS codebase would have — the solution file named for the product, or a package path unique to this monorepo} | [CHECK] |
 
 VERIFICATION RULE:
 - If 0 of 6 fingerprint markers match -> WRONG CODEBASE. Stop and warn.

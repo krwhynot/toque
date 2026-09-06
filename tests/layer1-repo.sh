@@ -843,8 +843,8 @@ HOL_LINE='RUN one additional judge with no rubric, no criterion list, and no dim
 grep -qxF "$HOL_LINE" plugins/toque/skills/plan/stages/stage-2-design.md \
   || { fail "PH5-050: plugins/toque/skills/plan/stages/stage-2-design.md does not run a rubric-free pass — nothing checks the criteria for completeness"; hol_bad=1; }
 [ -f plugins/toque/docs/planning-techniques/lint-candidates.md ] \
-  || { fail "PH5-050: plugins/toque/docs/planning-techniques/lint-candidates.md missing — unmapped findings have nowhere to land"; hol_bad=1; }
-[ "$hol_bad" -eq 0 ] && pass "PH5-050: a rubric-free pass runs and its unmapped findings land in lint-candidates.md"
+  || { fail "PH5-050: plugins/toque/docs/planning-techniques/lint-candidates.md missing — promoted rules have nowhere to land"; hol_bad=1; }
+[ "$hol_bad" -eq 0 ] && pass "PH5-050: a rubric-free pass runs, records to the gate record, and an owner-curated lint-candidates.md exists for promoted rules"
 
 # ===========================================================================
 # PH5-051 / row A15 (inverted in 8.0.0, WIDENED in 11.0.0): no scoring

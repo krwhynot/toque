@@ -30,7 +30,7 @@ Ask the user for:
    - If version tag exists, default to commits since that tag
 
 3. **Project/Product Name** (optional)
-   - Example: "POSIT", "Crispy CRM", "API v2"
+   - Example: "Billing Service", "Admin Console", "API v2"
    - Default to repo name if not provided
 
 4. **Audience** (required)

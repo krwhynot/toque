@@ -1015,14 +1015,50 @@ criterion files. If no fresh instance can be spawned, skip this pass and record
 it as not run; a judge that has already read the criteria is not rubric-free.
 
 Map its findings against the criterion set afterwards. A finding that maps to an
-existing criterion is discarded — the gate already covers it. A finding that maps
-to NOTHING is appended to
-`${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/lint-candidates.md` with the plan
-name and date, as a candidate rule for owner review, when that file is writable
-from this session; otherwise it is recorded under `holistic_pass.candidates` in
-the gate record (status.json or gate.json), never in the audited repository. A
-candidate already listed for this document — in lint-candidates.md or in an
-earlier gate record — is not appended again.
+existing criterion is discarded — the gate already covers it.
+
+Cluster the findings that map to NOTHING by their underlying angle, not by shared
+wording, and name that angle in every entry it produced. Findings resting on one
+assumption are one gap in the rubric seen several times, and the owner curating
+them needs to see that before drafting rules against each symptom separately.
+
+Do NOT collapse a cluster into one candidate. Each finding that names a distinct,
+checkable condition stays its own candidate with its own draft rule; the angle is
+recorded alongside, not instead. A single rule generalised over a whole cluster is
+how a vacuous rule gets written — "the mitigation must work" has no procedure that
+decides it, while "the mitigation's signal is not derived from the same filtered
+source as the failure" does. Merge two candidates only when the same condition
+would be checked the same way.
+
+Every candidate is recorded in full under `holistic_pass.candidates[]` in the
+gate record (status.json for a plan folder, gate.json for a standalone document),
+and nowhere else. The gate record is committed with the plan and survives a
+plugin upgrade; it is the record. Each entry:
+
+```json
+{
+  "slug": "mitigation-detector-shares-blind-spot",
+  "gate_run": 1,
+  "angle": "the registry checks that a control is named, not that it works",
+  "finding": "...",
+  "maps_to": "none (checked against the registry as of {date})",
+  "proposed_rule": "LINT-NN — ...",
+  "status": "proposed"
+}
+```
+
+`holistic_pass.runs` counts the passes and `holistic_pass.candidates_filed[]`
+keeps the slugs for a quick read; `candidates[]` is where the reasoning lives.
+
+Do NOT write to `${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/lint-candidates.md`,
+and do NOT create a lint-candidates.md inside the audited repository. A finding
+names the audited project's tables, scripts and policies; the plugin's file is
+project-agnostic by decision, and an installed copy of it sits under a
+version-keyed cache that is replaced on upgrade — a live run wrote four candidates
+there and the marketplace copy still read "none yet". The plugin's file is written
+by its owner alone, who reads gate records across projects and promotes a
+generalised rule with the project detail stripped. A candidate already listed in
+an earlier gate record for this document is not recorded again.
 
 This pass never gates, and that is deliberate. Every other mechanism in the design
 gate makes the judge honest ABOUT the criteria; none of them can notice that the
@@ -1152,7 +1188,8 @@ shape; add fields, never nest these:
   "validator_exit": 0,
   "mode": "LITE",
   "baseline": {},
-  "history": []
+  "history": [],
+  "holistic_pass": { "runs": 0, "candidates_filed": [], "candidates": [] }
 }
 ```
 </design_gate>
