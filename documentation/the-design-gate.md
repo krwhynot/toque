@@ -33,7 +33,7 @@ The canary runs before the auditor and decides whether the audit can be trusted 
 ```mermaid
 flowchart TD
   A["tq-canary.js inject<br/>mutated copy in .canary/"]
-  A -->|"exit 2: no class applies"| A2["Gate cannot run<br/>no unchecked pass"]
+  A -->|"exit 2: no class applies"| A2["Audit the original anyway<br/>NOT PASS, no unchecked pass"]
   A -->|"exit 0"| B["Fresh plan-auditor<br/>audits the mutated copy"]
   B --> C["tq-canary.js detected<br/>UNMET ids + applicable ids"]
   C -->|"exit 1: first miss"| D["Re-inject with<br/>a different class"]
@@ -99,7 +99,7 @@ Exit 2 means there was nothing to validate, the most serious result. Exit 1 mean
 
 There is no weighted score, partial credit, or “good enough overall.” One unresolved required criterion keeps the gate closed.
 
-A separate holistic review looks for gaps outside the current criteria. Its unmapped findings become proposed rules in `docs/planning-techniques/lint-candidates.md`; they do not secretly add a new gating score.
+A separate holistic review looks for gaps outside the current criteria. Its unmapped findings are recorded as proposed rules under `holistic_pass.candidates[]` in the gate record — `status.json` for a plan folder, `gate.json` for a standalone document — and nowhere else. The plugin's own `docs/planning-techniques/lint-candidates.md` is owner-curated and the pass never writes it, and no lint-candidates.md is created in the audited repository. They do not secretly add a new gating score.
 
 ## If the gate refuses the design
 
@@ -131,6 +131,6 @@ Evidence validation establishes citation integrity, not semantic truth, requirem
 
 Toque's workflow rules are also not operating-system or deployment permissions. Use separate controls for production access.
 
-The quick-plan and quick-audit entrypoints run this same gate, from the same `<design_gate>` block of the Stage 2 file, and write the same `audit.md` and `evidence/` record beside the document they audit. What they lack is what surrounds the gate in `/toque:plan`: accepted intent, scope lock, human review, and the build that follows.
+The quick-plan and quick-audit entrypoints run this same gate, from the same `<design_gate>` block of the Stage 2 file, and write the same `audit.md` and `evidence/` record — beside the document they audit, or into the plan folder when that document is a plan's own `spec.md`. What they lack is what surrounds the gate in `/toque:plan`: accepted intent, scope lock, human review, and the build that follows. Quick-audit also binds no generator, so a `NOT PASS` names the unmet criteria and stops — the revision loop does not run and the audited document is never edited.
 
 [Stage workflow](the-plan-workflow.md) · [Evidence files and resume](plan-workspace.md) · [Formal methodology](../METHODOLOGY.md)

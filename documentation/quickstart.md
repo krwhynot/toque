@@ -46,7 +46,7 @@ An automated pass still needs recorded human review, or the narrowly eligible [d
 
 ## 3. Approve the implementation plan, then build
 
-Toque writes `plan.md` before changing implementation code. Check the affected files, sequence, assumptions, risks, verification steps, and any parallel work.
+Toque writes `plan.md` before changing implementation code. Check the affected files, order of work, risks, supporting proof, verification steps, and any parallel work.
 
 Approve the plan only when you are ready for those changes. “Continue researching” and “implement this” are different instructions.
 
@@ -99,7 +99,7 @@ See [Plan workspace](plan-workspace.md) for file contracts and recovery.
 /toque:quick-plan Add scheduled reports
 ```
 
-This produces `docs/specs/{name}.md`, runs the same design gate as Stage 2, and allows up to two revisions. The gate record lands beside the spec in `docs/specs/{name}/`; commit it with the spec. Review any remaining findings. It does not create a full six-stage workspace, and a pass is not human review. `--plan {name}` can link the draft to an existing plan.
+This produces `docs/specs/{slug}.md`, where `{slug}` is your objective in kebab-case — `Add scheduled reports` becomes `add-scheduled-reports`. It runs the same design gate as Stage 2 and allows up to two revisions. The gate record lands beside the spec in `docs/specs/{slug}/`; commit it with the spec. Review any remaining findings. It does not create a full six-stage workspace, and a pass is not human review. `--plan {name}` can link the draft to an existing plan.
 
 Already have a plan? Try `/toque:quick-audit path/to/plan.md`.
 

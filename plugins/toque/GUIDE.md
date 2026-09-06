@@ -61,7 +61,7 @@ The gate is the same one Stage 2 runs, executed from the same `<design_gate>` bl
 /toque:quick-audit docs/plans/YYYY-MM-DD-scheduled-reports/spec.md --plan scheduled-reports
 ```
 
-Runs the design gate against one file and reports criterion verdicts, canary result, evidence validation, and findings. A named or detected plan receives `audit.md` and index/state updates in its own folder. Any other file gets a gate folder beside it, named after the file without its extension (`docs/specs/pricing.md` is audited into `docs/specs/pricing/`); there is no conversation-only result and no fallback report in `docs/audit/`. A pasted plan is written to `docs/specs/` first.
+Runs the design gate against one file and reports criterion verdicts, canary result, evidence validation, and findings. Where the record lands depends on the file, not on `--plan`: a plan's own `spec.md` is audited into that plan folder — into `reaudits/{date}/` once Design is complete — with index and state updates there. Every other file gets a gate folder beside it, named after the file without its extension (`docs/specs/pricing.md` is audited into `docs/specs/pricing/`), and `--plan` then only adds a manifest row in that plan. There is no conversation-only result and no fallback report in `docs/audit/`. A pasted plan is written to `docs/specs/` first.
 
 There is no generator to revise the document, so `NOT PASS` is reported with the unmet criteria named. A pass is a design-gate pass for that file, not human review or production authorization.
 
@@ -102,7 +102,7 @@ The receiving developer unpacks it into a compatible project and uses the includ
 /toque:troubleshoot --plan scheduled-reports Reports are being sent twice
 ```
 
-The four investigation phases are Root Cause, Pattern Analysis, Hypothesis, and Fix. The workflow checks the knowledge base first and verifies the resolution before recording it. For an incident, use `--severity SEV1` or the appropriate severity. SEV1/SEV2 handling adds containment approval, status updates, and a blameless `-postmortem.md` beside the log.
+The four investigation phases are Root Cause, Pattern Analysis, Hypothesis, and Fix. The workflow checks the knowledge base first and verifies the resolution before recording it. For an incident, use `--severity SEV1` or the appropriate severity. SEV1/SEV2 handling adds a containment gate, status updates, and a blameless `-postmortem.md` beside the log.
 
 Logs go into the linked plan's `troubleshooting/` directory or `docs/troubleshooting/` when standalone. Reusable findings go to `docs/troubleshooting/knowledge-base.md`. Production-impacting actions retain their approval boundary.
 
@@ -128,7 +128,7 @@ The lifecycle reference is [Anthropic's AI-Native SDLC playbook](https://claude.
 | Build | `plan.md`, code, `impact-review.md` | Approve plan before implementation; confirm impact afterward. |
 | Test | `test-plan.md`, results | Automated pass and human-confirmed manual checks. |
 | Deploy | `review.md`, release checklist | Named human authorizes, performs, then confirms production release; authorization and release are recorded separately. |
-| Maintain | Incident records; new draft intent when warranted | Steady state, not a completion gate. |
+| Maintain | `status.json` maintain metrics; a new draft `intent.md` when the trigger fires | Steady state, not a completion gate. |
 
 [Stage-by-stage contracts](https://github.com/krwhynot/toque/blob/main/documentation/the-plan-workflow.md) cover assumptions, parallel work, Change Records, and incident recurrence.
 
@@ -176,7 +176,7 @@ A failing flag can demote `MET` to `UNMET`; validation never promotes a verdict.
 
 ## How the pieces connect
 
-Three entrypoints call the agents and gate tools; everything else you type only reads and writes files, and the hooks are called by Claude Code, not by you.
+Three entrypoints call the agents and gate tools; everything else you type reads and writes files — except `/toque:troubleshoot`, which can spawn up to four inline specialists of its own — and the hooks are called by Claude Code, not by you.
 
 ```mermaid
 flowchart LR
@@ -219,7 +219,7 @@ The plan skill drives the six stages and, in Stage 2, runs the design gate: the 
 
 Both load `self-audit-knowledge` to distinguish verified claims, code-reading evidence, and inference.
 
-These two are the only agents with a file in `agents/`, and only `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit` invoke them. An instruction file may also define subagents inline, with no file here: Stage 1 of `/toque:plan` deploys up to three research tracks in parallel, and `/toque:troubleshoot` can escalate to as many as four specialists. Inline subagents are described where they are used, in `skills/plan/stages/stage-1-plan.md` and `skills/troubleshoot/phases/multi-agent-mode.md`.
+These two are the only agents with a file in `agents/`, and only `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit` invoke them. An instruction file may also define subagents inline, with no file here: Stage 1 of `/toque:plan` deploys up to three research tracks in parallel, and `/toque:troubleshoot` can escalate to as many as four specialists. Inline subagents are described where they are used: `skills/plan/stages/stage-1-plan.md` (three research tracks), `stage-2-design.md` (the rubric-free holistic judge), `stage-3-build.md` (up to three impact-review subagents), `stage-5-deploy.md` (the fresh diff-versus-plan check), and `skills/troubleshoot/phases/multi-agent-mode.md` (up to four specialists).
 
 ## The 5 skills
 

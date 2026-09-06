@@ -50,7 +50,7 @@ this is how to read them:
 | **Stages** | All 6 (Plan through Maintain) | None — a one-shot spec, outside the stage workflow |
 | **Asks questions?** | Yes, walks you through interactively | No, takes objective and generates immediately |
 | **Creates plan folder?** | Yes: `docs/plans/2026-03-07-{name}/` | No; writes `docs/specs/{name}.md` plus its gate record in `docs/specs/{name}/` (`audit.md`, `evidence/`, `gate.json`) |
-| **Research?** | Yes, scans codebase + docs + web | No, uses existing context |
+| **Research?** | Yes, scans codebase + docs + web | Scaffolder only: three analysts read the codebase; no source-document intake and no external research |
 | **Audit?** | Yes, the design gate plus human review | Yes, the same design gate with a revision loop (up to 2 iterations); no human review |
 | **Build help?** | Yes, tracks tickets and assists | No, plan is delivered |
 | **Resumes?** | Yes, come back anytime | No, one and done |
@@ -74,7 +74,7 @@ Same pattern applies: `/toque:quick-audit` = audit one file without the workflow
 
 | Command | What It Does |
 |---------|-------------|
-| `/toque:documentation` | Generate any document: ADR, BRD, PRD, README, release notes, spec. Part of the plan workflow (Stage 2 ADRs, Stage 5 runbook) and usable standalone. |
+| `/toque:documentation` | Generate any document: ADR, BRD, PRD, README, runbook, release notes, spec. Part of the plan workflow (Stage 2 ADRs, Stage 5 runbook) and usable standalone. |
 
 ### Utility
 
@@ -138,8 +138,10 @@ All artifacts go to `docs/plans/{date}-{name}/`. Check progress with `/toque:pla
 
 ## Codebase analysis
 
-Toque does not analyse codebases. The codebase-audit, security-scan, delta and
+Toque is not a codebase scanner. The codebase-audit, security-scan, delta and
 AI-readiness commands were removed in 11.0.0 and nothing replaces them here.
+Stage 1 research and the quick-plan scaffolder still read the codebase; what
+was removed is the standalone scanning product.
 
 It does *read* analysis when something else has produced it. If `docs/audit/`
 holds a risk assessment, dependency map, feature inventory or integration scan,

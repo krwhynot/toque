@@ -51,7 +51,7 @@ Each stage reads the previous artifact, writes its own, and stops at a decision 
 | Deploy | `intent.md` Constraints, `plan.md`, `test-plan.md`, `status.json`, `git diff` | `review.md`, `plan.md` Departures from plan | Fresh subagent compares diff with plan (a report, not a check) | Named human records Authorized, Rejected, or Deferred, performs the release, then confirms it; `status.json` records authorization and release as two separate events |
 | Maintain | The plan folder, `troubleshooting/` logs, `docs/troubleshooting/knowledge-base.md` | `status.json` maintain metrics; a new draft `intent.md` when the trigger fires | None | Accept or reject the new intent back in Plan; never auto-accepted |
 
-The canary and evidence validator are the only executable checks in the workflow; every other gate is an instruction to the agent plus a recorded human decision. A recorded release authorization is the instruction to a human, not proof that a deployment happened; the deployment is recorded separately, as `released_at`, when a human confirms it, and Deploy stays `authorized` until then.
+The canary and evidence validator are the only checks Toque itself ships as executables; the Test stage runs your project's own Tier 1 commands, and every other gate is an instruction to the agent plus a recorded human decision. A recorded release authorization is the instruction to a human, not proof that a deployment happened; the deployment is recorded separately, as `released_at`, when a human confirms it, and Deploy stays `authorized` until then.
 
 ## Stage 1 — Plan
 
@@ -215,7 +215,7 @@ Approval and execution belong in the record. Do not invent either to advance the
 
 **Question:** What is production teaching us?
 
-**Produces:** plan-linked incident records and, when warranted, a new draft intent.
+**Produces:** `status.json` maintain metrics and, when the trigger fires, a new draft intent. The incident records themselves are written by `/toque:troubleshoot`; Maintain reads them.
 
 The feedback loop watches what comes back from service. It does not automatically rewrite the recipe.
 

@@ -73,8 +73,9 @@ file missing its `name:` passes clean.
 The same rule applies to **skill** names, which are not MCP tools but fail the
 same way: plugin skills address as `plugin:skill`, so an agent that says
 "reference the `self-audit-knowledge` skill" is naming something unresolvable.
-Qualify with the plugin namespace — `toque:self-audit-knowledge`. Nothing in
-the toolchain catches an unqualified skill reference either.
+Qualify with the plugin namespace — `toque:self-audit-knowledge`. Layer 1's F27
+sweep catches an unqualified name in an agent file; nothing catches one in a
+command or skill body.
 
 Until 11.0.0 a second plugin shipped a byte-identical mirror of that skill so
 it resolved under both namespaces, and a layer 1 guard held the two copies
@@ -99,7 +100,8 @@ the **folder** — so an inline key does not merely duplicate config, it disable
 every shipped handler while looking correct. `layer1` asserts the key's absence.
 
 Each handler:
-- parses stdin with `JSON.parse` and reads the **named** field it needs
+- parses stdin with `JSON.parse` and reads the **named** field it needs, when it
+  needs one — `tq-pre-compact.js` reads the payload and discards it
 - emits JSON on exit 0 — **never stderr on exit 0**, which is not surfaced
 - exits 0 on every path; none of the three can deny, prompt, or block
 
@@ -116,15 +118,19 @@ When editing hooks:
   fails a row fails regardless of how it is written
 - security guards must never fail open; informational hooks must never fail closed
 - every file in a plugin's `scripts/` must be referenced by that plugin's
-  `hooks/hooks.json` (or invoked as `node .../scripts/NAME` from its commands),
-  and every reference must resolve — `layer1` sweeps both directions
+  `hooks/hooks.json` (or invoked as `node .../scripts/NAME` from its commands,
+  agents, or skills — `tq-canary.js` and `tq-evidence-validate.js` are wired from
+  `skills/plan/stages/stage-2-design.md`), and every reference must resolve —
+  `layer1` sweeps both directions
 
 ## Versioning
 
 One manifest, one catalog entry, one tag+SHA, and `.github/release.sh` is the
 only supported way to cut a release. The lockstep checks still run over every
 manifest `git ls-files` finds, so adding a second plugin needs no change to
-the release script — only to the counts the suite asserts. Follow
+the release script — only a new profile block in `tests/layer1-core.sh`, which
+refuses to run on an unrecognised profile, and a new `PARTS` entry in
+`tests/layer1-config-wiring.sh`. Follow
 semantic versioning (MAJOR.MINOR.PATCH):
 - PATCH: Bug fixes, hook improvements
 - MINOR: New commands, agents, or hooks

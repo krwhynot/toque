@@ -8,7 +8,7 @@ Get the kitchen ready once. Then work from your project, not the plugin checkout
 
 ## Prerequisites
 
-Only two things are required; the rest are used when a specific command needs them, and each has a stated fallback.
+Only two things are required; the rest are used when a specific command needs them, and the table states what happens without each.
 
 | Dependency | Status | Used by | If absent |
 | --- | --- | --- | --- |
@@ -58,16 +58,16 @@ Next: [complete your first workflow](quickstart.md).
 
 ## What gets installed, and what gets written
 
-Installing adds capabilities to Claude Code; nothing is written into your project until you run a command.
+Installing adds capabilities to Claude Code. Apart from the enabled-plugin entry that `--scope project` writes into this repository's shared settings, nothing is written into your project until you run a command.
 
 | Where | What appears | When |
 | --- | --- | --- |
 | Claude Code's plugin cache (versioned; not your repository) | The `toque` plugin: 6 command files, 5 skills, 2 agents, `hooks/hooks.json`, 5 Node scripts, document templates | At `claude plugin install` |
 | Your Claude Code settings for the chosen scope (`user`, `project`, or `local`) | The enabled-plugin entry that makes `/toque:*` available | At install; `--scope project` writes to the repository's shared settings |
-| Every session in a project | Three informational hooks run on SessionStart, SubagentStop, and PreCompact; they read `docs/plans/` and never create files | Automatically, after install and reload |
+| Every session in a project | Three informational hooks run on SessionStart, SubagentStop, and PreCompact; they read `docs/plans/` and create no directories — one appends to an existing plan's `troubleshooting/subagent-log.txt`, as described below | Automatically, after install and reload |
 | `docs/plans/YYYY-MM-DD-{name}/` in your project | The plan workspace (`intent.md`, `spec.md`, `audit.md`, `evidence/`, `plan.md`, `review.md`, …) | Only when you run `/toque:plan`, `/toque:quick-cleanup`, or a plan-linked command |
-| `docs/specs/{name}.md` and `docs/specs/{name}/` | A standalone spec and its gate record (`audit.md`, `evidence/`, `gate.json`) | Only when you run `/toque:quick-plan`; `/toque:quick-audit` writes the same gate record beside whatever file it audits |
-| `docs/troubleshooting/` | Standalone troubleshooting logs and `knowledge-base.md` | Only when you run `/toque:troubleshoot` without a plan |
+| `docs/specs/{name}.md` and `docs/specs/{name}/` | A standalone spec and its gate record (`audit.md`, `evidence/`, `gate.json`) | Only when you run `/toque:quick-plan`; `/toque:quick-audit` writes the same gate record beside the file it audits, or into the plan folder when that file is a plan's own `spec.md` |
+| `docs/troubleshooting/` | `knowledge-base.md` on every run; the troubleshooting log only when the run is not linked to a plan | Whenever you run `/toque:troubleshoot` |
 | `{plan-name}-export.zip` at the project root | A portable plan package | Only when you run `/toque:plan-export` |
 | `docs/audit/` | Nothing. Toque reads analysis another tool left there; it does not write it | Never written by Toque |
 
@@ -113,7 +113,7 @@ Identify the old entries in `/plugin` first. Removing a marketplace can remove i
 
 Update embedded slash commands to the `/toque:` namespace. Toque no longer reads the old `DG_*` or `TQ_*` settings used by the retired blocking hooks; check for other consumers before removing settings from shared configuration.
 
-Installation does not rewrite plan folders. Separately, resuming a pre-8.0.0 plan performs a [schema-preserving migration](plan-workspace.md#migrating-a-pre-800-plan).
+Installation does not rewrite plan folders. Separately, resuming a pre-8.0.0 plan [migrates it from schema 1 to schema 2](plan-workspace.md#migrating-a-pre-800-plan), preserving the old `phases` object under `phases_schema1` and leaving the legacy artifact names intact.
 
 Upgrading from 10.x? Codebase-audit and AI-readiness scanning were removed in 11.0.0. There is no replacement scanner here.
 

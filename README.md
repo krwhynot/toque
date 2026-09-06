@@ -143,7 +143,7 @@ Start Claude Code in your project and run `/toque:help`. Reload or restart an al
 
 ## Technical and repository details
 
-One plugin, `toque`. Six command files, five skills, two agents, seven document templates, three informational hooks, and two Node gate tools. Nine user-facing entrypoints; some are skills rather than command files.
+One plugin, `toque`. Six command files, five skills, two agents, seven document templates, three informational hooks, and two Node gate tools. Nine user-facing entrypoints: the six command files plus the `plan`, `troubleshoot`, and `documentation` skills. The other two skills, `mcp-research` and `self-audit-knowledge`, are knowledge those entrypoints load, not entrypoints themselves.
 
 ```text
 .claude-plugin/marketplace.json   Catalog with a release ref and SHA pin

@@ -10,6 +10,7 @@
 #   5. Evidence Validator - PH5-020 record validation (node)
 #   6. Canary - PH5-030 auditor liveness check (node)
 #   7. Release Preflight - lockstep release script guards (bash)
+#   8. Protected Artifacts - immutable plan-record guard (bash)
 #
 # Usage:
 #   bash tests/run-all.sh              # Run all layers

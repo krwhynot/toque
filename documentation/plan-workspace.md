@@ -36,6 +36,8 @@ docs/plans/YYYY-MM-DD-{plan-name}/
   review.md            Diff review and release checklist
   runbook.md           When the plan needs one
   troubleshooting/     Plan-linked incidents and logs
+  snapshots/           Immutable point-in-time records; never edited once written
+  reaudits/{date}/     A quick-audit rerun of spec.md after Design is complete
 ```
 
 Stage instructions call for committing the planning records, including `audit.md` and `evidence/`. Canary scratch and the export zip are excluded. These are workflow requirements, not an automatic Git enforcement hook.
@@ -46,8 +48,8 @@ Design can also create project documents outside the folder:
 
 | Document | Location |
 | --- | --- |
-| ADR | `docs/adr/ADR-{topic}.md` |
-| PRD | `docs/prd/{feature}.md` |
+| ADR | `docs/adr/ADR-{NNN}-{topic}.md` |
+| PRD | `docs/prd/{domain}/PRD-{name}.md` |
 
 Link them from `manifest.md`. Standalone documentation generation has its own [output locations](../plugins/toque/GUIDE.md#the-7-document-templates), including domain-grouped PRDs.
 
@@ -136,7 +138,7 @@ Freshness uses **path-scoped fingerprints**: hashes of the files a stage actuall
 | Implementation departs from approved `plan.md` | Record “Departures from plan” in the same commit; Stage 5 checks it. |
 | Source documents change after research | Research becomes WARNING. |
 
-An edit to accepted intent is not a harmless wording update once downstream work relies on it. After the first spec commit, scope changes need a Change Record.
+An edit to accepted intent is not a harmless wording update once downstream work relies on it. Once `intent.md` is accepted, a scope change travels as a Change Record plus one supersession banner on the original, never as an in-place edit.
 
 ## Migrating a pre-8.0.0 plan
 

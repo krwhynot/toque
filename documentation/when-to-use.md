@@ -35,7 +35,7 @@ Start with the [quickstart](quickstart.md). Read the [workflow](the-plan-workflo
 
 A quick plan is useful for exploring an approach. A quick audit is useful when a plan already exists. Cleanup can be the entire task; creating a homebase does not mean you have agreed to build anything.
 
-Quick-plan and quick-audit run the same design gate as Stage 2, from the same block of the stage file: canary, evidence validation, lint registry, gap outputs, gate expression. What they skip is everything around the gate: no intent, no research, no scope lock, no human review, no build. Remaining findings may be delivered for you to resolve.
+Quick-plan and quick-audit run the same design gate as Stage 2, from the same block of the stage file: canary, evidence validation, lint registry, gap outputs, gate expression. What they skip is everything around the gate: no accepted intent, no scope lock, no human review, no build. Quick-plan's scaffolder still reads the codebase; what it omits is source-document intake and external research. Any criteria still unmet are named for you to resolve.
 
 Export prepares a package; it does not establish that another codebase is identical or that secret redaction is infallible. Inspect the archive before sharing it.
 

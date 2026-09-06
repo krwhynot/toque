@@ -20,10 +20,13 @@ scripts govern behavior; the formal section numbering and canonical lint rule te
 
 Version 11.0.0 (historical reference version) | Conformance review: September 4, 2026.
 
-The installed package version is **11.0.1**, from [plugins/toque/.claude-plugin/plugin.json](plugins/toque/.claude-plugin/plugin.json).
-[.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) pins `plugins/toque` to `v11.0.1`, commit
-`63a05063ed87b2a9168127ca715208c4cad74d5a`. This review compared that package with
-the current checkout; local prose changes do not create a new published release.
+The package this review examined was **11.0.1**, which
+[.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) pinned at the time to
+`v11.0.1`, commit `63a05063ed87b2a9168127ca715208c4cad74d5a`. Releases have shipped
+since; the installed version is whatever
+[plugins/toque/.claude-plugin/plugin.json](plugins/toque/.claude-plugin/plugin.json) now
+declares. This review compared the 11.0.1 package with the checkout as of its date;
+local prose changes do not create a new published release.
 
 > **Scope note (11.0.0).** Sections 1, 2, 4 and 9 retain the history of the
 > removed codebase-analysis product. They describe no currently shipped scanner,
@@ -215,7 +218,9 @@ discipline, distinct from the local citation validator in section 7.
 The caller applies this preserved gate expression:
 
 ```text
-CANARY_OK   = the criterion the planted defect violates came back UNMET
+CANARY_OK   = a defect was planted AND the criterion it violates came back UNMET
+              (false when canary_found is false for any reason: missed twice,
+              not-applicable, no-isolation)
 EVIDENCE_OK = tq-evidence-validate.js exited 0 (nothing was flagged)
 VERIFIED    = every applicable criterion is MET or N_A after validation
 INFRA_OK    = infra_gaps == 0
@@ -597,7 +602,8 @@ identical semantics to every removed parser and tracker.
 at v8.0.0: Git guard (including deploy restrictions), migration guard, change
 tracker, test tracker, and session summary. Their behaviors included force-push
 denial, hard-reset confirmation, migration protection, and informational tracking.
-These are distinct behaviors, not seven currently registered handlers. Current
+These are distinct behaviors from a retired package, not handlers this plugin
+registers; today's `hooks/hooks.json` declares three. Current
 `plugins/toque/.claude-plugin/plugin.json` is not evidence for those removed hooks.
 Use the v8.0.0 Git tree for provenance; no historical source is a current control.
 
@@ -779,8 +785,8 @@ in an agent session.
 
 The auditor enumerates Architecture (dimensions 1–3), Risk (4–5), Execution (6,8),
 Quality (7), and Gap Verifier (matrices). Architecture/Risk/Gap are assigned Opus;
-Execution/Quality are assigned Sonnet. A stale introductory line says four,
-but five roles and the downstream five-output synthesis are explicit.
+Execution/Quality are assigned Sonnet. The step heading and its introduction both
+say five: four dimension reviewers plus the Gap Verifier.
 
 This requests separated specialist review; the files remain mutually readable.
 Fresh prompts and forbidden-input instructions are not filesystem isolation,
@@ -1023,9 +1029,10 @@ mean confidential, statistically independent or immune to bias.
 ### Scaling Rules
 
 The active plan skill suggests direct execution for 1–2 independent tasks,
-parallel workers for 3+, and grouping for 5+. A preceding rule also asks for
-parallelism at 2+; stage-specific instructions determine the concrete request.
-This overlap is an instruction ambiguity, not a measured optimal policy.
+parallel workers for 3+, and grouping for 5+. The preceding rule sets the same
+threshold and rules two out explicitly — two independent tasks run inline — so
+stage-specific instructions set the concrete request. These are Toque heuristics,
+not a measured optimal policy.
 The old module-count scaling for codebase scanners is retired.
 **Implementation:** [plugins/toque/skills/plan/SKILL.md](plugins/toque/skills/plan/SKILL.md) (parallel_execution_strategy). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
 

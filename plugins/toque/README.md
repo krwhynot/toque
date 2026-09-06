@@ -39,6 +39,9 @@ Verify inside a Claude Code session:
 
 ## Commands (6)
 
+The count is of files in `commands/`. Nine rows follow, because three entrypoints
+are skill surfaces — see the note after the tables.
+
 ### Planning
 
 | Command | Description |
@@ -73,11 +76,11 @@ pit feedback. Each stage below names the actual artifact and approval it needs.
 | Stage | Commits | Gate |
 | ----- | ------- | ---- |
 | 1. Plan | `intent.md` | Intent accepted |
-| 2. Design | `spec.md`, `audit.md`, `evidence/` | Scope lock, then the design gate |
+| 2. Design | `spec.md`, `audit.md`, `evidence/` | Scope lock, the design gate, then human review (or an eligible waiver) and `spec.md` Status: Approved |
 | 3. Build | `plan.md`, code, `impact-review.md` | `plan.md` approved before code; impact review confirmed |
 | 4. Test | `test-plan.md`, results | Automated tier passes; every manual check confirmed by a human |
 | 5. Deploy | `review.md` with a release checklist | Release authorization, then a separate human confirmation that the release happened. The agent never crosses the production gate |
-| 6. Maintain | A new `intent.md` from incidents | Intent accepted or declined |
+| 6. Maintain | A new `intent.md` from incidents | None. The stage never completes; a proposed intent re-enters Stage 1 for a human to accept or reject |
 
 ## The Design Gate
 
@@ -105,15 +108,16 @@ adversarial one. Details in [GUIDE.md](GUIDE.md#the-design-gate).
 
 The plugin includes 3 plan-context hooks that activate automatically. They are
 declared in `hooks/hooks.json` and run as Node scripts from `scripts/`, one file
-per handler. **Requires Node.js 18 or later** — the same runtime Claude Code
-itself needs. All three are informational and fail open. There are no blocking
-hooks: use Claude Code permission rules in `settings.json` for force-push,
-migration, and database-deploy protection.
+per handler. **Requires Node.js 18 or later on PATH** — a Claude Code install
+does not establish that Node is available to these scripts; see
+[Dependencies](#dependencies). All three are informational and fail open. There
+are no blocking hooks: use Claude Code permission rules in `settings.json` for
+force-push, migration, and database-deploy protection.
 
 | Hook | Event | What It Does |
 | ---- | ----- | ------------ |
 | Active Plan Display | SessionStart | Reports the active plan, its phase, and that phase's status |
-| Subagent Log | SubagentStop | Logs subagent completions to the active plan's troubleshooting folder |
+| Subagent Log | SubagentStop | Appends a completion line to the newest plan's `troubleshooting/` folder, and only when that folder already exists |
 | Plan Context | PreCompact | Preserves plan name and stage on compact |
 
 ## Dependencies
@@ -131,8 +135,9 @@ present; every stage and template works without them. There are no other
 optional dependencies.
 
 **What happens without Node.** The hooks cannot start, and Claude Code reports a
-hook error on each guarded event. That is deliberate: absent and loud beats
-present and wrong. The design-gate tools fail the same way, and Stage 2 cannot
+hook error on each of the three hook events. That is deliberate: absent and loud
+beats present and wrong. The notice is user-visible in an interactive session and
+suppressed under `claude -p`. The design-gate tools fail the same way, and Stage 2 cannot
 pass without them.
 
 ## File Output Locations
@@ -142,7 +147,8 @@ pass without them.
 | Plan workspace | `docs/plans/{date}-{name}/` | Yes |
 | Audit evidence | `docs/plans/{date}-{name}/evidence/` | Yes |
 | Canary working copy | `docs/plans/{date}-{name}/.canary/` | No |
-| Troubleshooting logs, postmortems, knowledge base | `docs/troubleshooting/` or the plan's `troubleshooting/` | Yes |
+| Troubleshooting logs and postmortems | `docs/troubleshooting/` or the plan's `troubleshooting/` | Yes |
+| Troubleshooting knowledge base | `docs/troubleshooting/knowledge-base.md` | Yes |
 | Specifications and quick plans | `docs/specs/{name}.md` | Yes |
 | Gate record for a standalone spec or audited file | `{dir}/{name}/audit.md`, `evidence/`, `gate.json` beside the document (`docs/specs/{name}/` for a quick-plan spec) | Yes |
 | Canary working copy for a standalone gate run | `{dir}/{name}/.canary/`, deleted by the gate once used | No |
