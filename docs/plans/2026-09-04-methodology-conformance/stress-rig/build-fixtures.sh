@@ -138,8 +138,28 @@ for s in s2 s3 s5; do gitinit "$ST/$s"; mkdir -p "$ST/$s/.stress-baseline"; sha 
 mkdir -p "$ST/s4/.stress-baseline"; sha "$ST/s4/docs/adr/ADR-reporting-pipeline.md" > "$ST/s4/.stress-baseline/doc.sha"
 sha "$ST/s3/docs/specs/pricing-engine.md" > "$ST/s3/.stress-baseline/doc.sha"
 
-# sanity: canary applicability
+# Sanity: canary applicability. Both fixtures are asserted, not just printed —
+# s3 exists to carry an applicable class and s4 exists to carry none, and a
+# fixture that has quietly stopped doing its job would otherwise be discovered
+# halfway through a run. `head -1` is avoided here: it closes the pipe, and
+# under `pipefail` the resulting EPIPE aborts the script.
 echo "--- canary applicability"
-node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s3/docs/specs/pricing-engine.md" "$ST/cdry/" | head -1; rm -rf "$ST/cdry"
-node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s4/docs/adr/ADR-reporting-pipeline.md" "$ST/cdry/" 2>&1 | head -1; echo "s4 exit=$? (expected 2 via pipe; see message)"; rm -rf "$ST/cdry"
+set +e
+s3out="$(node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s3/docs/specs/pricing-engine.md" "$ST/cdry/" 2>&1)"; s3rc=$?
+set -e
+rm -rf "$ST/cdry"
+s3first="${s3out%%$'\n'*}"
+echo "s3: $s3first"
+echo "s3 inject exit=$s3rc (expected 0: a class applies)"
+[ "$s3rc" -eq 0 ] || { echo "FIXTURE CHECK FAILED: s3 inject exited $s3rc, expected 0"; exit 1; }
+case "$s3first" in *"-> LINT-"*) ;; *) echo "FIXTURE CHECK FAILED: s3 must have an applicable canary class"; exit 1 ;; esac
+
+set +e
+s4out="$(node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s4/docs/adr/ADR-reporting-pipeline.md" "$ST/cdry/" 2>&1)"; s4rc=$?
+set -e
+rm -rf "$ST/cdry"
+echo "s4: ${s4out%%$'\n'*}"
+echo "s4 inject exit=$s4rc (expected 2: no class applies)"
+[ "$s4rc" -eq 2 ] || { echo "FIXTURE CHECK FAILED: s4 must have no applicable canary class"; exit 1; }
+
 for s in s1 s2 s3 s4 s5 s6; do printf '%s: %s files, HEAD %s\n' "$s" "$(cd "$ST/$s" && git ls-files | wc -l | tr -d ' ')" "$(cd "$ST/$s" && git rev-parse --short HEAD)"; done

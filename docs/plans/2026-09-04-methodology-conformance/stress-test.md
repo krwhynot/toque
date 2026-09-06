@@ -141,19 +141,35 @@ The twelve medium and low defects are recorded and not fixed. Two runs found 14 
 
 ## Reproducing it
 
+Freeze first. Run 1 skipped this step and lost part of its result to a plugin that moved mid-flight; `freeze-plugin.sh` is that step, and it builds the fixtures itself so the two cannot be done out of order.
+
 ```bash
 # from a Git Bash shell, with node, git and tar available
-ST=/c/scratch/toque-stress SRC=/c/path/to/toque-plugin \
-  bash docs/plans/2026-09-04-methodology-conformance/stress-rig/build-fixtures.sh
+RIG=docs/plans/2026-09-04-methodology-conformance/stress-rig
+RUN=/c/scratch/toque-run3
 
-# after a scenario has been run by an agent inside $ST/s1
-node docs/plans/2026-09-04-methodology-conformance/stress-rig/check-invariants.js \
-  s1 "$ST/s1" "$SRC/plugins/toque"
+# 1. freeze the plugin, prove the lock, hash the tree, build the six fixtures
+RUN=$RUN bash $RIG/freeze-plugin.sh
+
+# 2. run the scenarios, giving every agent the FROZEN plugin and its own repo:
+#      plugin root  $RUN/frozen/plugins/toque   (read-only)
+#      scenario     $RUN/stress/s1 .. s6
+
+# 3. after each scenario, re-derive its invariants from disk
+node $RIG/check-invariants.js s1 "$RUN/stress/s1" "$RUN/frozen/plugins/toque"
+
+# 4. after the whole run, prove the plugin never moved
+RUN=$RUN bash $RIG/freeze-plugin.sh verify
+
+# 5. read-only files cannot be deleted; unlock before removing the scratch dir
+RUN=$RUN bash $RIG/freeze-plugin.sh unlock && rm -rf $RUN
 ```
 
-`build-fixtures.sh` prints, as a sanity check, which canary class applies to the s3 fixture and confirms `inject` exits 2 on the s4 ADR, then lists each scenario repo's file count and commit. `check-invariants.js` prints JSON and never writes.
+`freeze-plugin.sh` takes the tree digest *before* locking, so the opening number describes the bytes the agents read rather than the bytes plus a permission change, then proves the lock instead of assuming it: a shell append and a `fs.appendFileSync` are both attempted against the gate stage file and the script exits non-zero if either succeeds. `verify` re-takes the same digest through the same helper — `hash-tree.sh`, so two numbers cannot differ merely because two implementations disagreed — and exits 1 on any drift. Both directions were checked for vacuity: appending one byte to a file inside the frozen tree turns `verify` red and removing that byte turns it green again, and both lock probes succeed once the probe file is made writable.
 
-What the rig does not contain is the agent half: six executor prompts that hand an agent the command text and the sandbox constraint, six verifier prompts, and the critic. Those were composed for this run. The reusable parts are the fixtures, the invariant checker, and the four-layer separation described above — executor, deterministic script, independent verifier, cross-scenario critic — which is the part worth repeating.
+`build-fixtures.sh` asserts rather than prints its two fixture properties — s3 must have an applicable canary class, s4 must have none — and fails the build if either stops holding, then lists each scenario repo's file count and commit. `check-invariants.js` prints JSON and never writes.
+
+What the rig does not contain is the agent half: six executor prompts that hand an agent the command text and the sandbox constraint, six verifier prompts, and the critic. Those were composed for this run. The reusable parts are the freeze, the fixtures, the invariant checker, and the four-layer separation described above — executor, deterministic script, independent verifier, cross-scenario critic — which is the part worth repeating.
 
 ## Confidence
 
@@ -161,6 +177,8 @@ What the rig does not contain is the agent half: six executor prompts that hand 
 
 **The fourteen defects are real: High (90%).** Every cited line was read in the current files; the top four were re-read directly rather than taken from the critic.
 
-**Runtime conformance under the current text: Low (55%).** Zero of six runs executed the post-`371b37d` text end to end, and one of six achieved auditor isolation. The fixes those runs produced are now in the text but have themselves never been run. To increase: one `quick-plan` run on a template-conformant spec with a spawned or `claude -p` auditor under a frozen plugin checkout, and one re-audit that writes the LINT-14 record exactly as the block specifies and runs the validator afterwards. Both are worth doing before the next release, and both are cheap now that the rig is checked in.
+**Runtime conformance: Med (75%), raised from 55% by the second run.** The two steps this section named as "to increase" were both taken. Six scenarios executed post-`371b37d` text under a frozen, read-only checkout whose opening and closing digests are identical; the intended PASS path ran end to end once, with a fresh auditor spawned via `claude -p`, a planted defect returned UNMET and confirmed mechanically, and every term re-derived from the gate folder by a verifier that did not perform the run; and the LINT-14 write order held six times out of six, every pin matching its `audit.md` hash.
+
+Two gaps remain, and they are why this is not High. Run 2's own four high-severity fixes are in the text and have not themselves been run — the same gap as before, one generation down, and a third run is not planned. Auditor isolation is proved structurally in two scenarios and only circumstantially in the other four. To increase: one run of the six scenarios against a checkout frozen at or after `72935f2`, with the isolation route recorded per scenario rather than inferred.
 
 The headline is the floor of those three. This test establishes that the design gate's structure survives being executed by six independent readers, and that its prose does not yet say one thing.
