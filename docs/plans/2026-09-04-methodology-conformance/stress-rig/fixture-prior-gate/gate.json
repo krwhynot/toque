@@ -1,0 +1,233 @@
+{
+  "gate_passed": false,
+  "unmet_criteria": [
+    "LINT-01",
+    "LINT-06",
+    "LINT-08",
+    "LINT-09",
+    "LINT-15",
+    "LINT-16",
+    "LINT-18",
+    "LINT-22",
+    "LINT-24"
+  ],
+  "gap_checked": false,
+  "gap_count": 34,
+  "canary_found": true,
+  "canary_class": "rollback-strip",
+  "canary_reason": "found",
+  "validator_exit": 0,
+  "mode": "LITE",
+  "baseline": {
+    "run_number": 1,
+    "date": "2026-09-06",
+    "plan_version": "v1",
+    "lint_results": {
+      "LINT-01": "fail",
+      "LINT-02": "pass",
+      "LINT-03": "pass",
+      "LINT-04": "pass",
+      "LINT-05": "pass",
+      "LINT-06": "fail",
+      "LINT-07": "pass",
+      "LINT-08": "fail",
+      "LINT-09": "fail",
+      "LINT-10": "pass",
+      "LINT-13": "pass",
+      "LINT-14": "n_a",
+      "LINT-15": "fail",
+      "LINT-16": "fail",
+      "LINT-17": "pass",
+      "LINT-18": "fail",
+      "LINT-19": "pass",
+      "LINT-20": "pass",
+      "LINT-21": "pass",
+      "LINT-22": "fail",
+      "LINT-23": "pass",
+      "LINT-24": "fail"
+    },
+    "coverage_items": [
+      { "name": "FR-001 single pricing module", "status": "covered" },
+      { "name": "FR-001 acceptance: seats x unit price", "status": "covered" },
+      { "name": "FR-001 acceptance: no price rows -> total 0, no error", "status": "gap" },
+      { "name": "FR-001 must-not: no total changes", "status": "covered" },
+      { "name": "FR-002 fixed discount order", "status": "covered" },
+      { "name": "NFR-001 10,000 rows in 2s", "status": "gap" },
+      { "name": "Metric: golden-master mismatches", "status": "covered" },
+      { "name": "Metric: 50% fewer pricing tickets", "status": "gap" },
+      { "name": "Null unit price renders as 0 (gotcha)", "status": "covered" },
+      { "name": "Assumption 1: fixture coverage", "status": "gap" },
+      { "name": "Assumption 2: no other caller", "status": "gap" },
+      { "name": "Dep: archived report fixtures", "status": "covered" },
+      { "name": "Dep: null unit price decision", "status": "covered" },
+      { "name": "Risks (no risk register exists)", "status": "gap" },
+      { "name": "Non-goals / out of scope (none stated)", "status": "gap" }
+    ],
+    "assumption_counts": {
+      "total": 6,
+      "verified": 0,
+      "unverified": 5,
+      "falsified": 1,
+      "waived": 0
+    },
+    "assumption_notes": "Two assumptions are the document's own (spec lines 75-76); four more are load-bearing assumptions the audit found the document relies on without stating. Assumption 2 is marked 'verified' in the document but is counted unverified here: its stated verification is a grep for one literal field name, which is narrower than the claim it is said to establish. Assumption 4 (npm test and the render timing log exist) is counted falsified: `test -f package.json` and a search for src/ both returned nothing in the audited tree.",
+    "scenario_statuses": [
+      { "id": 1, "name": "Happy path", "status": "covered" },
+      { "id": 2, "name": "Failure path", "status": "gap" },
+      { "id": 3, "name": "Partial rollout (mixed state)", "status": "gap" },
+      { "id": 4, "name": "Backward compatibility", "status": "covered" },
+      { "id": 5, "name": "Scale/volume edge", "status": "gap" },
+      { "id": 6, "name": "Auth/permission edge", "status": "gap" },
+      { "id": 7, "name": "Config/environment difference", "status": "gap" },
+      { "id": 8, "name": "Rollback path", "status": "gap" }
+    ],
+    "concern_statuses": [
+      { "name": "API contract", "status": "ok" },
+      { "name": "UI behavior", "status": "warn" },
+      { "name": "Auth/authz", "status": "gap" },
+      { "name": "Config", "status": "gap" },
+      { "name": "CORS/network/browser", "status": "ok" },
+      { "name": "Data model/query limits", "status": "gap" },
+      { "name": "Pagination", "status": "ok" },
+      { "name": "Caching", "status": "gap" },
+      { "name": "Observability", "status": "gap" },
+      { "name": "Migration/backward compat", "status": "ok" },
+      { "name": "Rollout/rollback", "status": "gap" },
+      { "name": "Tests", "status": "ok" }
+    ],
+    "infra_gaps": 3,
+    "infra_planned": 3,
+    "doc_sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+  },
+  "history": [],
+  "holistic_pass": {
+    "runs": 1,
+    "candidates_filed": [
+      "golden-master-pins-known-defect",
+      "gate-criterion-contradicts-its-requirement",
+      "rollback-restores-code-not-emitted-state",
+      "absolute-threshold-cannot-detect-regression",
+      "relative-target-names-no-baseline",
+      "evidence-brief-cites-unadopted-practice",
+      "blocking-open-question-has-no-default",
+      "flag-has-no-lifecycle",
+      "plan-internal-work-has-no-owner",
+      "behaviour-change-has-no-customer-facing-step"
+    ],
+    "candidates": [
+      {
+        "slug": "golden-master-pins-known-defect",
+        "gate_run": 1,
+        "angle": "the registry checks that a control exists, never that the reference point the control compares against is correct",
+        "finding": "The plan names a known defect (null unit price renders as 0 by accident, spec line 40) and then mandates that the golden master preserve it across 500 reports (Phase 1 Go/No-Go, spec line 98). Characterization records what the code does, so '500 of 500 identical' evidences a faithful copy, not correct pricing; the gate converts an accident into a test-enforced contract a later engineer will be afraid to change.",
+        "maps_to": "none (checked against the registry as of 2026-09-06; LINT-24 asks whether a measurement exercises the property its requirement states, not whether the baseline it pins is correct)",
+        "proposed_rule": "LINT-NN - a characterization or golden-master baseline that the plan itself identifies as containing known-incorrect behaviour must name which recorded outputs are exempt from the comparison, or name the step that decides them.",
+        "status": "proposed"
+      },
+      {
+        "slug": "gate-criterion-contradicts-its-requirement",
+        "gate_run": 1,
+        "angle": "the registry checks that a control exists, never that the reference point the control compares against is correct",
+        "finding": "FR-002 requires the discount order to change (spec line 16) while the Phase 2 Go/No-Go requires no golden-master regression (spec line 104). If any archived report is affected the gate cannot pass; if none is, FR-002 changed nothing. The cheapest resolution under deadline pressure is re-baselining the golden master, which discards the only regression detector the plan has.",
+        "maps_to": "none (LINT-10 checks that each phase HAS go/no-go criteria; nothing checks a criterion against the requirement it gates)",
+        "proposed_rule": "LINT-NN - a phase whose go/no-go asserts no change to a baseline must not deliver a requirement that changes that baseline; where it does, the criterion names the enumerated set of expected differences instead.",
+        "status": "proposed"
+      },
+      {
+        "slug": "rollback-restores-code-not-emitted-state",
+        "gate_run": 1,
+        "angle": "rollback is checked as a reversal of code or configuration, never as restoration of the state the change already emitted",
+        "finding": "The Phase 2 rollback is the DISCOUNT_ORDER_V2 flag off (spec line 103). For a pricing change, flipping the flag only corrects future computations; totals already computed, persisted, invoiced or emailed while the flag was on stay wrong. No backfill, credit or restatement step appears anywhere in the plan.",
+        "maps_to": "none (LINT-03 checks a rollback exists; LINT-23 checks the rollback artifact is re-runnable and created at the point whose state it preserves; neither asks what the rollback does not undo)",
+        "proposed_rule": "LINT-NN - where a phase changes a value that is persisted or sent outside the system, its rollback names the remediation of artifacts already emitted, or states that none were.",
+        "status": "proposed"
+      },
+      {
+        "slug": "absolute-threshold-cannot-detect-regression",
+        "gate_run": 1,
+        "angle": "the registry checks that a measurement is named, never that its verdict is decidable",
+        "finding": "NFR-001 states a 2-second budget measured by the existing render timing log (spec line 21). No pre-change number is recorded, so a post-change run at 1.9s passes even if render previously took 200ms - a 9.5x regression scored as a pass. No percentile and no sample count are stated either, so one lucky run satisfies it.",
+        "maps_to": "none (LINT-24 asks whether the measurement exercises the property its requirement states; this is the absence of a before-value to compare it against)",
+        "proposed_rule": "LINT-NN - a performance or resource requirement verified against an absolute threshold must record the pre-change value of the same measurement, or state why a regression that stays under the threshold is acceptable.",
+        "status": "proposed"
+      },
+      {
+        "slug": "relative-target-names-no-baseline",
+        "gate_run": 1,
+        "angle": "the registry checks that a measurement is named, never that its verdict is decidable",
+        "finding": "The lagging success metric is '50% fewer pricing-related support tickets within 1 quarter' (spec line 28). No current ticket count is stated, and no control for ticket volume or tagging drift, so the target cannot be evaluated at its stated evaluation point.",
+        "maps_to": "none (no registry rule inspects success-metric baselines)",
+        "proposed_rule": "LINT-NN - a success metric whose target is expressed as a change from today must state the measured value today and the window it was measured over.",
+        "status": "proposed"
+      },
+      {
+        "slug": "evidence-brief-cites-unadopted-practice",
+        "gate_run": 1,
+        "angle": "the evidence brief is checked for the presence of fields, never for whether the design adopts the practice the entry cites",
+        "finding": "The Evidence entry cites the GitHub Scientist library, which compares old and new code paths on production traffic before cutover (spec line 58). The design adopts no production-side comparison at all: every gate in the plan is a pre-merge test gate. The entry borrows the credibility of a control the plan does not implement, and that control is precisely the one that would catch the fixture-coverage gap in assumption 1.",
+        "maps_to": "none (LINT-19 checks for unresolved HIGH-impact markers; LINT-20 checks each entry carries its required fields)",
+        "proposed_rule": "LINT-NN - an Evidence entry whose 'Connection to this plan' field cites a practice used at scale must name where in the Design or Delivery the plan adopts that practice, or state that it adopts only part of it and which part.",
+        "status": "proposed"
+      },
+      {
+        "slug": "blocking-open-question-has-no-default",
+        "gate_run": 1,
+        "angle": "ownership and lifecycle of the control surfaces the plan itself creates is unchecked",
+        "finding": "The null-price question is owned by the product team, listed 'open' in Dependencies (spec line 83) and due before a Phase 2 that starts in week 2 (spec lines 69, 92). No default behaviour is stated if the answer does not arrive, and no escalation path.",
+        "maps_to": "none (LINT-04 checks an external dependency has an owner; this one has an owner and is still an unmanaged single point of failure)",
+        "proposed_rule": "LINT-NN - an open question or dependency that gates a phase must state the behaviour the plan takes if it is unresolved when that phase starts.",
+        "status": "proposed"
+      },
+      {
+        "slug": "flag-has-no-lifecycle",
+        "gate_run": 1,
+        "angle": "ownership and lifecycle of the control surfaces the plan itself creates is unchecked",
+        "finding": "DISCOUNT_ORDER_V2 (spec line 103) is the entire Phase 2 rollback mechanism and has no default state, no rollout ramp, no removal criterion, and no statement of who may flip it.",
+        "maps_to": "none (LINT-23 checks the rollback artifact is re-runnable and created at the right point, not that its operation is defined)",
+        "proposed_rule": "LINT-NN - a feature flag named as a rollback mechanism must state its default state, who may change it, and the condition under which it is removed.",
+        "status": "proposed"
+      },
+      {
+        "slug": "plan-internal-work-has-no-owner",
+        "gate_run": 1,
+        "angle": "ownership and lifecycle of the control surfaces the plan itself creates is unchecked",
+        "finding": "Dana owns both assumption verifications, both due inside a one-week Phase 1 (spec lines 75-76, 92). No owner is named on PRC-1, PRC-2 or PRC-3 (spec line 91).",
+        "maps_to": "none (LINT-04 covers external dependencies only)",
+        "proposed_rule": "LINT-NN - every ticket in the Delivery section names an owner, and no single owner holds more than one verification that gates the same phase.",
+        "status": "proposed"
+      },
+      {
+        "slug": "behaviour-change-has-no-customer-facing-step",
+        "gate_run": 1,
+        "angle": "no criterion asks what a behaviour change means outside the system",
+        "finding": "FR-002 changes the order in which discounts are applied and therefore what customers are charged (spec line 16). No grandfathering, customer-notice, or contract-review step appears anywhere in the plan.",
+        "maps_to": "none",
+        "proposed_rule": "LINT-NN - a change that alters a value a customer is charged, quoted or shown must name the notification, grandfathering or approval step it requires, or state that none applies and why.",
+        "status": "proposed"
+      }
+    ]
+  },
+  "isolation_route": "claude-p",
+  "specialist_reviews_in_sequence": true,
+  "auditor_launches": 3,
+  "auditor_launch_notes": "Launch 1 (auditor) failed to start: the CLI parsed the leading '---' of the prompt as an option and the process exited in 3s having written nothing. Launch 2 was the rubric-free holistic judge. Launch 3 was the harness relaunch of the auditor, same class and same bindings, which returned. Per the design gate, a spawn that exits without writing its records is relaunched once and that relaunch does not consume the one sanctioned canary re-run.",
+  "canary_criterion": "LINT-03",
+  "canary_detected_exit": 0,
+  "canary_stripped_and_rechecked": {
+    "criterion": "LINT-03",
+    "auditor_verdict_on_mutated_copy": "UNMET",
+    "caller_verdict_on_original": "MET"
+  },
+  "gate_terms": {
+    "CANARY_OK": true,
+    "EVIDENCE_OK": true,
+    "VERIFIED": false,
+    "INFRA_OK": false
+  },
+  "verdict_counts": { "MET": 11, "UNMET": 10, "N_A": 1, "applicable": 22 },
+  "doc": "docs/specs/pricing-engine.md",
+  "gate_dir": "docs/specs/pricing-engine/",
+  "audit_md_sha256": "ccd2ec339dd86f87a0d8b1c3d4e6be504757d5e85f745d0bf042af18212d0d29",
+  "generator": "none",
+  "holistic_pass_input": "the mutated working copy - the same input manifest as the auditor. The judge located the canary itself, by diffing the mutated copy against the original and then reading .canary/canary.json; recorded here rather than suppressed. Its findings that mapped to an existing criterion (missing Phase 1 rollback -> LINT-03, npm test and timing log absent -> LINT-15/16, assumption 1 unverified -> LINT-08, assumption 2 grep too narrow -> LINT-24, no observability -> LINT-09) were discarded per the design gate."
+}

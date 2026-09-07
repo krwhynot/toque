@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-04",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 80,
+      "line_end": 83,
+      "exact_quote": "| Dependency | Owner | Status |\n| --- | --- | --- |\n| Archived report fixtures from the staging database | platform team | confirmed |\n| Decision on null unit prices | product team | open |",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The Dependencies table lists two external dependencies and each carries a named owner: archived report fixtures from the staging database is owned by the platform team, and the decision on null unit prices is owned by the product team. Both also carry a status. Every external dependency the document states has an owner.",
+  "verdict": "MET"
+}

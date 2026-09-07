@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-06",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 15,
+      "line_end": 15,
+      "exact_quote": "  - Must NOT: change any total for existing reports (golden-master comparison)",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 103,
+      "line_end": 103,
+      "exact_quote": "Rollback: feature flag `DISCOUNT_ORDER_V2` off restores the previous order",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Backward compatibility is claimed explicitly: FR-001 states the change must NOT alter any total for existing reports. The rule then requires a mixed-state scenario. The DISCOUNT_ORDER_V2 feature flag means two pricing code paths coexist in production, but the document never describes the mixed state that flag creates: it does not say whether the flag is global or per-request, what a report rendered under one flag state and re-rendered under the other should produce, or how a partial rollout is reconciled. The golden-master run is an offline before-and-after comparison of a single code path, not a mixed deployment state. The compatibility claim is therefore unchecked in the one configuration where it is most likely to break.",
+  "verdict": "UNMET"
+}

@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-21",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 75,
+      "line_end": 75,
+      "exact_quote": "| 1 | The 500 archived reports cover every pricing rule in use | A rule with no fixture is silently changed | Group archived reports by rule id and compare with the rule table | Phase 1 | Dana | unverified |",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The rule triggers on a risk whose failure mode is silent, and the document has one: assumption 1 records that a pricing rule with no fixture is silently changed. Its named verification does not rely on the same filtered source as the failure. The failure lives in the archived report set being incomplete, and the check groups archived reports by rule id and compares them against the rule table, which is an independent enumeration of the rules in use. Comparing the fixture set against an external authoritative list is exactly the cross-source signal this rule asks for; a same-source signal would have been checking the archives against themselves. The separate concern that the production-side signal is slow is recorded under LINT-09.",
+  "verdict": "MET"
+}

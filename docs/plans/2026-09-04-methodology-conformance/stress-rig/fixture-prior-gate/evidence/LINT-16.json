@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-16",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 21,
+      "line_end": 21,
+      "exact_quote": "- **NFR-001 (P0):** Rendering a 10,000-row report completes within 2 seconds on the staging database — measured by the existing `render` timing log",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "NFR-001 names the existing render timing log as its measurement source. The word existing makes this a claim about monitoring infrastructure in place today, not a deliverable of any phase. It could not be supported: the repository bound to this audit has no src directory and therefore no src/reports.js and no render function, so the timing log the requirement depends on does not exist here. The second measurement source, the support tracker tag pricing, is an external system that cannot be checked from the repository and is recorded as unverifiable rather than as the basis of this verdict. Flagged CODEBASE-CLAIM-NOT-VERIFIED on the same basis as LINT-15.",
+  "verdict": "UNMET"
+}

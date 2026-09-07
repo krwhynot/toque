@@ -1,0 +1,16 @@
+{
+  "criterion_id": "LINT-14",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine/audit.md",
+      "line_start": 435,
+      "line_end": 436,
+      "exact_quote": "**Baseline comparison: 0 regressions, 0 improvements, 0 new items** (nothing to compare).\nLINT-14 is therefore **N_A (caller-decided)**, and stays in the denominator of the 22-rule set.",
+      "sha256": "ccd2ec339dd86f87a0d8b1c3d4e6be504757d5e85f745d0bf042af18212d0d29"
+    }
+  ],
+  "reasoning": "CALLER-DECIDED, per the design gate: the auditor always records LINT-14 N_A with justification \"caller compares\", and the caller replaces that verdict from the baseline comparison. No previous baseline exists for this document - the gate folder docs/specs/pricing-engine/ did not exist before this run, it holds no earlier gate.json, there is no sibling reaudits/*/ folder, and the gate folder is not a plan folder so there is no status.json. Nothing was compared, so no regression is possible and none is claimed. The full comparison is recorded in the ## Baseline comparison section of audit.md cited above, pinned to that file final sha256.",
+  "verdict": "N_A",
+  "n_a_justification": "First audit of this document; no previous baseline existed to compare against. On a first audit LINT-14 is N_A and stays in the denominator of the 22-rule Phase 5 Lite set.",
+  "caller_decided": true
+}

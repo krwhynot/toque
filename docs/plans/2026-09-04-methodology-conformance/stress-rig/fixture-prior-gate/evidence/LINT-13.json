@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-13",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 32,
+      "line_end": 32,
+      "exact_quote": "Extract the pricing arithmetic from `src/reports.js` into `src/pricing.js` behind a `computeTotal(report)` function. `render` calls it; nothing else changes in Phase 1. Phase 2 adds the discount ordering. Characterization tests capture current totals before any code moves.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The Design section commits to a two-phase sequencing, extraction first and discount ordering second, and the sentence \"nothing else changes in Phase 1\" is the evaluated rejection of doing both in one phase. Two orderings are thereby weighed and one chosen. The minimum of two evaluated alternatives is met.",
+  "verdict": "MET"
+}

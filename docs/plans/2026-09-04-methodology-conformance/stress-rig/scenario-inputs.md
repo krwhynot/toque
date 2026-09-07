@@ -9,6 +9,8 @@
 - **Raw output.** Every spawned auditor's, scaffolder's and holistic judge's complete output is saved to `$RUN/logs/{scenario}-{role}-{launch}.txt`, numbered by launch, before it is read.
 - **No release preflight.** Do not run `.github/release.sh check` in a scenario repository. It dispatches to `preflight`, whose first test fails on any dirty tree, and a scenario is required to leave its tree dirty (§4b row 3).
 - **Subprocess route.** When the isolation route is `claude -p`, launch through `launch-auditor.sh` (below). Never pass the prompt on argv, and never add `--dangerously-skip-permissions`.
+- **Every prompt on disk.** The prompt handed to every spawned agent — auditor, generator, holistic judge — is written to `$RUN/logs/{scenario}-{role}-{launch}-prompt.md` before the launch, so a verifier can re-derive from disk what the generator was told (the D9 feedback lines) and what the auditor was bound to. From run 4 on, every spawn goes through the wrapper, which makes this automatic.
+- **Long launches.** A subprocess can run longer than one Bash call allows. Start the wrapper with the Bash tool's `run_in_background`, and read `{out}.meta` when the completion notification arrives; the meta file is written only after the subprocess exits.
 
 ## s1 — `quick-plan` on a vague objective
 
@@ -58,6 +60,16 @@ bash $RIG/launch-auditor.sh "$RUN/logs/s3-auditor-1-prompt.md" "$RUN/stress/s3" 
 
 The wrapper pipes the prompt on stdin, grants exactly the tools `plan-auditor.md`'s frontmatter declares, pins the model to Opus, and writes `{out}.meta` with the argv, cwd, prompt hash, start, end and exit code. That file is the disk artifact a verifier grades the isolation route from. `DRY_RUN=1` prints the argv and launches nothing.
 
-## Fourth run: three scenarios, not built yet
+## s8 — `quick-audit` re-run over a prior gate folder (run 4)
 
-The critic scoped run 4 to three engineered scenarios (stress-run3-critic.md §6): one that reaches PASS under current text, one where the auditor misses the canary so `inject --exclude` and exit 3 execute, and one where the relaunched subprocess auditor also fails so `auditor-did-not-return` is recorded once. None has a fixture or a block here yet.
+```
+/toque:quick-audit docs/specs/pricing-engine.md
+```
+
+The repository holds the s3 spec at v1 in its first commit together with the gate folder run 3's s3 produced for it (`fixture-prior-gate/`, a real run-3 artifact with one planted prior-auditor miss: LINT-13 is recorded as pass although the Design section evaluates no alternative), and at v2 in its second commit, where Phase 2 is revised and its `Rollback:` line dropped. The previous document is in git history under the baseline's `doc_sha256`, which is the D10 reconstruction path.
+
+Expected under D10: LINT-13 fails on unchanged text and is reported as AUDITOR VARIANCE; LINT-03 fails on changed text and is a regression; LINT-14 is UNMET for that one regression; LINT-15 and LINT-16 improve because the binding now resolves. The scenario is NOT PASS by design. The executor is told none of this.
+
+## Fourth run: what is built and what is not
+
+The critic scoped run 4 to three engineered scenarios (stress-run3-critic.md §6). Built: the PASS-path attempt reuses **s1** under the D9–D11 text, and **s8** above forces a flip on unchanged text. Not built: a scenario where the auditor misses the canary so `inject --exclude` and exit 3 execute, and one where the relaunched subprocess auditor also fails so `auditor-did-not-return` is recorded once.

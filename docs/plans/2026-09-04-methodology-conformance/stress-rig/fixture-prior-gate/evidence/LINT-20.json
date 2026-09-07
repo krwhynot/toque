@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-20",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 53,
+      "line_end": 53,
+      "exact_quote": "**What it is:** Tests that record the current behavior of code before changing it, so that a refactor is checked against what the code did rather than what it should have done.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 61,
+      "line_end": 61,
+      "exact_quote": "**Why it works:** It turns \"did I break anything\" into a diff against recorded outputs, which catches the accidental behaviors a spec never wrote down.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 65,
+      "line_end": 65,
+      "exact_quote": "**Connection to this plan:** Phase 1 records 500 archived report totals before `computeTotal` exists; Phase 2 reruns them.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The confidence brief has one entry and that entry carries all three required fields. What it is defines characterization testing at line 53, Why it works gives the mechanism at line 61, and Connection to this plan ties it to the specific Phase 1 and Phase 2 steps at line 65. Per the registry scope note, this rule counts entry fields rather than subsections, so a single-entry brief is not a failure. The connection field is specific to this plan rather than generic, naming the 500 archived report totals and the Phase 2 rerun.",
+  "verdict": "MET"
+}

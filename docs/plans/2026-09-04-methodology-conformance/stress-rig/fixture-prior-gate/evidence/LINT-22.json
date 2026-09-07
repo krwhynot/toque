@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-22",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 91,
+      "line_end": 92,
+      "exact_quote": "- Tickets: PRC-1 capture golden master; PRC-2 extract `computeTotal`; PRC-3 discount ordering (depends on PRC-2)\n- Timeline: Phase 1 week 1; Phase 2 week 2; critical path PRC-1 → PRC-2 → PRC-3",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 98,
+      "line_end": 98,
+      "exact_quote": "Go/No-Go: 500 of 500 golden-master totals identical before PRC-3 starts",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The document states an ordering between separately deployable artifacts and names an enforcement mechanism for only part of it. PRC-3 is stated to depend on PRC-2, and the Phase 1 go/no-go enforces that dependency by requiring 500 of 500 identical totals before PRC-3 starts. The ordering PRC-1 before PRC-2 has no such mechanism: it appears only as an arrow in the critical path line. That is the load-bearing order in the whole plan, because if the golden master is captured after the arithmetic moves it records post-move behavior and pins the wrong baseline, making every downstream comparison pass regardless of what the extraction broke. Nothing named in the document prevents PRC-2 from landing first; no gate, no CI check and no go/no-go condition guards that boundary.",
+  "verdict": "UNMET"
+}

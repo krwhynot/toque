@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-10",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 98,
+      "line_end": 98,
+      "exact_quote": "Go/No-Go: 500 of 500 golden-master totals identical before PRC-3 starts",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 104,
+      "line_end": 104,
+      "exact_quote": "Go/No-Go: no golden-master regression and the product decision on null prices recorded",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Both delivery phases state go/no-go criteria and both are falsifiable. Phase 1 requires 500 of 500 golden-master totals identical before PRC-3 starts. Phase 2 requires no golden-master regression and the recorded product decision on null prices. Each names a condition that can be checked and that would visibly fail if unmet.",
+  "verdict": "MET"
+}

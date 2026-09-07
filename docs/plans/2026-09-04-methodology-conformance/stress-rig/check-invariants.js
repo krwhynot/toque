@@ -117,6 +117,33 @@ switch (scenario) {
     out.checks.manifest_mentions_reaudit = read(`${plan}/manifest.md`).includes('reaudits/');
     break;
   }
+  case 's8': { // run 4: quick-audit re-run over a prior gate folder; D10's diff-scoped LINT-14
+    const doc = 'docs/specs/pricing-engine.md';
+    const gateDir = 'docs/specs/pricing-engine';
+    out.checks.doc_sha_unchanged = sha(doc) === fs.readFileSync(path.join(repo, '.stress-baseline', 'doc.sha'), 'utf8').trim();
+    out.checks.gate = gateFolderChecks(gateDir, doc);
+    const audit = read(`${gateDir}/audit.md`);
+    out.checks.baseline_comparison_section = /## Baseline comparison/.test(audit);
+    out.checks.audit_mentions_variance = (audit.match(/AUDITOR VARIANCE/gi) || []).length;
+    out.checks.audit_reports_line = (audit.match(/Baseline comparison: [^\n]*/) || [null])[0];
+    const verdictOf = (id) => { try { return JSON.parse(read(`${gateDir}/evidence/${id}.json`)).verdict; } catch (e) { return null; } };
+    out.checks.verdicts = { 'LINT-03': verdictOf('LINT-03'), 'LINT-13': verdictOf('LINT-13'), 'LINT-14': verdictOf('LINT-14'), 'LINT-15': verdictOf('LINT-15'), 'LINT-16': verdictOf('LINT-16') };
+    try {
+      const g = JSON.parse(read(`${gateDir}/gate.json`));
+      out.checks.baseline_run_number = g.baseline && g.baseline.run_number;
+      out.checks.history_length = Array.isArray(g.history) ? g.history.length : null;
+      out.checks.prior_run_in_history = Array.isArray(g.history) && g.history.some(h => h && h.run_number === 1);
+      out.checks.baseline_lint13 = g.baseline && g.baseline.lint_results && g.baseline.lint_results['LINT-13'];
+      out.checks.baseline_lint03 = g.baseline && g.baseline.lint_results && g.baseline.lint_results['LINT-03'];
+      out.checks.baseline_comparison_recorded = g.baseline_comparison || null;
+    } catch (e) { out.checks.gate_json = 'unparseable'; }
+    // The previous document must be recoverable from history by the baseline's sha (D10).
+    const v1 = run(`git show HEAD~1:${doc}`);
+    out.checks.v1_in_history = v1.code === 0;
+    out.checks.v1_sha = v1.code === 0 ? crypto.createHash('sha256').update(v1.out.replace(/\r\n/g, '\n')).digest('hex') : null;
+    out.checks.spec_commits = run(`git log --format=%h -- ${doc}`).out.trim().split('\n').filter(Boolean).length;
+    break;
+  }
   case 's6': { // quick-audit with pasted text
     const specs = newSpec();
     out.checks.spec_files = specs;

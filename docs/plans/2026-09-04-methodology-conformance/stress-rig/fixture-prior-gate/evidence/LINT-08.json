@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-08",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 75,
+      "line_end": 75,
+      "exact_quote": "| 1 | The 500 archived reports cover every pricing rule in use | A rule with no fixture is silently changed | Group archived reports by rule id and compare with the rule table | Phase 1 | Dana | unverified |",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Assumption 1 states that the 500 archived reports cover every pricing rule in use, records the consequence if false as a pricing rule being silently changed, and carries status unverified. Silent alteration of a live pricing rule is HIGH impact by any reasonable reading: it produces wrong money with no error raised. The assumption is load-bearing because the entire safety argument of the extraction rests on the golden master being complete. An unverified HIGH-impact assumption is precisely the condition this hard gate blocks on, and the verification named in the register is scheduled for Phase 1 rather than already done.",
+  "verdict": "UNMET"
+}

@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-15",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 36,
+      "line_end": 36,
+      "exact_quote": "Repository test conventions (`node --test`, one file per module); no new dependencies.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The document relies on npm test as the mechanism that runs both phases of tests, and describes node --test with one file per module as an existing repository convention. Both are claims about infrastructure asserted to exist today rather than deliverables of a phase, so under the registry classification they are checkable now. In the repository bound to this audit they are not supported: a find over the whole repository returned no package.json at any path and no src directory exists, so no npm test script is defined and the stated repository convention could not be confirmed. The two test files themselves are correctly classified as PLANNED (tests/pricing.golden.test.js is a Phase 1 deliverable and tests/pricing.test.js a Phase 2 deliverable) and are not counted against this rule. The verdict rests solely on the run mechanism, which is externally checkable and unsupported. Flagged CODEBASE-CLAIM-NOT-VERIFIED: the spec may target a codebase other than the repository it is filed in, but the schema requires UNMET rather than MET for an externally checkable claim with no supporting evidence.",
+  "verdict": "UNMET"
+}

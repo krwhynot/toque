@@ -1,0 +1,22 @@
+{
+  "criterion_id": "LINT-03",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 97,
+      "line_end": 97,
+      "exact_quote": "Rollback: revert the extraction commit; `render` still contains the inline arithmetic until PRC-2 merges",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 103,
+      "line_end": 103,
+      "exact_quote": "Rollback: feature flag `DISCOUNT_ORDER_V2` off restores the previous order",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "CALLER RE-CHECK after the canary strip (design gate, canary step 2). The auditor returned UNMET for LINT-03 on the mutated working copy, in which the canary class rollback-strip had deleted the Phase 1 Rollback line; that finding is an artefact of this harness and was stripped. Re-checked against the unmutated document: the plan has exactly two deployment phases, and each states a rollback - Phase 1 at line 97 (revert the extraction commit) and Phase 2 at line 103 (turn the DISCOUNT_ORDER_V2 flag off). Every deployment phase therefore has a rollback plan.",
+  "verdict": "MET",
+  "caller_recheck": true
+}

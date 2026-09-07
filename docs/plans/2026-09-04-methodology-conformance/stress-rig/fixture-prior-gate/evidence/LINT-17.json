@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-17",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Every deliverable carries an assigned testing methodology, named from the standard set rather than defaulted to unit tests. Phase 1 deliverables (src/pricing.js, tests/pricing.golden.test.js, render calling computeTotal) are assigned characterization testing, which is the correct choice for a refactor that must not change behavior. Phase 2 deliverables (ordered discount application, tests/pricing.test.js) are assigned TDD, which is the correct choice for new behavior. The assignment is stated per phase and each phase covers all of its own deliverables.",
+  "verdict": "MET"
+}

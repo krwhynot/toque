@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-18",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 96,
+      "line_end": 96,
+      "exact_quote": "Deliverables: `src/pricing.js`, `tests/pricing.golden.test.js`, `render` calling `computeTotal`",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Phase 2 satisfies the rule explicitly: tests/pricing.test.js is written by a separate agent from the implementer. Phase 1 does not. Phase 1 ships a code deliverable, src/pricing.js, and its accompanying test file tests/pricing.golden.test.js is described only as captured before the move, naming no author and no separation from whoever performs the extraction. The document identifies its own authorship as agent plus human reviewer, so the AI-generated condition is in play. Under the Lite-mode adjustment for this rule, a code deliverable that names no test author is UNMET rather than N_A, because separation cannot be confirmed. The gap matters most in Phase 1, where the golden master is the only thing standing between the refactor and a silent behavior change.",
+  "verdict": "UNMET"
+}

@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-23",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 65,
+      "line_end": 65,
+      "exact_quote": "**Connection to this plan:** Phase 1 records 500 archived report totals before `computeTotal` exists; Phase 2 reruns them.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 103,
+      "line_end": 103,
+      "exact_quote": "Rollback: feature flag `DISCOUNT_ORDER_V2` off restores the previous order",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The rollback artifacts the plan itself creates are correctly specified on both counts this rule checks. The golden master is created at the point whose state it preserves: it is captured before the move and before computeTotal exists, which is the pre-change state it is meant to pin. It is also re-runnable, and the document says so, since Phase 2 reruns the same 500 totals. The Phase 2 feature flag DISCOUNT_ORDER_V2 is re-runnable by nature, being a toggle that can be flipped off and on, and it is introduced alongside the change it reverses rather than after it. That Phase 1 states no rollback at all is a distinct defect recorded under LINT-03; this rule judges the rollback artifacts that do exist, and those are sound.",
+  "verdict": "MET"
+}

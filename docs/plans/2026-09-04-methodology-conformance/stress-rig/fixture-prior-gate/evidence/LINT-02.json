@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-02",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 73,
+      "line_end": 76,
+      "exact_quote": "| # | Assumption | Impact If False | How to Verify | By When | Owner | Status |\n|---|-----------|----------------|---------------|---------|-------|--------|\n| 1 | The 500 archived reports cover every pricing rule in use | A rule with no fixture is silently changed | Group archived reports by rule id and compare with the rule table | Phase 1 | Dana | unverified |\n| 2 | No caller other than `render` reads pricing fields directly | A hidden caller breaks when fields move | grep for `unit_price` outside src/reports.js | Phase 1 | Dana | verified |",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The rule triggers on a risk labelled HIGH. The full 103-line document contains no risk register and assigns no likelihood or severity label to any hazard; a keyword scan for risk/likelihood/impact/mitigation matched 2 lines, both in the assumption register and the Evidence section, neither of which labels a risk HIGH. The two impact-if-false entries that do exist each carry a named verification action and an owner. Under the registry note that a rule whose triggering condition is absent is PASS with the reason recorded, this passes. The absence of any risk register is reported as a dimension-4 gap, not as a LINT-02 failure.",
+  "verdict": "MET"
+}

@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-05",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 32,
+      "line_end": 32,
+      "exact_quote": "Extract the pricing arithmetic from `src/reports.js` into `src/pricing.js` behind a `computeTotal(report)` function. `render` calls it; nothing else changes in Phase 1. Phase 2 adds the discount ordering. Characterization tests capture current totals before any code moves.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    },
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The document introduces no HTTP endpoint or external API surface; the only new interface is the internal function computeTotal(report) in src/pricing.js. That function has test entries in both phases: tests/pricing.golden.test.js pins its output for Phase 1 and tests/pricing.test.js covers the Phase 2 discount ordering. Whether read as vacuously triggered (no endpoint) or as satisfied (the new interface has test entries), the rule passes.",
+  "verdict": "MET"
+}

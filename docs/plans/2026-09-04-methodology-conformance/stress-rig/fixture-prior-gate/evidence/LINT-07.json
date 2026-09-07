@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-07",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 87,
+      "line_end": 87,
+      "exact_quote": "Characterization for Phase 1 (`tests/pricing.golden.test.js`, captured before the move); TDD for Phase 2 discount ordering (`tests/pricing.test.js`, written by a separate agent from the implementer). Both run in `npm test` at build time and in Stage 4.",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "Each new behavior has a named test. FR-001 (extraction with no behavior change) is covered by characterization testing in tests/pricing.golden.test.js, and FR-002 (fixed discount order) is covered by TDD in tests/pricing.test.js. The methodology is matched to the change type in both cases. The narrower concern that the golden master may not contain a report exercising the empty-price-rows acceptance criterion is a coverage gap recorded in the scenario matrix and under LINT-08; it does not make the behavior untested at the level this rule checks.",
+  "verdict": "MET"
+}

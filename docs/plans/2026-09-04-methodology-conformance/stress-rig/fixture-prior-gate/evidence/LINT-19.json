@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-19",
+  "evidence": [
+    {
+      "artifact": "docs/specs/pricing-engine.md",
+      "line_start": 50,
+      "line_end": 51,
+      "exact_quote": "#### Characterization testing {#characterization}\n**Impact:** HIGH — the extraction is only safe if current totals are pinned first",
+      "sha256": "d32216bca7d8bbbf31d0bfa8d54ad36abb7f3086467f36863eb4734606c7d5ee"
+    }
+  ],
+  "reasoning": "The Evidence section exists and functions as the confidence brief. It carries one entry, characterization testing, marked Impact HIGH. A scan of the full document for the three blocking markers SOURCE NEEDED, LINK DEAD and UNVERIFIED in bracketed marker form returned no match on any line, so no HIGH-impact entry carries an unresolved marker and there is nothing for this gate to block on. The entry also supplies a concrete origin and a reference URL rather than an unsourced assertion.",
+  "verdict": "MET"
+}
