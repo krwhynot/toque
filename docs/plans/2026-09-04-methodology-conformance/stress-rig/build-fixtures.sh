@@ -128,7 +128,7 @@ gitinit "$ST/s4"
 
 # ---- copies of the toque repository (the centerpiece plan is about it) ------
 mkdir -p "$ST/base-toque"
-(cd "$SRC" && tar --exclude='./.git' --exclude='./assets' --exclude='./node_modules' --exclude='./docs/plans/2026-07-20-plugin-hardening-v5' -cf - .) | (cd "$ST/base-toque" && tar -xf -)
+(cd "$SRC" && tar --exclude='./.git' --exclude='./assets' --exclude='./node_modules' --exclude='.canary' --exclude='./docs/plans/2026-07-20-plugin-hardening-v5' -cf - .) | (cd "$ST/base-toque" && tar -xf -)
 for s in s2 s3 s5; do cp -r "$ST/base-toque" "$ST/$s"; done
 
 # s3: a standalone template-shaped spec beside which quick-audit must write its gate folder

@@ -56,7 +56,7 @@ mkdir -p "$FROZEN" "$SRCW" "$ST"
 # are byte-identical by construction. GNU tar reads "C:/..." as a remote host,
 # so the -f form is avoided entirely and the stream is piped. rsync is not
 # installed in Git Bash here; tar is what the rig already uses.
-(cd "$LIVE" && tar --exclude='./.git' --exclude='./assets' --exclude='./node_modules' -cf - .) \
+(cd "$LIVE" && tar --exclude='./.git' --exclude='./assets' --exclude='./node_modules' --exclude='.canary' -cf - .) \
   | (cd "$FROZEN" && tar -xf -)
 cp -r "$FROZEN/." "$SRCW/"
 

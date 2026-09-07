@@ -67,7 +67,7 @@ The `--exclude` fix was then reviewed by an external agent (Codex CLI) and three
 
 Guarded by fourteen assertions in `tests/canary-test.js` (63 passing, up from 49) and five greps added to `PH5-043`. Both were checked for vacuity: removing the exclusion from the script makes the test report the same class twice, and renaming the new reasons or lower-casing the carve-out makes the guard fail.
 
-The twelve medium and low defects the run recorded are not fixed, and a third run is not planned.
+The twelve medium and low defects the run recorded are not fixed. A third run, against the frozen 11.2.0 release on September 6–7, executed these four fixes: LINT-20 and the re-anchoring carve-out held; `--exclude` and `auditor-did-not-return` were never entered because no scenario missed a canary or lost an auditor twice. It also found six new high-severity defects, one of them in `tq-canary.js`; the ranked list is in [stress-run3-critic.md](stress-run3-critic.md) and the run itself in [stress-test.md](stress-test.md). The fixes it recommends are not yet decided.
 
 ## What this does not claim
 

@@ -42,7 +42,9 @@ function gateFolderChecks(gateDir, docPath) {
   }
   if (c.gate_json) { try { const g = JSON.parse(read(`${gateDir}/gate.json`)); c.gate_json_keys = Object.keys(g); c.gate_passed = g.gate_passed; c.canary_found = g.canary_found; c.canary_class = g.canary_class; c.canary_reason = g.canary_reason; c.validator_exit_recorded = g.validator_exit; c.mode_recorded = g.mode; } catch (e) { c.gate_json_parse = 'error'; } }
   const audit = read(`${gateDir}/audit.md`);
-  c.audit_cites_canary_path = audit.includes('.canary/');
+  // Prose scan, not a citation check: the auditor declining to read .canary/, or the
+  // caller quoting an inject command, both hit it. The invariant is citations.canary.
+  c.audit_prose_mentions_canary_path = audit.includes('.canary/');
   c.audit_mentions = { PASS: /\bPASS\b/.test(audit), NOT_PASS: /NOT PASS/.test(audit), revision_history: /Revision History/.test(audit), mode: (audit.match(/Audit mode: (\w+)/) || [])[1] || null, not_applicable: /not-applicable/.test(audit) };
   return c;
 }
