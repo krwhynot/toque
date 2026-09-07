@@ -85,7 +85,7 @@ pit feedback. Each stage below names the actual artifact and approval it needs.
 ## The Design Gate
 
 Stage 2 ends in an audit with no score. A fresh, isolated plan-auditor returns
-criterion records, each with a verdict and byte-addressed evidence. Two tools
+criterion records, each with a verdict and byte-addressed evidence. Three tools
 in `scripts/` decide whether that audit counts:
 
 - **`tq-canary.js`** checks the auditor. Before the audit runs, it injects one
@@ -95,6 +95,11 @@ in `scripts/` decide whether that audit counts:
 - **`tq-evidence-validate.js`** checks the evidence. It re-reads every cited
   file, verifies the hash, slices the cited lines, and compares them to the
   quote byte-for-byte. It can only demote a verdict, never promote one.
+- **`tq-gate-baseline.js`** checks the revision. It diffs the document against
+  the previous baseline's copy and classifies every element that changed
+  status: a flip on text the revision touched is a regression, a flip on text
+  it did not is auditor variance. It writes the `## Baseline comparison`
+  section and pins the LINT-14 record to it.
 
 ```
 PASS = CANARY_OK AND EVIDENCE_OK AND VERIFIED AND INFRA_OK
@@ -164,7 +169,7 @@ pass without them.
 - **5 skills** - plan and troubleshoot (each a router plus one file per stage or phase), documentation, MCP research, self-audit knowledge
 - **7 doc templates** - ADR, BRD, PRD, README, runbook, release notes, spec, each with a fill-in document skeleton
 - **3 hook handlers** - `scripts/tq-session-start.js`, `tq-subagent-stop.js`, `tq-pre-compact.js`
-- **2 design-gate tools** - `scripts/tq-canary.js` and `tq-evidence-validate.js`, run by the Stage 2 `<design_gate>` block, which `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit` all execute; never by hooks
+- **3 design-gate tools** - `scripts/tq-canary.js`, `tq-evidence-validate.js` and `tq-gate-baseline.js`, run by the Stage 2 `<design_gate>` block, which `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit` all execute; never by hooks
 
 ## Version History
 

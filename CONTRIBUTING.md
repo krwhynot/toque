@@ -119,7 +119,8 @@ When editing hooks:
 - security guards must never fail open; informational hooks must never fail closed
 - every file in a plugin's `scripts/` must be referenced by that plugin's
   `hooks/hooks.json` (or invoked as `node .../scripts/NAME` from its commands,
-  agents, or skills — `tq-canary.js` and `tq-evidence-validate.js` are wired from
+  agents, or skills — `tq-canary.js`, `tq-evidence-validate.js` and
+  `tq-gate-baseline.js` are wired from
   `skills/plan/stages/stage-2-design.md`), and every reference must resolve —
   `layer1` sweeps both directions
 

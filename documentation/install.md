@@ -13,7 +13,7 @@ Only two things are required; the rest are used when a specific command needs th
 | Dependency | Status | Used by | If absent |
 | --- | --- | --- | --- |
 | Claude Code (`claude --version`) | Required | Everything | Nothing runs |
-| Node.js 18+ on PATH (`node --version`) | Required | The 3 hooks and the 2 design-gate tools (`tq-canary.js`, `tq-evidence-validate.js`) | Hook errors on each event; Stage 2 cannot pass. There is no fallback that turns a missing check into a pass |
+| Node.js 18+ on PATH (`node --version`) | Required | The 3 hooks and the 3 design-gate tools (`tq-canary.js`, `tq-evidence-validate.js`, `tq-gate-baseline.js`) | Hook errors on each event; Stage 2 cannot pass. There is no fallback that turns a missing check into a pass |
 | Git | Conditional | Stage 5 diff-versus-plan; Stage 3 traceability check | Those checks cannot run |
 | `python3` or `python` | Conditional | `plan-status` overview and `troubleshoot` plan detection (JSON read, falls back to `grep`); `quick-cleanup` PDF, Word, and CSV extraction fallbacks | Status still reports via a weaker `grep` read; unreadable source files are marked for manual review |
 | `pdftotext`, `pandoc` | Conditional | `quick-cleanup` PDF and Word extraction | Python fallback, then `[MANUAL REVIEW REQUIRED]` |

@@ -885,6 +885,10 @@ then replaces that verdict, in this order:
   4. Run the evidence validator.
   5. Write the gate record (gate.json, or status.json for a plan folder) LAST.
 
+Steps 1 and 2 are `tq-gate-baseline.js record`, and it does them in one pass so
+the section and the pin cannot disagree; step 3 is yours, and `repin` after it.
+The commands and the comparison they run are under BASELINE SNAPSHOT below.
+
 The pin is only as good as the last edit to audit.md. Two later steps append
 to that file by design — `## Evidence notes` when no generator is bound, and
 `## Revision History` after the loop ends — and each one makes the pin stale.
@@ -1015,46 +1019,140 @@ When {gate_dir} is a plan folder, update manifest.md: update the spec.md row
 with the reinforcement date.
 
 BASELINE SNAPSHOT:
-After writing the audit, capture a per-element baseline in status.json when
-{gate_dir} is a plan folder, otherwise in {gate_dir}/gate.json:
+
+Four caller duties live here — keep the previous document, diff it against
+{doc}, classify every compared element, write and pin the LINT-14 record. They
+are mechanical and they are ONE SCRIPT. Run it. Do not perform the comparison by
+reading two tables side by side.
+
+The rule this replaces said a regression was a flip on a line "the item's new
+record cites". Coverage, scenario and concern rows have no record, and one
+stress run lost the gate's only open path to that missing referent: the single
+UNMET standing between a spec and a PASS was a cross-cutting concern row, and
+two careful readers of the paragraph reached opposite verdicts about whether it
+could be a regression at all. A script cannot leave the referent unsupplied, so
+it does not.
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/tq-gate-baseline.js" compare \
+  {previous-baseline.json | -} {current-baseline.json} {previous-doc | -} {doc} \
+  --evidence {gate_dir}/evidence \
+  --root {repo root} \
+  --out {gate_dir}/baseline-comparison.json
+```
+
+Exit 0 is LINT-14 MET or N_A, exit 1 is UNMET on at least one regression, exit 2
+is an input error with nothing written. Use its verdict; it is the caller's, and
+the auditor never has one.
+
+`baseline-comparison.json` is an intermediate that `record` and `snapshot` read.
+The committed record of the comparison is the `## Baseline comparison` section
+in audit.md and the LINT-14 record pinned to it; keep the JSON beside them if a
+later verifier will re-derive the classification, delete it otherwise.
+
+THE CURRENT BASELINE is a JSON file you write from the audit before comparing,
+in the shape below, and then hand to `snapshot`. It is the published schema plus
+the one addition that is the whole point: every matrix row names the lines of
+{doc} it is about, and the file you read them from.
+
 ```json
 {
   "baseline": {
     "run_number": 1,
     "date": "{ISO date}",
     "plan_version": "v1",
-    "lint_results": { "LINT-01": "pass", "LINT-02": "pass", ... },
-    "coverage_items": [{ "name": "...", "status": "covered|partial|ok-excluded|gap" }],
+    "lint_results": {
+      "LINT-01": "pass",
+      "LINT-03": { "status": "fail", "lines": [[100, 103]], "line_source": "evidence/LINT-03.json" }
+    },
+    "coverage_items": [{ "name": "...", "status": "covered|partial|ok-excluded|gap", "lines": [[40, 52]], "line_source": "audit.md Coverage Matrix" }],
     "assumption_counts": { "total": N, "verified": N, "unverified": N, "falsified": N, "waived": N },
-    "scenario_statuses": [{ "id": 1, "name": "Happy path", "status": "covered|partial|gap" }],
-    "concern_statuses": [{ "name": "API contract", "status": "ok|warn|gap" }],
+    "scenario_statuses": [{ "id": 1, "name": "Happy path", "status": "covered|partial|gap", "lines": [[61, 70]], "line_source": "audit.md Scenario Matrix" }],
+    "concern_statuses": [{ "name": "API contract", "status": "ok|warn|gap", "lines": [[496, 496]], "line_source": "audit.md Cross-Cutting Concerns" }],
     "infra_gaps": N,
     "infra_planned": N,
-    "doc_sha256": "{sha256 of {doc} at the moment this baseline was written}"
+    "doc_sha256": "{written by snapshot from {doc}; do not transcribe it}"
   }
 }
 ```
 
-On re-audit (after revision loop or manual re-run), compare current vs baseline:
-- REGRESSION: item was covered/passing, now gap/failing, AND at least one line
-  the item's new record cites lies inside the diff between the previous
-  baseline's document and {doc} -> flag in audit output
-- AUDITOR VARIANCE: item was covered/passing, now gap/failing, and every line
-  its new record cites is unchanged since the previous baseline -> report under
-  baseline_comparison as variance, never as a regression. The item still fails
-  its own criterion; it does not also fail LINT-14.
-- IMPROVEMENT: item was gap/failing, now covered/passing -> report as progress
-- NEW: item not in previous baseline -> report for awareness
+`lines` accepts `[[100, 103]]`, `[100, 103]`, `496` or `"100-103"`. A LINT
+element may omit `lines` and `line_source`: `compare --evidence` fills them from
+`evidence/{criterion_id}.json`, using only citations that point at {doc} — a
+record may also cite a test file, and a change there is not a change to the
+document being diffed. A MATRIX ROW has no record and must carry them itself;
+the auditor's coverage, scenario and concern matrices are where you read them.
+`assumption_counts`, `infra_gaps` and `infra_planned` ride in the baseline for
+trend tracking and are not classified as elements.
+
+Three status vocabularies are in use — this schema's
+`covered|partial|ok-excluded|gap`, the auditor's matrices emitting
+`OK|WARNING|GAP`, and its lint tables emitting `PASS|FAIL|N_A`. The script maps
+all three onto pass/partial/fail/n_a in one place. A token outside them is
+refused rather than guessed, because a status guessed as passing turns a real
+regression into an unchanged row and nothing on the page says so.
+
+WHAT THE COMPARISON DECIDES, per element:
+- REGRESSION — was passing, now failing, and at least one line it cites lies
+  inside the diff between the previous baseline's document and {doc}. HIGH
+  priority in the audit output.
+- AUDITOR VARIANCE — was passing, now failing, and every line it cites is
+  unchanged since the previous baseline. Reported under baseline_comparison,
+  never as a regression. The element still fails its own criterion; it does not
+  also fail LINT-14.
+- DEGRADATION — dropped a step without reaching failing (covered -> partial,
+  ok -> warn), or fell from partial. Reported with its diff scope. Not a LINT-14
+  failure: D10 defines that over an element that was passing and now fails.
+- IMPROVEMENT — was failing, now passing or partial. Reported as progress.
+- NEW / DROPPED — absent from one side. A DROPPED beside a NEW is usually a
+  RENAMED row rather than a lost one; one run booked two renames as new items
+  and nothing on the page showed the old names disappearing.
+- NOT-COMPARABLE — N_A on either side. N_A is off the ladder in both
+  directions, so a vacuous rule recorded N_A on one run and PASS on the next
+  cannot read as a regression on a document nobody changed.
+- UNCHANGED — same status.
+
+A flip the script CANNOT scope — no previous document, or a row that named no
+lines — is booked as a REGRESSION, marked unscoped in the section with the
+reason it could not be scoped. The exemption is never applied on a guess. The
+fix is to name the lines, not to accept the demotion.
+
+LINT-14 is N_A on the first audit, and N_A when {doc}'s sha256 equals the
+previous baseline's doc_sha256 — the diff is then empty, so every flip is
+variance and nothing about the document was tested. UNMET on any regression.
+MET otherwise.
+
+Then write the section and the record. This is steps 1 and 2 of the LINT-14
+write order above, and it is idempotent:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/tq-gate-baseline.js" record \
+  {gate_dir}/baseline-comparison.json {gate_dir}/audit.md {gate_dir}/evidence \
+  --root {repo root}
+```
+
+It writes `## Baseline comparison` into audit.md — replacing any section already
+there, never appending a second one under the same heading — listing every
+element compared, the file each baseline value was read from, its cited lines,
+its diff scope and its class, followed by the counts:
 
 Report: "Baseline comparison: X regressions, Y improvements, Z new items,
 V auditor-variance flips"
-Regressions are flagged as HIGH priority in the audit output.
 
-This comparison is what LINT-14 is evaluated against (see the registry for its text).
-Only an element that was covered/passing in the previous baseline and is now
-gap/failing, on text the revision changed, counts; pre-existing gaps do not
-trigger it, and neither does a pre-existing defect a fresh auditor is the first
-to notice. Skipped on the first audit, when no baseline exists.
+Then it pins evidence/LINT-14.json to that range and to audit.md's sha256.
+
+Do step 3 (set the LINT-14 rows in the Criterion Verdicts and Plan Lint Results
+tables to this verdict, marked "caller-decided"), then re-pin, then steps 4 and
+5:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/tq-gate-baseline.js" repin \
+  {gate_dir}/audit.md {gate_dir}/evidence --root {repo root}
+```
+
+Run `repin` after ANY later edit to audit.md — the table update, `## Evidence
+notes`, `## Revision History`. It recomputes the hash and relocates the cited
+range; it never changes the verdict, and it needs no re-audit.
 
 THE PREVIOUS BASELINE is the newest of status.json's baseline and the baseline in
 any gate.json already present in {gate_dir} or in a sibling reaudits/*/ folder —
@@ -1066,14 +1164,28 @@ repository until the iteration's own record is written, and keep them — the
 Revision History and the baseline comparison are built from them by the
 caller, never by the auditor.
 
-The diff needs the previous baseline's document. Keep a copy of {doc} beside
-each baseline as it is written — with the moved-out prior records during a
-loop, and reconstructed from git history by the recorded doc_sha256 on a manual
-re-run. When {doc}'s sha256 equals the previous baseline's doc_sha256 the diff
-is empty and every flip is variance: record LINT-14 N_A and report the
-differences under baseline_comparison as AUDITOR VARIANCE. When no copy of the
-previous document can be found, say so in `## Baseline comparison` and treat
-every flip as a regression; the exemption is never applied on a guess.
+The diff needs the previous baseline's document. `snapshot` is what keeps it,
+and it is the last step of each iteration:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/tq-gate-baseline.js" snapshot \
+  {current-baseline.json} {doc} {status.json | gate.json} \
+  --comparison {gate_dir}/baseline-comparison.json \
+  --keep {the folder holding the moved-out prior records}
+```
+
+It computes doc_sha256 from {doc} rather than trusting a transcribed one, fills
+run_number and date, moves the previous baseline WHOLE into the `history` array
+— that is what goes into history, not a summary of it — records the
+comparison's verdict and counts on the new baseline for trend tracking, and
+writes the document copy as `doc-at-baseline-{run_number}.md`. Without `--keep`
+no copy is kept, the next comparison has nothing to diff, and every flip it
+finds is booked as a regression; the script says so on the way past.
+
+On a manual re-run where no copy was kept, reconstruct the previous document
+from git history by the recorded doc_sha256 and pass it as the third argument to
+`compare`. When it cannot be found, pass `-`: the section then says no previous
+document was available and treats every flip as a regression.
 
 Two audits of one unchanged passage disagreeing is a fact about the auditor,
 not the document, and calling it a regression fails text nobody touched. The
@@ -1082,9 +1194,6 @@ disagreement; before the diff-scoped rule, one stress run booked a pre-existing
 defect first noticed on iteration 3 as a regression because the text left no
 other option, and LINT-14 was unreachable in the loop that exists to change the
 document.
-
-Update the baseline (status.json, or gate.json) after each comparison (append
-to history array for trend tracking).
 
 GATE: Evaluator-Optimizer Loop.
 
@@ -1191,11 +1300,14 @@ IF NOT PASS:
      (quick-audit), report NOT PASS with the list of unmet criteria and stop.
   -> Revise ONLY the failing sections (not the entire document).
   -> Re-run the audit on the revised document.
-  -> Compare re-audit against baseline: flag any regressions (items that
-     were passing in v1 but now fail in v2 on text the revision changed).
-     Regressions indicate the revision broke something that was previously
-     working; a flip on unchanged text is auditor variance (baseline
-     comparison above) and fails only its own criterion.
+  -> Compare re-audit against baseline with `tq-gate-baseline.js compare`,
+     passing the previous iteration's document copy: it flags any regressions
+     (items that were passing in v1 but now fail in v2 on text the revision
+     changed). Regressions indicate the revision broke something that was
+     previously working; a flip on unchanged text is auditor variance (baseline
+     comparison above) and fails only its own criterion. Do not classify the
+     flips by reading the two audits side by side — that is the step the script
+     replaced, and the referent it kept getting wrong was the matrix row.
   -> Maximum 2 revision iterations.
 
 <revision_feedback>

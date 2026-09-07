@@ -11,6 +11,7 @@
 #   6. Canary - PH5-030 auditor liveness check (node)
 #   7. Release Preflight - lockstep release script guards (bash)
 #   8. Protected Artifacts - immutable plan-record guard (bash)
+#   9. Gate Baseline - PH5-044 baseline comparison and LINT-14 record (node)
 #
 # Usage:
 #   bash tests/run-all.sh              # Run all layers
@@ -79,8 +80,8 @@ QUICK=false
 for arg in "$@"; do
     case $arg in
         --quick) QUICK=true ;;
-        [1-8]) RUN_LAYERS="$RUN_LAYERS $arg" ;;
-        *) echo "run-all.sh: unknown argument: $arg (expected --quick or a layer number 1-8)" >&2; exit 2 ;;
+        [1-9]) RUN_LAYERS="$RUN_LAYERS $arg" ;;
+        *) echo "run-all.sh: unknown argument: $arg (expected --quick or a layer number 1-9)" >&2; exit 2 ;;
     esac
 done
 
@@ -89,7 +90,7 @@ if [[ -z "$RUN_LAYERS" ]]; then
     if $QUICK; then
         RUN_LAYERS="1 2 3"
     else
-        RUN_LAYERS="1 2 3 4 5 6 7 8"
+        RUN_LAYERS="1 2 3 4 5 6 7 8 9"
     fi
 fi
 
@@ -116,6 +117,7 @@ for layer in $RUN_LAYERS; do
         6) run_layer 6 "Canary" "$SCRIPT_DIR/canary-test.js" node || OVERALL_EXIT=1 ;;
         7) run_layer 7 "Release Preflight" "$SCRIPT_DIR/release-preflight-test.sh" || OVERALL_EXIT=1 ;;
         8) run_layer 8 "Protected Artifacts" "$SCRIPT_DIR/protected-artifacts-test.sh" || OVERALL_EXIT=1 ;;
+        9) run_layer 9 "Gate Baseline" "$SCRIPT_DIR/gate-baseline-test.js" node || OVERALL_EXIT=1 ;;
     esac
 done
 

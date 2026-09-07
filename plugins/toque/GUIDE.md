@@ -186,6 +186,7 @@ flowchart LR
   CAN["tq-canary.js"]
   AU["plan-auditor"]
   EV["tq-evidence-validate.js"]
+  GB["tq-gate-baseline.js"]
   SC["plan-scaffolder"]
   PLAN["docs/plans/{date}-{name}/"]
   SPEC["docs/specs/"]
@@ -193,22 +194,27 @@ flowchart LR
   P -->|"runs"| CAN
   P -->|"invokes"| AU
   P -->|"runs"| EV
+  P -->|"runs"| GB
   P -->|"writes"| PLAN
   QP -->|"invokes"| SC
   QP -->|"runs"| CAN
   QP -->|"invokes"| AU
   QP -->|"runs"| EV
+  QP -->|"runs"| GB
   QP -->|"writes"| SPEC
   QA -->|"runs"| CAN
   QA -->|"invokes"| AU
   QA -->|"runs"| EV
+  QA -->|"runs"| GB
   EV -->|"validates evidence/"| PLAN
   EV -->|"validates evidence/"| SPEC
+  GB -->|"writes the LINT-14 record"| PLAN
+  GB -->|"writes the LINT-14 record"| SPEC
   AU -->|"reads if present"| AUDIT
   SC -->|"reads if present"| AUDIT
 ```
 
-The plan skill drives the six stages and, in Stage 2, runs the design gate: the canary tool, the plan-auditor, and the evidence validator against the plan folder's `evidence/` directory. Quick-plan invokes the scaffolder, writes a spec under `docs/specs/`, then runs that same gate against it with the gate record in `docs/specs/{name}/`; quick-audit runs the same gate against one file, into the plan folder or a gate folder beside the file. All three execute the `<design_gate>` block of the Stage 2 file. Both agents may read optional analysis under `docs/audit/` and both load the `self-audit-knowledge` skill. No other entrypoint invokes either agent: `/toque:troubleshoot` writes logs and can spawn specialists of its own, `/toque:documentation` writes documents and links them from a plan's manifest, and `plan-status`, `plan-export`, `quick-cleanup`, and `help` read or package files. The three hooks are listed in [The 3 hooks](#the-3-hooks): Claude Code starts them on its own events, two read the newest plan's `status.json`, and the SubagentStop handler appends a log line only when a plan's `troubleshooting/` folder already exists.
+The plan skill drives the six stages and, in Stage 2, runs the design gate: the canary tool, the plan-auditor, the evidence validator against the plan folder's `evidence/` directory, and the baseline tool, which compares this audit with the previous one and decides LINT-14. Quick-plan invokes the scaffolder, writes a spec under `docs/specs/`, then runs that same gate against it with the gate record in `docs/specs/{name}/`; quick-audit runs the same gate against one file, into the plan folder or a gate folder beside the file. All three execute the `<design_gate>` block of the Stage 2 file. Both agents may read optional analysis under `docs/audit/` and both load the `self-audit-knowledge` skill. No other entrypoint invokes either agent: `/toque:troubleshoot` writes logs and can spawn specialists of its own, `/toque:documentation` writes documents and links them from a plan's manifest, and `plan-status`, `plan-export`, `quick-cleanup`, and `help` read or package files. The three hooks are listed in [The 3 hooks](#the-3-hooks): Claude Code starts them on its own events, two read the newest plan's `status.json`, and the SubagentStop handler appends a log line only when a plan's `troubleshooting/` folder already exists.
 
 ## The 2 agents
 
@@ -263,7 +269,7 @@ Without Node, the handlers cannot start; fail-open handling inside a script does
 
 ## The scripts
 
-Five Node files live in `scripts/`: the three hook handlers and two explicit gate tools ([how they are called](#how-the-pieces-connect)).
+Six Node files live in `scripts/`: the three hook handlers and three explicit gate tools ([how they are called](#how-the-pieces-connect)).
 
 From `plugins/toque/` in a development checkout:
 
@@ -271,6 +277,10 @@ From `plugins/toque/` in a development checkout:
 node scripts/tq-canary.js inject <spec-path> <out-dir> [seed]
 node scripts/tq-canary.js detected <canary.json> <unmet-csv> <applicable-csv>
 node scripts/tq-evidence-validate.js <evidence-dir> [root-dir]
+node scripts/tq-gate-baseline.js compare <prev-baseline|-> <cur-baseline> <prev-doc|-> <doc> [--evidence <dir>] [--root <dir>] [--out <file>]
+node scripts/tq-gate-baseline.js record <comparison.json> <audit.md> <evidence-dir> [--root <dir>]
+node scripts/tq-gate-baseline.js repin <audit.md> <evidence-dir> [--root <dir>]
+node scripts/tq-gate-baseline.js snapshot <cur-baseline> <doc> <status.json|gate.json> [--comparison <file>] [--keep <dir>]
 ```
 
 Injection prepares scratch; it does not establish detection. The `detected` command checks the audit's unmet criteria against the planted defect. Supply the complete applicable-criteria list so blanket rejection can be rejected. The full sequence is defined once, in the `<design_gate>` block of the Stage 2 file, and run from there by `/toque:plan`, `/toque:quick-plan`, and `/toque:quick-audit`.

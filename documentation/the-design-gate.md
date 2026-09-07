@@ -67,7 +67,23 @@ For executable criteria, a recorded command or `exit_code` is not trusted proof.
 
 The [guide lists every evidence flag](../plugins/toque/GUIDE.md#evidence-flags).
 
-## 3. Evaluate all four conditions
+## 3. Compare this audit with the last one
+
+Every revision iteration spawns a **fresh** auditor, which is what keeps the second audit from ratifying the first. It also means two audits of the same untouched paragraph can disagree, and that disagreement is a fact about the auditor rather than about the design.
+
+`tq-gate-baseline.js` decides which is which. It diffs the current document against a copy of the one the previous baseline was taken on, then classifies every element whose status changed:
+
+- **Regression** — was passing, now failing, and at least one line it cites lies inside the diff. The revision broke it. This is the only outcome that fails LINT-14.
+- **Auditor variance** — was passing, now failing, and every line it cites is unchanged. Reported, and the element still fails its own criterion, but the revision is not blamed for it.
+- **Improvement**, **degradation**, **new**, **dropped**, **not comparable** — reported for awareness.
+
+Every element carries the lines it is about and the file those lines were read from. Lint criteria take them from their evidence record; coverage, scenario and cross-cutting-concern rows have no record and name them in the baseline. A flip the tool cannot scope — no previous copy of the document, or an element that named no lines — is recorded as a regression and says so. The exemption is never applied on a guess.
+
+The result is written into `audit.md` as a `## Baseline comparison` section listing every element compared, and the LINT-14 evidence record is pinned to that section.
+
+**What this establishes:** whether the revision made something worse. It does not establish that the auditor is consistent, and it does not judge an element's status — the auditor does that, and this only compares two of its answers.
+
+## 4. Evaluate all four conditions
 
 ```text
 PASS = CANARY_OK AND EVIDENCE_OK AND VERIFIED AND INFRA_OK

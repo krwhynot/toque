@@ -111,9 +111,11 @@ block and this description ever disagree, the block wins.
 ## Step 5: Revision loop
 
 The revision loop is part of the block: on NOT PASS it sends the
-plan-scaffolder one line per unmet criterion (id, what is missing, location),
-never the rubric or the totals, and re-runs the auditor as a FRESH instance on
-the revised spec. Maximum 2 revision iterations. After 2 iterations, deliver
+plan-scaffolder one line per DEFECT (id, what is missing, location), not one
+per criterion — a criterion quantified over the whole document is unmet at
+every instance the audit found, and each instance is its own line (decision
+D9). It never sends the rubric or the totals, and it re-runs the auditor as a
+FRESH instance on the revised spec. Maximum 2 revision iterations. After 2 iterations, deliver
 the plan at its current quality with the unmet criteria named; a plan does not
 "usably pass with known gaps". The block writes the revision history into
 docs/specs/{slug}/audit.md after the loop; do not keep a second copy in the

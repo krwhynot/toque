@@ -1514,6 +1514,73 @@ tr -d '' < plugins/toque/commands/quick-plan.md | tr '
 ' ' ' | grep -qF 'If no fresh instance can be spawned in this session'   || { fail "PH5-043: quick-plan.md has no fallback when the scaffolder cannot be spawned"; dg43_bad=1; }
 [ "$dg43_bad" -eq 0 ] && pass "PH5-043: the shared block defines a fresh instance, orders the LINT-14 record, and separates planned deliverables from claims"
 
+# ===========================================================================
+# PH5-044: the baseline comparison is a script, not a paragraph (R4-01).
+#
+# D10 made a regression "a flip on text the revision changed", and the prose
+# keyed that on "the line the item's new record cites". Coverage, scenario and
+# concern rows have no evidence record. Stress run 4's s1 reached 21 of 22 with
+# LINT-14 the only UNMET, on a cross-cutting concern row, and both verifiers
+# read the paragraph as ambiguous — under the other reading the same run is
+# 22 of 22 and the gate's open path is observed for the first time.
+#
+# A script must name what it compares. This guard fails if the block goes back
+# to describing the comparison instead of running it, or if the schema stops
+# requiring a line source on the rows that have no record.
+#
+# Decidable by grep, on the block and on the script's own CLI.
+# ===========================================================================
+echo "--- Baseline comparison is executed, not described (PH5-044) ---"
+
+gb_bad=0
+gb_script=plugins/toque/scripts/tq-gate-baseline.js
+
+if [ ! -f "$gb_script" ]; then
+  fail "PH5-044: $gb_script is missing — the baseline comparison has no implementation"
+  gb_bad=1
+else
+  node --check "$gb_script" >/dev/null 2>&1 \
+    || { fail "PH5-044: $gb_script does not parse"; gb_bad=1; }
+  # Four subcommands, four caller duties. Losing one sends that duty back to prose.
+  for sub in "cmd === 'compare'" "cmd === 'record'" "cmd === 'repin'" "cmd === 'snapshot'"; do
+    grep -qF -- "$sub" "$gb_script" \
+      || { fail "PH5-044: $gb_script no longer dispatches $sub"; gb_bad=1; }
+  done
+  # The four element kinds R4-01 turned on. A comparison that reads only
+  # lint_results silently drops the rows that decided the run.
+  for group in 'lint_results' 'coverage_items' 'scenario_statuses' 'concern_statuses'; do
+    grep -qF -- "$group" "$gb_script" \
+      || { fail "PH5-044: $gb_script no longer reads $group — record-less rows go uncompared"; gb_bad=1; }
+  done
+  # The unscoped route must stay explicit. Silently exempting a flip nobody
+  # could scope is the failure the diff-scoped rule was carved around.
+  grep -qF 'no line source on this element' "$gb_script" \
+    || { fail "PH5-044: $gb_script no longer says why a flip could not be scoped"; gb_bad=1; }
+fi
+
+dgb=$(sed -n '/^<design_gate>$/,/^<\/design_gate>$/p' "$DG_STAGE" 2>/dev/null)
+if [ -z "$dgb" ]; then
+  fail "PH5-044: no <design_gate> block to check"
+  gb_bad=1
+else
+  # Pin the INVOCATION, not the token, the way PH5-043 pins the canary re-run:
+  # a bare grep for the filename survives the commands being replaced by prose
+  # that merely mentions the script. Lines are joined so the backslash
+  # continuations in the command blocks cannot hide the subcommand.
+  joined=$(printf '%s\n' "$dgb" | tr -d '\r' | tr '\n' ' ')
+  for sub in compare record repin snapshot; do
+    printf '%s' "$joined" | grep -qE "tq-gate-baseline\.js\"? +$sub" \
+      || { fail "PH5-044: <design_gate> does not run 'tq-gate-baseline.js $sub' — that caller duty is back to prose"; gb_bad=1; }
+  done
+  # The schema addition that closes R4-01: a row with no record names its lines.
+  for piece in 'line_source' 'A MATRIX ROW has no record and must carry them itself' 'The exemption is never applied on a guess'; do
+    printf '%s\n' "$dgb" | grep -qF -- "$piece" \
+      || { fail "PH5-044: <design_gate> lost '$piece' — a matrix row can again flip with no line to scope it against"; gb_bad=1; }
+  done
+fi
+[ "$gb_bad" -eq 0 ] && pass "PH5-044: the baseline comparison runs as a script that names every element it compares"
+
+
 
 # ===========================================================================
 # REL-1: authorization and release are two events (decision D4).
