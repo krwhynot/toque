@@ -45,7 +45,8 @@ function gateFolderChecks(gateDir, docPath) {
   // Prose scan, not a citation check: the auditor declining to read .canary/, or the
   // caller quoting an inject command, both hit it. The invariant is citations.canary.
   c.audit_prose_mentions_canary_path = audit.includes('.canary/');
-  c.audit_mentions = { PASS: /\bPASS\b/.test(audit), NOT_PASS: /NOT PASS/.test(audit), revision_history: /Revision History/.test(audit), mode: (audit.match(/Audit mode: (\w+)/) || [])[1] || null, not_applicable: /not-applicable/.test(audit) };
+  // mode tolerates the bolded form `Audit mode: **LITE (spec-only)**`, which returned null in run 3 (s6).
+  c.audit_mentions = { PASS: /\bPASS\b/.test(audit), NOT_PASS: /NOT PASS/.test(audit), revision_history: /Revision History/.test(audit), mode: (audit.match(/Audit mode:\s*\**\s*([A-Za-z]+)/) || [])[1] || null, not_applicable: /not-applicable/.test(audit) };
   return c;
 }
 

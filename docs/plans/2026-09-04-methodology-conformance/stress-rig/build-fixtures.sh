@@ -4,7 +4,8 @@
 # Set two variables before running:
 #   ST  a scratch directory OUTSIDE this repository; the six scenario repos are
 #       created as $ST/s1 .. $ST/s6 and nothing is written anywhere else.
-#   SRC a checkout of this repository (scenarios s2, s3 and s5 audit a copy of it).
+#   SRC a checkout of this repository (scenarios s2 and s5 audit a copy of it;
+#       s1, s3, s4 and s6 use the small invented Node project below).
 # Run with Git Bash. Requires node, git, tar.
 set -euo pipefail
 ST="${ST:-$(mktemp -d)/stress}"
@@ -61,7 +62,14 @@ async function send(report, email) {
   const body = await render(report);
   return mailer.send({ to: email, subject: report.title, body });
 }
-async function render(report) { return `<h1>${report.title}</h1>`; }
+async function render(report) {
+  const started = Date.now();
+  // Pricing is computed inline here today: seats times unit price, summed over rows.
+  const total = (report.rows || []).reduce((sum, r) => sum + (r.seats || 0) * (r.unit_price || 0), 0);
+  const html = `<h1>${report.title}</h1><p>Total: ${total}</p>`;
+  console.log(`render ${report.id} ${Date.now() - started}ms`); // render timing log
+  return html;
+}
 const mailer = { send: async () => ({ ok: true }) };
 module.exports = { listForAccount, get, canView, send, render };
 EOF
@@ -103,6 +111,18 @@ EOF
 cp -r "$ST/base-small" "$ST/s1"; gitinit "$ST/s1"
 cp -r "$ST/base-small" "$ST/s6"; gitinit "$ST/s6"
 
+# s3: a standalone template-shaped spec beside which quick-audit must write its
+# gate folder. The spec describes this small project (its pricing arithmetic sits
+# inline in src/reports.js, its tests run under node --test, its render has a
+# timing log), so every path it CLAIMS resolves and an INFRA-GAP or a LINT-15/16
+# verdict is about the document, not the binding. Run 3 bound it to a copy of the
+# Toque repository and every claimed path was absent for that reason alone
+# (stress-run3-critic.md §4b row 7).
+cp -r "$ST/base-small" "$ST/s3"; mkdir -p "$ST/s3/docs/specs"
+cp "$RIG/fixture-template-spec.md" "$ST/s3/docs/specs/pricing-engine.md"
+gitinit "$ST/s3"; mkdir -p "$ST/s3/.stress-baseline"
+sha "$ST/s3/docs/specs/pricing-engine.md" > "$ST/s3/.stress-baseline/doc.sha"
+
 # s4: a prose ADR with none of the canary shapes
 cp -r "$ST/base-small" "$ST/s4"; mkdir -p "$ST/s4/docs/adr"
 cat > "$ST/s4/docs/adr/ADR-reporting-pipeline.md" <<'EOF'
@@ -129,14 +149,10 @@ gitinit "$ST/s4"
 # ---- copies of the toque repository (the centerpiece plan is about it) ------
 mkdir -p "$ST/base-toque"
 (cd "$SRC" && tar --exclude='./.git' --exclude='./assets' --exclude='./node_modules' --exclude='.canary' --exclude='./docs/plans/2026-07-20-plugin-hardening-v5' -cf - .) | (cd "$ST/base-toque" && tar -xf -)
-for s in s2 s3 s5; do cp -r "$ST/base-toque" "$ST/$s"; done
+for s in s2 s5; do cp -r "$ST/base-toque" "$ST/$s"; done
 
-# s3: a standalone template-shaped spec beside which quick-audit must write its gate folder
-mkdir -p "$ST/s3/docs/specs"; cp "$RIG/fixture-template-spec.md" "$ST/s3/docs/specs/pricing-engine.md"
-
-for s in s2 s3 s5; do gitinit "$ST/$s"; mkdir -p "$ST/$s/.stress-baseline"; sha "$ST/$s/$PLAN/audit.md" > "$ST/$s/.stress-baseline/plan-audit.sha"; sha "$ST/$s/$PLAN/spec.md" > "$ST/$s/.stress-baseline/plan-spec.sha"; ls "$ST/$s/$PLAN/evidence" | wc -l | tr -d ' ' > "$ST/$s/.stress-baseline/plan-evidence-count"; done
+for s in s2 s5; do gitinit "$ST/$s"; mkdir -p "$ST/$s/.stress-baseline"; sha "$ST/$s/$PLAN/audit.md" > "$ST/$s/.stress-baseline/plan-audit.sha"; sha "$ST/$s/$PLAN/spec.md" > "$ST/$s/.stress-baseline/plan-spec.sha"; ls "$ST/$s/$PLAN/evidence" | wc -l | tr -d ' ' > "$ST/$s/.stress-baseline/plan-evidence-count"; done
 mkdir -p "$ST/s4/.stress-baseline"; sha "$ST/s4/docs/adr/ADR-reporting-pipeline.md" > "$ST/s4/.stress-baseline/doc.sha"
-sha "$ST/s3/docs/specs/pricing-engine.md" > "$ST/s3/.stress-baseline/doc.sha"
 
 # Sanity: canary applicability. Both fixtures are asserted, not just printed —
 # s3 exists to carry an applicable class and s4 exists to carry none, and a
@@ -153,6 +169,16 @@ echo "s3: $s3first"
 echo "s3 inject exit=$s3rc (expected 0: a class applies)"
 [ "$s3rc" -eq 0 ] || { echo "FIXTURE CHECK FAILED: s3 inject exited $s3rc, expected 0"; exit 1; }
 case "$s3first" in *"-> LINT-"*) ;; *) echo "FIXTURE CHECK FAILED: s3 must have an applicable canary class"; exit 1 ;; esac
+
+# s3's spec CLAIMS these exist in the bound tree. If one is missing, an INFRA-GAP
+# or a LINT-15/16 UNMET is about the fixture, not the document, and the scenario
+# stops measuring what it exists to measure.
+for p in src/reports.js tests/reports.test.js package.json; do
+  [ -f "$ST/s3/$p" ] || { echo "FIXTURE CHECK FAILED: s3 spec claims $p, absent from s3"; exit 1; }
+done
+grep -q 'render timing log' "$ST/s3/src/reports.js" || { echo "FIXTURE CHECK FAILED: s3 spec claims a render timing log, absent from src/reports.js"; exit 1; }
+grep -q '"test": "node --test' "$ST/s3/package.json" || { echo "FIXTURE CHECK FAILED: s3 spec claims node --test conventions, absent from package.json"; exit 1; }
+echo "s3: claimed paths, timing log and test script present"
 
 set +e
 s4out="$(node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s4/docs/adr/ADR-reporting-pipeline.md" "$ST/cdry/" 2>&1)"; s4rc=$?

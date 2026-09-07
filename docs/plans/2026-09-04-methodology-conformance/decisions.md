@@ -88,7 +88,7 @@ Guarded by ten new assertions in `tests/canary-test.js` and three greps added to
 - **R3-06 — LINT-14's variance exemption cannot fire inside the revision loop.** It applies only when the document's sha256 is unchanged, and a revision loop changes the document every iteration while spawning a fresh auditor that maximises variance, so a newly noticed pre-existing defect is booked as a regression. Whether to widen the exemption — for example to elements whose underlying text did not change between baselines — is a judgement about how much auditor variance the gate absorbs.
 - **R3-01, the design half.** Audit notes now carry no verdicts, but they are still written into the document before the loop ends and are read by the next auditor. Whether reinforcement should wait until the loop ends is the remaining question; the mechanical half is landed.
 
-The six rig fixes from the critic's §4b are not yet in `stress-rig/`. The fourth run — three scoped scenarios — waits on them and on these decisions.
+The rig fixes from the critic's §4b are in `stress-rig/` as of September 7: the `.canary` tar exclusion and the checker's prose-scan rename (during the run), then s3 bound to the small project with its claimed paths asserted, `launch-auditor.sh` for the stdin and tool-grant form, `scenario-inputs.md` for the fixed s1 answers and s6 text, and the checker's mode regex. The fourth run — three scoped scenarios, none yet built — waits on these decisions.
 
 ## What this does not claim
 
