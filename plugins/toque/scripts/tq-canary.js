@@ -54,17 +54,40 @@ const CLASSES = {
     describe: 'added an unverified HIGH-impact assumption',
     apply(text) {
       const lines = text.split('\n');
-      // Anchor on the assumption register, not on the first numbered row in the
-      // document: a Risk Assessment table usually precedes it and also starts
-      // its rows with "| 1 |", and a row planted there is a malformed risk, not
-      // an unverified assumption, so LINT-08 has nothing to catch.
-      const header = lines.findIndex((l) => /^\|.*\bAssumption\b/i.test(l));
+      // Anchor on the assumption register's HEADER: a table row with a cell that
+      // starts "Assumption", followed by a separator row. Matching any row that
+      // contained the word anchored on a success-criteria row in one stress run.
+      const isRow = (l) => /^\|/.test(l);
+      const isSep = (l) => /^\|\s*:?-+/.test(l);
+      const header = lines.findIndex((l, i) => isRow(l)
+        && /^\|(?:[^|]*\|)*?\s*Assumptions?\b[^|]*\|/i.test(l)
+        && isSep(lines[i + 1] || ''));
       if (header === -1) return null;
-      const rel = lines.slice(header + 1).findIndex((l) => /^\|\s*1\s*\|/.test(l));
-      if (rel === -1) return null;
-      const i = header + 1 + rel;
-      lines.splice(i + 1, 0,
-        '| 2 | Peak write throughput fits the current connection pool | Writes stall at launch | unverified |');
+      // The register ENDS at the first line that is not a table row. An unbounded
+      // scan for the next "| 1 |" planted the row 120 lines below a register whose
+      // rows were numbered A1..A11 — inside a Testing Strategy table — and exit 0
+      // said nothing, so canary.json named a criterion the copy did not violate
+      // and a correct audit was condemned as a miss. Inside the register or
+      // nothing: a register with no rows is not a site.
+      let end = header + 2;
+      while (end < lines.length && isRow(lines[end])) end++;
+      const last = end - 1;
+      if (last < header + 2) return null;
+      const cells = (l) => l.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
+      const names = cells(lines[header]);
+      const prev = cells(lines[last])[0] || '';
+      const m = /^([A-Za-z]*)(\d+)$/.exec(prev);
+      const id = m ? `${m[1]}${Number(m[2]) + 1}` : '2';
+      // The row takes the register's own column count, filled by header name, so
+      // a seven-column register gets a seven-cell row and not a malformed one.
+      const row = names.map((name, k) => {
+        if (/^assumption/i.test(name)) return 'Peak write throughput fits the current connection pool';
+        if (/impact/i.test(name)) return 'Writes stall at launch';
+        if (/status/i.test(name)) return 'unverified';
+        if (k === 0) return id;
+        return '';
+      });
+      lines.splice(last + 1, 0, `| ${row.join(' | ')} |`);
       return lines.join('\n');
     },
   },
@@ -128,7 +151,26 @@ function inject(text, className) {
     className,
     criterion: spec.criterion,
     describe: spec.describe,
+    edit: locateEdit(normalized, mutated),
   };
+}
+
+/**
+ * Where the mutation landed. Every class inserts, removes or rewrites exactly one
+ * line, and the caller needs that line: a finding that rests on it — on any
+ * criterion, not only the canary's own — was derived from the mutation, not from
+ * the document, and the strip-and-recheck step has to reach every one of them.
+ * `line` is 1-based; for an insert or replace it indexes the MUTATED copy, for a
+ * delete it indexes the ORIGINAL (the line no longer exists in the copy).
+ */
+function locateEdit(before, after) {
+  const a = before.split('\n');
+  const b = after.split('\n');
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (b.length > a.length) return { op: 'insert', line: i + 1, text: b[i] };
+  if (b.length < a.length) return { op: 'delete', line: i + 1, text: a[i] };
+  return { op: 'replace', line: i + 1, text: b[i] };
 }
 
 /**
@@ -426,8 +468,14 @@ if (require.main === module) {
     process.exit(2);
   }
 
-  fs.mkdirSync(outDir, { recursive: true });
-  const mutatedPath = path.join(outDir, path.basename(specPath));
+  // The copy sits ALONE in its own folder. The record used to be written beside
+  // it, and an auditor that lists the folder of the file it was handed found the
+  // answer key there (one holistic judge read it; two plan-auditors declined it
+  // on their own initiative — the gate had arranged nothing). The record stays
+  // in outDir, one level up, where nothing points the auditor.
+  const docDir = path.join(outDir, 'doc');
+  fs.mkdirSync(docDir, { recursive: true });
+  const mutatedPath = path.join(docDir, path.basename(specPath));
   fs.writeFileSync(mutatedPath, record.text, 'utf8');
   fs.writeFileSync(
     path.join(outDir, 'canary.json'),
@@ -435,6 +483,7 @@ if (require.main === module) {
       className: record.className,
       criterion: record.criterion,
       describe: record.describe,
+      edit: record.edit,
       seed,
       excluded,
       spec: specPath,
@@ -446,9 +495,10 @@ if (require.main === module) {
   console.log(`canary: ${record.className} -> ${record.criterion}`);
   console.log(`  ${record.describe}`);
   console.log(`  audit this copy: ${mutatedPath}`);
+  console.log(`  ${record.edit.op} at line ${record.edit.line}; point the auditor at the copy, never at ${outDir}`);
   process.exit(0);
 }
 
 module.exports = {
-  inject, wasFound, stripFinding, resolve, assess, pickClass, CLASSES, CLASS_NAMES,
+  inject, wasFound, stripFinding, resolve, assess, pickClass, locateEdit, CLASSES, CLASS_NAMES,
 };

@@ -597,6 +597,14 @@ removed, a dependency owner blanked, an unverified HIGH-impact assumption added,
 go/no-go criteria deleted, or a claim of coverage from a test file that does not
 exist. The class is recorded along with the single criterion it violates.
 
+inject writes the copy to {gate_dir}/.canary/doc/{basename} and the record to
+{gate_dir}/.canary/canary.json. The copy sits alone in its folder on purpose:
+canary.json is the answer key, and an auditor that lists the folder of the file
+it was handed must not find the key beside it. Point the auditor at the copy's
+path exactly as inject printed it, never at .canary/ itself, and never name
+canary.json to it. The record also carries `edit` — the operation and the
+1-based line the mutation landed on — which step 2 below needs.
+
 If inject exits 2 with "no canary class could be applied", the document has
 none of the five shapes a canary attaches to: a `Rollback:` line, an owned
 dependency row, an assumption-register row, a `Go/No-Go:` line, a cited test
@@ -611,16 +619,22 @@ still the audit's value. In this case skip the mutated-copy audit, the
 `detected` check, the re-anchoring and the .canary/ deletion below: inject wrote
 no canary.json and no .canary/, and the auditor audits {doc} itself.
 
-Exactly one canary_reason is ever recorded, and the five are decided at
-different moments, so no two can apply at once: "no-isolation" at STEP 0 before
-inject runs; "not-applicable" when inject exits 2; "single-trial-only" when the
-re-run's inject exits 3; "auditor-did-not-return" when a spawned auditor fails
-twice to return; "found" or "missed" only when an auditor actually returned a
-report. CANARY_OK is true for "found" alone.
+Exactly one canary_reason is ever recorded. Six values exist, and the LAST
+event decides: "no-isolation" at STEP 0 before inject runs; "not-applicable"
+when inject exits 2; "single-trial-only" when the re-run's inject exits 3;
+"auditor-did-not-return" when a spawned auditor fails twice to return; "found"
+or "missed" only when an auditor actually returned a report. Two can occur in
+one run — inject exits 2 and the auditor then spawned on {doc} fails twice —
+and the later one is recorded, because "not-applicable" describes a document
+that was audited and this one was not; note the earlier fact in caller_notes.
+Present the reason as the gate recorded it, with the same six tokens.
+CANARY_OK is true for "found" alone.
 
 The auditor then audits the MUTATED copy, knowing nothing of any of this. Point
-it at the mutated copy as the document; it cites what it reads, in its records
-and in audit.md, and the caller re-anchors both afterwards (step 3 below).
+it at {gate_dir}/.canary/doc/{basename} as the document; it cites what it reads,
+in its records and in audit.md, and the caller re-anchors both afterwards (step
+3 below). Before it is spawned, {gate_dir} holds no prior gate.json, audit.md or
+evidence/ — the sweep under BASELINE SNAPSHOT says where they go.
 
 IF THE SPAWN STARTS AND DOES NOT RETURN — killed by a time limit, or exited
 without writing its records — that is a third outcome, and it is neither a miss
@@ -680,8 +694,18 @@ membership by hand, so nothing ever ran it.
      defect is worse than not revising: it rewrites the spec to satisfy
      conclusions never derived from reading it.
   2. If it was found, strip that finding from the report — it is an artefact of
-     this harness, not a property of the plan — and then RE-CHECK that one
-     criterion against the unmutated original. The strip alone is unsafe: if the
+     this harness, not a property of the plan — and then RE-CHECK against the
+     unmutated original. The recheck reaches everything the mutation touched,
+     not only the canary's own criterion: canary.json's `edit` names the line
+     the canary inserted, removed or rewrote, and every criterion verdict, gap
+     matrix row and concern status whose evidence cites that line, or rests on
+     its absence, was derived from the mutation. Re-derive each of those on
+     {doc} and rewrite it before the baseline snapshot is taken. In one run the
+     planted assumption row failed a second criterion beside the canary's, and
+     that verdict was sent to the generator as a defect to fix; in another a
+     stripped finding lived on as two matrix gaps and entered the baseline,
+     where the next run reads them as improvements on a document nobody
+     changed. The strip alone is unsafe in the other direction too: if the
      plan has a genuine gap on the same criterion, removing "the LINT-03 finding"
      would remove the real one with it. The strip removes the artefact; the
      recheck decides the truth. Both are the caller's work: the auditor cannot
@@ -689,7 +713,9 @@ membership by hand, so nothing ever ran it.
   3. Re-anchor every record to {doc}: set `artifact` to {doc}'s repo-relative
      path, locate `exact_quote` in {doc} to set `line_start` and `line_end`,
      and recompute `sha256` from {doc}. A quote that cannot be found in {doc}
-     came from the mutation: drop it; its criterion was re-checked in step 2.
+     came from the mutation: drop it, and if step 2 did not already re-check
+     its criterion on {doc}, do so now — a record quoting the mutation is
+     exactly the collateral finding step 2 exists to catch.
      ONE EXCEPTION, the same one the evidence-reinforcement step makes: a quote
      SPLIT by the line the canary inserted or removed is genuine — the edit broke
      it in half — and is re-cited at its new range, or as two citations. Only a
@@ -855,9 +881,19 @@ then replaces that verdict, in this order:
   3. Update the LINT-14 row in audit.md's Criterion Verdicts and Plan Lint
      Results tables to the caller's verdict, marked "caller-decided", so the two
      do not disagree on disk. Do this before step 2's hash is taken if the
-     tables live in audit.md — nothing after the pin may edit that file.
+     tables live in audit.md.
   4. Run the evidence validator.
   5. Write the gate record (gate.json, or status.json for a plan folder) LAST.
+
+The pin is only as good as the last edit to audit.md. Two later steps append
+to that file by design — `## Evidence notes` when no generator is bound, and
+`## Revision History` after the loop ends — and each one makes the pin stale.
+After ANY later edit to audit.md: recompute its sha256 into evidence/LINT-14.json,
+relocate the `## Baseline comparison` range it cites, and run the validator
+again. EVIDENCE_OK is the exit code of the LAST validator run before the gate
+record is written. Executing the steps in printed order without that re-pin
+flags EVIDENCE-STALE on LINT-14 and closes the gate on a document nobody
+changed; five of six stress-run executors had to notice and work around it.
 
 The gate record is written after the pin, never cited by it. On a first audit
 LINT-14 is N_A and stays in the denominator; "MET" applies only where a baseline
@@ -909,7 +945,8 @@ is bound and {doc} is not yet approved):
 
 With no generator bound, or when {doc} carries Status: Approved, the audited
 document is not edited: write the notes below under `## Evidence notes` in
-{gate_dir}/audit.md instead. An approved document changes only through a
+{gate_dir}/audit.md instead, then re-pin evidence/LINT-14.json and re-run the
+validator (LINT-14 write order above). An approved document changes only through a
 Change Record (Stage 3 change control), and a document someone else owns
 (quick-audit) is theirs to change.
 
@@ -935,9 +972,18 @@ it with audit findings:
    missing error handling for malformed YAML. Added try/catch in design gate
    revision v2. Gap closed."}
    ```
+   A note says what was found and how it was resolved, in prose, as the two
+   examples do. It never carries a criterion id, a verdict token (MET, UNMET,
+   N_A, PASS, FAIL), a rule count or a gate result: the note is in {doc} when
+   the next iteration's fresh auditor reads it, and that auditor is forbidden a
+   prior verdict (agents/plan-auditor.md, <forbidden_inputs>). One stress run
+   left ten notes naming verdicts in a spec, and every later auditor had to
+   disclose and disregard them. The auditor's file states how it treats a note
+   that reaches it anyway; do not rely on that.
 
 3. UPDATE HEADER:
-   Set "Last reinforced: {date} (design gate)" in the Evidence section header.
+   Set "Last reinforced: {date} (design gate)" in the Evidence section header,
+   and nothing else on that line.
 
 4. NEW CROSS-PLAN REFERENCES:
    If the audit revision introduced tools/patterns that exist in other plans,
@@ -949,8 +995,10 @@ run the validator again. A quote split only by the "Last reinforced" line this
 step inserts is re-cited at its new range, or as two citations — that is
 re-anchoring, not a demotion; the gate must not demote a verdict on an edit it
 required. Any other quote that cannot be relocated is a demotion, not a reason
-to re-audit. EVIDENCE_OK is the exit code of this post-reinforcement validator
-run, never the earlier one.
+to re-audit. EVIDENCE_OK is the exit code of the last validator run before the
+gate record is written: this post-reinforcement run when {doc} was reinforced,
+the run after the `## Evidence notes` re-pin when it was not — never an
+earlier one.
 
 When {gate_dir} is a plan folder, update manifest.md: update the spec.md row
 with the reinforcement date.
@@ -992,7 +1040,12 @@ when no baseline exists.
 THE PREVIOUS BASELINE is the newest of status.json's baseline and the baseline in
 any gate.json already present in {gate_dir} or in a sibling reaudits/*/ folder —
 committed or not. Read it BEFORE the auditor is spawned, and leave no prior
-gate.json inside {gate_dir} while the auditor works there.
+gate.json, audit.md or evidence/ inside {gate_dir} while the auditor works
+there: the previous iteration's verdict records would sit in the working
+directory of an auditor forbidden to read them. Move them out of the
+repository until the iteration's own record is written, and keep them — the
+Revision History and the baseline comparison are built from them by the
+caller, never by the auditor.
 
 When {doc}'s sha256 equals the previous baseline's doc_sha256, the document did
 not change. Record LINT-14 N_A and report any differences under
@@ -1097,11 +1150,12 @@ IF PASS:
      design-gate pass and nothing more.
 
 IF NOT PASS:
-  -> If CANARY_OK is false for ANY reason — missed twice, not-applicable, or
-     no-isolation: STOP. Do not revise. Either the audit could not see a defect
-     planted for it to find, or no defect could be planted, or no independent
-     auditor could be reached. In none of those cases are the audit's other
-     findings a basis for rewriting anything.
+  -> If CANARY_OK is false for ANY reason — missed twice, not-applicable,
+     no-isolation, single-trial-only or auditor-did-not-return: STOP. Do not
+     revise. Either the audit could not see a defect planted for it to find, or
+     no defect could be planted, or no second trial was possible, or no
+     independent auditor could be reached or returned. In none of those cases
+     are the audit's other findings a basis for rewriting anything.
   -> Otherwise, when a {generator} is bound, auto-trigger revision of {doc}
      through it, using the feedback form below. With no generator bound
      (quick-audit), report NOT PASS with the list of unmet criteria and stop.
@@ -1162,8 +1216,10 @@ satisfied and evidenced, or the specific ones that are not get named. A "proceed
 with known gaps" rung was the rung most often used to proceed without reading them,
 and there is nothing here for it to mean.
 
-After the loop ends, append the revision history to audit.md. The auditor
-rewrites audit.md on every iteration, so append only after the final one:
+After the loop ends, append the revision history to audit.md, then re-pin
+evidence/LINT-14.json and re-run the validator (LINT-14 write order above).
+The auditor rewrites audit.md on every iteration, so append only after the
+final one:
 ```markdown
 ## Revision History
 | Version | Unmet criteria | Gaps | Action |

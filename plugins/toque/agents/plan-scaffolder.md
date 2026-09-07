@@ -159,7 +159,8 @@ Go/No-Go: [The measurable condition that lets the next phase start — a line th
 
 | # | Assumption | Impact If False | How to Verify | By When | Owner | Status |
 |---|-----------|----------------|---------------|---------|-------|--------|
-[one row per assumption the plan rests on; Impact is HIGH, MEDIUM or LOW; Status starts unverified. An unverified HIGH-impact assumption blocks the design gate.]
+| 1 | [assumption] | [what breaks] | [check] | [phase or date] | [name] | unverified |
+[one row per assumption the plan rests on, numbered 1, 2, 3 in the first column as shown — the design gate's canary anchors on this table and its numbering; Impact is HIGH, MEDIUM or LOW; Status starts unverified. An unverified HIGH-impact assumption blocks the design gate.]
 
 ## Rollback Strategy
 **Feature Flag:** [Name and location]

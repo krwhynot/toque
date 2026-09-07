@@ -1493,6 +1493,12 @@ else
   done
   printf '%s
 ' "$dg43" | grep -qF 'SPLIT by the line the canary inserted'     || { fail "PH5-043: re-anchoring can again drop a citation the canary edit split, demoting a verdict on the gate's own edit"; dg43_bad=1; }
+  # Stress run 3: the answer key is not filed beside the exam, the LINT-14 pin
+  # survives the two appends that follow it, and the reason vocabulary is six.
+  for piece in '.canary/doc/' 'The pin is only as good as the last edit to audit.md' 'Six values exist'; do
+    printf '%s\n' "$dg43" | grep -qF -- "$piece" \
+      || { fail "PH5-043: <design_gate> lost '$piece' — a run-3 fix is gone"; dg43_bad=1; }
+  done
 fi
 # quick-plan needs the same fallback: no fresh instance, no silent in-context scaffolder pass.
 tr -d '' < plugins/toque/commands/quick-plan.md | tr '

@@ -28,6 +28,8 @@ console.log('\n1. Injection actually mutates');
   const out = canary.inject(SPEC, 'rollback-strip');
   check('rollback-strip changes the text', out.text !== SPEC);
   check('rollback-strip names the criterion it violates', out.criterion === 'LINT-03', `got ${out.criterion}`);
+  check('rollback-strip reports the line it deleted',
+    !!out.edit && out.edit.op === 'delete' && /^Rollback:/.test(out.edit.text), JSON.stringify(out.edit));
   check('rollback-strip removes exactly one rollback line',
     (SPEC.match(/^Rollback:/gm) || []).length - (out.text.match(/^Rollback:/gm) || []).length === 1,
     `before=${(SPEC.match(/^Rollback:/gm) || []).length} after=${(out.text.match(/^Rollback:/gm) || []).length}`);
@@ -77,6 +79,52 @@ console.log('\n1. Injection actually mutates');
   check('assumption-inject with numbered rows but no assumption register THROWS', threw, 'it planted into a table that is not an assumption register');
 }
 
+// Stress run 3 found the row planted OUTSIDE the register twice: the scan for the
+// next "| 1 |" had no notion of where the register ends, so on a register numbered
+// A1..A11 it walked 120 lines down into a Testing Strategy table, and a
+// success-criteria row that mentioned the word "Assumption" anchored the header
+// match before the register did. inject exited 0 both times, canary.json named a
+// criterion the copy did not violate, and a correct audit read as a miss.
+{
+  const lettered = [
+    '# Plan', '',
+    '## Success criteria', '',
+    '| # | Criterion |',
+    '|---|-----------|',
+    '| SC1 | Assumption register reviewed before launch |', '',
+    '## Assumption Register', '',
+    '| # | Assumption | Impact If False | How to Verify | By When | Owner | Status |',
+    '|---|-----------|----------------|---------------|---------|-------|--------|',
+    '| A1 | Indexes cover the new query | Slow reads | EXPLAIN | Phase 1 | data team | verified |',
+    '| A2 | Cache is warm at cutover | Cold start | load test | Phase 2 | platform team | verified |', '',
+    '## Testing Strategy', '',
+    '| # | Test | Owner |',
+    '|---|------|-------|',
+    '| 1 | Smoke | qa team |', '',
+  ].join('\n');
+  const out = canary.inject(lettered, 'assumption-inject');
+  const lines = out.text.split('\n');
+  const planted = lines.findIndex((l) => /Peak write throughput/.test(l));
+  const lastRow = lines.findIndex((l) => /^\| A2 \|/.test(l));
+  check('a lettered register gets the row inside the register, not in the next numbered table',
+    planted === lastRow + 1, `planted at ${planted}, last register row at ${lastRow}`);
+  check('the planted row continues the register\'s own numbering',
+    /^\| A3 \|/.test(lines[planted]), lines[planted]);
+  check('the planted row has the register\'s column count',
+    lines[planted].split('|').length === lines[lastRow].split('|').length, lines[planted]);
+  check('the row is marked unverified in the Status column',
+    lines[planted].split('|').slice(1, -1).map((c) => c.trim()).pop() === 'unverified', lines[planted]);
+  check('inject reports where the edit landed, 1-based in the copy',
+    !!out.edit && out.edit.op === 'insert' && out.edit.line === planted + 1, JSON.stringify(out.edit));
+
+  // A register with a header and no rows is not a site: refuse rather than plant
+  // the row into whatever numbered table follows.
+  const empty = '# Plan\n\n## Assumptions\n\n| # | Assumption | Status |\n|---|-----------|--------|\n\n## Tests\n\n| # | Test |\n|---|------|\n| 1 | Smoke |\n';
+  let threw = false;
+  try { canary.inject(empty, 'assumption-inject'); } catch (err) { threw = true; }
+  check('a register with no rows THROWS instead of planting into the next table', threw, 'it planted outside the register');
+}
+
 console.log('\n2. Every class in the bank is live');
 
 // Rotation is the only thing raising the cost of pre-empting the canary, and it is
@@ -118,6 +166,16 @@ console.log('\n2b. The shipped spec template carries every canary shape');
     try { ok = canary.inject(tpl, name).text !== tpl; } catch (err) { msg = err.message; }
     check(`templates/spec.md carries the shape for ${name}`, ok, msg || 'mutation did not change the text');
   }
+
+  // The scaffolder's template is the other document shape the gate audits, and
+  // until run 3 its register showed a header and no row, so nothing said what the
+  // canary anchors on. The row it now shows must itself be a site.
+  const scaffolder = fs.readFileSync(
+    path.join(__dirname, '..', 'plugins', 'toque', 'agents', 'plan-scaffolder.md'), 'utf8'
+  ).replace(/\r\n/g, '\n');
+  let sOk = false, sMsg = '';
+  try { sOk = canary.inject(scaffolder, 'assumption-inject').text !== scaffolder; } catch (err) { sMsg = err.message; }
+  check('the scaffolder\'s register template carries the assumption-inject shape', sOk, sMsg || 'mutation did not change the text');
 }
 
 console.log('\n3. Detection');
@@ -241,6 +299,16 @@ console.log('\n6. CLI contract');
     !!rec.className && !!rec.criterion, JSON.stringify(rec));
   const mutated = fs.readFileSync(rec.mutated, 'utf8');
   check('the mutated copy differs from the original', mutated !== SPEC);
+
+  // The answer key must not sit beside the exam. In stress run 3 a holistic judge
+  // listed the folder of the file it was handed and read canary.json there.
+  const copyDir = path.dirname(rec.mutated);
+  check('the mutated copy sits alone in its own folder, away from canary.json',
+    copyDir !== outDir && fs.readdirSync(copyDir).length === 1,
+    `${rec.mutated} shares ${copyDir} with: ${fs.readdirSync(copyDir).join(', ')}`);
+  check('the record carries where the edit landed',
+    !!rec.edit && typeof rec.edit.line === 'number' && /^(insert|delete|replace)$/.test(rec.edit.op),
+    JSON.stringify(rec.edit));
 
   // The `detected` subcommand. It exists because the blanket-rejection rule
   // lived in wasFound with no caller: the workflow instructed an agent to check

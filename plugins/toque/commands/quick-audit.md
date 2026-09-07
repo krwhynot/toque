@@ -105,10 +105,14 @@ After the gate completes, present:
    the kitchen, with the criteria that failed. For each criterion, add the
    kitchen translation after its canonical token: `MET` — passed the pass;
    `UNMET` — back to the kitchen; `N_A` — not on this plate.
-2. Canary found, missed, not applicable (the document has none of the shapes
-   a canary attaches to), or no-isolation (no fresh auditor could be spawned),
-   and the evidence validator's exit code; a canary missed twice means the
-   audit could not be trusted and its findings are not shown as findings
+2. The canary reason exactly as the gate recorded it — one of found, missed,
+   not-applicable (the document has none of the shapes a canary attaches to),
+   no-isolation (no fresh auditor could be spawned), single-trial-only (the
+   document carried only the class already tried, so a second trial was never
+   possible) or auditor-did-not-return (the auditor was launched twice and
+   neither launch returned) — and the evidence validator's exit code; a canary
+   missed twice means the audit could not be trusted and its findings are not
+   shown as findings
 3. Findings by severity, each citing file:line evidence
 4. Top 3 gaps that must be addressed
 5. Go/No-Go recommendation
