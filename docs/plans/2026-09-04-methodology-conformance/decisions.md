@@ -102,6 +102,91 @@ Decided by the owner on September 7 on the evidence of the third stress run, wit
 
 All three were executed under a frozen tree the same day (stress-test.md, fourth run). D9 held on the caller's side in both revision iterations of s1 and exposed that nothing checks the auditor's half (R4-03). D10 executed in both scenarios and classified every flip the way an independent verifier did, but its rule names "the item's new record" for element classes that have no record (R4-01), and that referent decided s1's only UNMET. D11 held completely. The two run-4 defects that follow from these decisions, R4-01 and R4-03, are recorded there and are not yet fixed.
 
+## Fourth-run fixes: the baseline comparison is a script (September 7, 2026)
+
+The recommendation the fourth run left standing was the one made before it: the
+caller duties D10 added — keep the previous document, diff it, classify every
+compared element, write and pin the LINT-14 record — are mechanical and should
+be one script, which would settle R4-01 by construction because a script must
+name what it compares. That script is
+`plugins/toque/scripts/tq-gate-baseline.js`, and it replaces the prose that
+occupied `stage-2-design.md:1017-1087`.
+
+**R4-01 is closed at the input, not by a clarifying sentence.** The old rule
+keyed a regression on "the line the item's new record cites"; coverage,
+scenario and concern rows have no record. Every element the script compares now
+carries `lines` and `line_source`. A LINT element may omit both — `compare
+--evidence` fills them from `evidence/{criterion_id}.json`, using only
+citations that point at the audited document, since a change to a cited test
+file is not a change to the document being diffed. A matrix row has no record
+and names them itself, read from the auditor's own matrices. A flip the script
+cannot scope — no previous document, or a row that named no lines — is booked
+as a REGRESSION and marked unscoped with the reason, because the gate's
+standing rule is that the exemption is never applied on a guess.
+
+The four subcommands map one to one onto the four caller duties: `compare`
+(diff and classify, exit 1 on any regression), `record` (write `## Baseline
+comparison` into `audit.md` and pin `evidence/LINT-14.json` to it — steps 1 and
+2 of the LINT-14 write order, in one pass so the section and the pin cannot
+disagree), `repin` (recompute the hash and relocate the range after any later
+append, the failure five of six run-3 executors worked around by hand), and
+`snapshot` (write the baseline, move the previous one whole into `history`,
+compute `doc_sha256` from the document rather than trusting a transcribed one,
+and keep the document copy the next diff needs).
+
+Four R4-06 items are closed as a side effect, because a script cannot leave
+them open: the three status vocabularies in use (`covered|partial|ok-excluded|gap`,
+`OK|WARNING|GAP`, `PASS|FAIL|N_A`) map in one place and an unmapped token is
+refused rather than guessed; `covered -> partial` and `ok -> warn` have a
+category (DEGRADATION, reported, not a LINT-14 failure, which D10 defines over
+an element that was passing and now fails); `history` holds the whole previous
+baseline object, which is what a trend line over it needs; and every
+classification records whether it was diff-scoped, so improvements are marked
+the same way regressions are. Two things the runs hit are new: a DROPPED class
+beside NEW, so the two renamed rows one run booked as new items would show as a
+rename; and LINT-14 excluded from its own comparison, since the auditor writes
+it N_A every time and the caller overwrites it, which would report as
+NOT-COMPARABLE noise on every iteration.
+
+Guarded by PH5-044 in `tests/layer1-repo.sh` — the block must RUN each of the
+four subcommands rather than describe them, the script must dispatch all four
+and read all four element groups, and the schema sentence requiring a matrix
+row to name its lines must survive — and by 58 assertions in
+`tests/gate-baseline-test.js`, registered as layer 9. Both were checked for
+vacuity: making `scopeOf` always report "changed" fails nine assertions,
+emptying the self-referential set fails the LINT-14 exclusion, dropping the
+deletion marker fails the deletion test, and pointing the block's `repin`
+command at another filename, removing the matrix-row sentence, or moving the
+script away each turns PH5-044 red.
+
+**The two rig artifacts the run recorded are fixed.**
+`check-invariants.js` reports what `history` actually holds rather than a bare
+boolean against a field no schema then put there — and the field is now real,
+since `snapshot` writes whole baselines. `freeze-plugin.sh` writes
+`run-started.txt` itself, naming `hash-tree.sh` as the recipe with its
+normalisation rules, the source commit and the exclusions, so a verifier can
+recompute `frozen-before.sha` instead of taking it on trust; run 4's two
+verifiers could re-derive every gate term from disk and neither could reproduce
+that number. `launch-auditor.sh` records a wrapper PID, the child PID, a launch
+nonce, the host and the output file's size, mtime and hash alongside what it
+already recorded — not proof against a determined forger, since nothing the
+wrapper writes about itself can be, but the difference between a file that
+describes a launch and one written by one. That is the gap between s8's
+ESTABLISHED and s1's CORROBORATED.
+
+**Also closed:** `quick-plan.md` said one line per unmet criterion where D9 says
+one per defect.
+
+**Still open from run 4, and not decided here.** R4-02 (whether the canary
+re-runs per revision iteration) is an owner decision, not a fix: both executors
+ran it once, and CANARY_OK for s1's second and third gate runs rests on a trial
+those auditors never took. R4-03 (nothing checks the auditor's own "one row per
+witness" instruction), R4-04 (the canary-delete step and the gate-record-last
+step still cannot both hold as printed) and R4-05 (the holistic judge is
+pointed inside `.canary/` with no forbidden-inputs block) are unchanged. The
+open path is still unobserved: s1's fixture has not been re-run against the
+script.
+
 ## What this does not claim
 
 - D1 changes what the shortcut commands instruct; it does not add a runtime check that an agent obeyed the instruction. The suite's PH5-042 guard checks that the gate has one definition and that both shortcuts carry the execute-by-reference directive, not that a live run executed it. The evidence re-anchoring step is an instruction to the agent; a script that does it mechanically would be the durable form.

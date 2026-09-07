@@ -21,8 +21,8 @@ The audit reads active instructions and scripts first, invocation and tests seco
 | [industry-alignment.md](industry-alignment.md) | Per-method industry comparison, adaptations and gaps. |
 | [findings.md](findings.md) | Correction plan, applied changes, contradictions and owner decisions. |
 | [verification.md](verification.md) | Commands, results, links, anchors, negative controls and preservation. |
-| [decisions.md](decisions.md) | The six owner decisions (D1–D6), rationale, and where each change landed. Added 2026-09-05. |
-| [stress-test.md](stress-test.md) | Four live runs of `quick-plan` and `quick-audit` in scratch repositories (three of six scenarios, one of two): method, results, limits, and the instruction defects each run found. Rig in [stress-rig/](stress-rig/), with `launch-auditor.sh` and `scenario-inputs.md` since run 4. Added 2026-09-05. |
+| [decisions.md](decisions.md) | The owner decisions D1–D11, rationale, and where each change landed, plus the fixes each stress run justified. Added 2026-09-05; fourth-run fixes 2026-09-07. |
+| [stress-test.md](stress-test.md) | Four live runs of `quick-plan` and `quick-audit` in scratch repositories (three of six scenarios, one of two): method, results, limits, and the instruction defects each run found. Rig in [stress-rig/](stress-rig/), with `launch-auditor.sh` and `scenario-inputs.md` since run 4, and a self-written `run-started.txt` naming the digest recipe since the run-4 fixes. Added 2026-09-05. |
 | [stress-run3-critic.md](stress-run3-critic.md) | Cross-scenario critic report for the third stress run (September 6–7, 2026, against the frozen 11.2.0 release): whether run 2's four fixes held, the isolation route per scenario, 41 ranked instruction defects with proposed fixes, agent errors and fixture artifacts listed separately, and the recommendation. Added 2026-09-07. |
 
 ## Counts
