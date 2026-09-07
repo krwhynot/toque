@@ -1,4 +1,4 @@
-# Toque Knowledge Guide v11.1.0
+# Toque Knowledge Guide v11.2.0
 
 **6 Commands** · **5 Skills** · **2 Agents** · **7 Document Templates** · **3 Plan-Context Hooks** · **2 Gate Tools** · **Requires Node.js 18+**
 
