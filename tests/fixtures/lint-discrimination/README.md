@@ -53,6 +53,9 @@ by prose as a restatement of the rule. `result.md` has one edit of the same
 kind: its parenthetical registry rule count is now prose, because PH5-002 allows a
 rule count only inside the registry. The second run, C with B as the control, is
 recorded in `result-claimed.md`; `prediction-claimed.md` is checked in as sealed.
+`result-claimed.md` carries one edit of the same kind as `result.md`: the four bullets
+that explain each verdict opened with the rule id and a colon, which PH5-001b reads
+as a restatement, so the colon after each id is now a dash. The words are unchanged.
 
 ## Known gap
 

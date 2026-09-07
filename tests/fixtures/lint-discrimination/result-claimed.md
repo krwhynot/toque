@@ -18,13 +18,13 @@ Every citation landed on the planted line and no other. On fixture C each
 UNMET named the specific gap the plant was built around, in the auditor's own
 words:
 
-- LINT-21: the count is "cached in the same entry, refreshed on the same
+- LINT-21 — the count is "cached in the same entry, refreshed on the same
   load", so it "carries the same TTL as the rows" and the mismatch never fires.
-- LINT-22: "merge status is repository state; the ordering claim is about
+- LINT-22 — "merge status is repository state; the ordering claim is about
   production state."
-- LINT-23: the retried snapshot "drops the pre-worker backup and recreates it
+- LINT-23 — the retried snapshot "drops the pre-worker backup and recreates it
   from a table that now contains rows from the failed rollout."
-- LINT-24: "a single sample is not a peak under any definition", and
+- LINT-24 — "a single sample is not a peak under any definition", and
   `heapUsed` is V8 heap, not resident set.
 
 Fixture B's auditor returned MET on all four with the mechanism as the reason
