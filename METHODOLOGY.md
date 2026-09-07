@@ -768,6 +768,10 @@ These are instructed checks, not a shipped general-purpose executable plan linte
 | LINT-18 | AI-generated code deliverables must specify a separate test writer | 4 / 5 |
 | LINT-19 | Confidence brief exists with no unresolved HIGH-impact markers | 5 |
 | LINT-20 | Confidence brief exists and each entry has its required fields | 5 |
+| LINT-21 | Every mitigation for a silent-failure risk names a signal not derived from the same filtered source as the failure | 5 |
+| LINT-22 | Every stated ordering between deployable artifacts names the mechanism that enforces it | 5 |
+| LINT-23 | Every rollback artifact the plan itself creates is re-runnable and created at the point whose state it preserves | 5 |
+| LINT-24 | Every named measurement exercises the property its requirement states | 5 |
 
 The workflow requires applicable rules and gap matrices to pass before reporting
 gap-checked. First audits skip baseline-regression comparison; Lite applicability

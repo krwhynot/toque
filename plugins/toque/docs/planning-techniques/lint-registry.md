@@ -41,23 +41,38 @@ file defined 16, and `agents/plan-auditor.md` claimed 14 in one place and 15 in 
 | LINT-18 | AI-generated code deliverables must specify a separate test writer | 4 (Plan) / 5 (Audit) | Full + Lite |
 | LINT-19 | Confidence brief exists with no unresolved HIGH-impact markers | 5 (Audit) | Full + Lite |
 | LINT-20 | Confidence brief exists and each entry has its required fields | 5 (Audit) | Full + Lite |
+| LINT-21 | Every mitigation for a silent-failure risk names a signal not derived from the same filtered source as the failure | 5 (Audit) | Full + Lite |
+| LINT-22 | Every stated ordering between deployable artifacts names the mechanism that enforces it | 5 (Audit) | Full + Lite |
+| LINT-23 | Every rollback artifact the plan itself creates is re-runnable and created at the point whose state it preserves | 5 (Audit) | Full + Lite |
+| LINT-24 | Every named measurement exercises the property its requirement states | 5 (Audit) | Full + Lite |
 
 LINT-19 and LINT-20 were numbered 17 and 18 in `commands/plan.md` and `agents/plan-auditor.md`
 until PH5-001, colliding with the two testing-methodology rules above. Audit reports written before
 that renumbering (under `docs/plans/`) refer to the confidence-brief checks by their old ids; those
 records are left as they were rather than rewritten, because they record what ran at the time.
 
+LINT-21 through LINT-24 were promoted on 2026-09-06 out of the Phase 5 rubric-free
+holistic pass: a judge given no rubric says what it expects to fail in production,
+and whatever maps to no existing criterion is filed as a candidate. All four
+arrived from a single angle — the registry checks that a control is NAMED, never
+that it WORKS — and they are deliberately kept apart rather than merged. One rule
+covering all four would have to be stated so generally that no auditor could
+return a falsifiable verdict on it, which is the vacuity the holistic pass exists
+to find rather than to create. Their disposition is in
+[lint-candidates.md](lint-candidates.md); the runs that produced them live in the
+gate records of the plans concerned, not here.
+
 ## Phase Ownership
 
 - **Phase 4 (Plan):** LINT-17, LINT-18 (enforced during plan creation, audited at Phase 5)
-- **Phase 5 (Audit):** LINT-01 through LINT-10, LINT-13, LINT-14, LINT-15, LINT-16, LINT-17, LINT-18, LINT-19, LINT-20 (18 rules)
+- **Phase 5 (Audit):** LINT-01 through LINT-10, LINT-13, LINT-14, LINT-15, LINT-16, LINT-17, LINT-18, LINT-19, LINT-20, LINT-21, LINT-22, LINT-23, LINT-24 (22 rules)
 - **Phase 7 (Impact Review):** LINT-11, LINT-12 (2 rules, Full mode only)
-- **Total:** 20 active rules
+- **Total:** 24 active rules
 
 ## Audit Modes
 
-- **Full mode** (`/toque:plan`, `/toque:quick-audit` with plan context): All 20 rules apply. Phase 7 rules run during Impact Review.
-- **Lite mode** (`/toque:quick-plan`, standalone `/toque:quick-audit`): 18 rules apply. LINT-11 and LINT-12 are skipped (no build phase, no changed files to trace).
+- **Full mode** (`/toque:plan`, `/toque:quick-audit` with plan context): All 24 rules apply. Phase 7 rules run during Impact Review.
+- **Lite mode** (`/toque:quick-plan`, standalone `/toque:quick-audit`): 22 rules apply. LINT-11 and LINT-12 are skipped (no build phase, no changed files to trace).
 
 ## Gate Behavior
 
@@ -101,12 +116,22 @@ above is the only wording for that.
   is a claim about today, and fails. See the classification step under
   INFRASTRUCTURE VERIFICATION in `skills/plan/stages/stage-2-design.md`.
 
+- **LINT-21 through LINT-24 each have a triggering condition, and a plan that
+  does not meet it PASSES.** LINT-21 needs a risk whose failure mode is silent —
+  one where the wrong outcome and the right one look the same to whatever is
+  watching. LINT-22 needs a stated ordering between two separately deployable
+  artifacts. LINT-23 needs a rollback that depends on an artifact the plan itself
+  creates. LINT-24 needs a requirement that names a command, query or check as
+  its measurement. A plan meeting none of those conditions is not exempt and not
+  N_A; each rule passes, with the absent condition as the recorded reason, under
+  the vacuous-rule note above.
+
 ## Lint Count by Context
 
 | Context | Lint Rules | Count |
 |---------|-----------|-------|
-| Phase 5 Audit (Full mode) | 01-10, 13-20 | 18 |
-| Phase 5 Audit (Lite mode) | 01-10, 13-20 | 18 |
+| Phase 5 Audit (Full mode) | 01-10, 13-24 | 22 |
+| Phase 5 Audit (Lite mode) | 01-10, 13-24 | 22 |
 | Phase 7 Impact Review | 11, 12 | 2 |
-| Total (Full mode) | All active | 20 |
-| Total (Lite mode) | Minus 11, 12 | 18 |
+| Total (Full mode) | All active | 24 |
+| Total (Lite mode) | Minus 11, 12 | 22 |
