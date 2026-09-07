@@ -16,7 +16,7 @@ Gate: Design gate PASS + human review (or waiver) + spec.md Status: Approved
 - Part C: Design gate (the audit) - checks, outputs A-D, canary, evidence validation
 - Part C: the <design_gate> block and its bindings, shared with /toque:quick-plan and /toque:quick-audit
 - Part C: Infrastructure verification, plan lint rules, gap summary
-- Part C: Evidence reinforcement and baseline snapshot
+- Part C: Baseline snapshot (every iteration) and evidence reinforcement (once, after the loop)
 - Part C: Gate expression, revision loop, auditor isolation
 - Part C: Human review gate and waiver condition
 - Exit: spec.md Status: Approved
@@ -940,8 +940,18 @@ gap summary.
 When {gate_dir} is a plan folder, update manifest.md: add audit.md to the
 Artifacts table with date and gate result.
 
-EVIDENCE REINFORCEMENT (after audit, before baseline; only when a {generator}
-is bound and {doc} is not yet approved):
+EVIDENCE REINFORCEMENT (ONCE, after the revision loop ends and before the
+Revision History is appended; only when a {generator} is bound and {doc} is not
+yet approved):
+
+Reinforcement runs once, on the final version of {doc}, never between
+iterations. A note written between iterations is caller text sitting in the
+document the next fresh auditor is told to read without any prior verdict, and
+one stress run had four auditors find such notes, disclose them and re-derive
+around them. Use the final audit plus the gaps earlier iterations closed, which
+the caller holds. The baseline snapshot below, by contrast, is taken on every
+iteration. This section is printed before the loop because it describes an
+edit to {doc}; it executes after it.
 
 With no generator bound, or when {doc} carries Status: Approved, the audited
 document is not edited: write the notes below under `## Evidence notes` in
@@ -975,8 +985,9 @@ it with audit findings:
    A note says what was found and how it was resolved, in prose, as the two
    examples do. It never carries a criterion id, a verdict token (MET, UNMET,
    N_A, PASS, FAIL), a rule count or a gate result: the note is in {doc} when
-   the next iteration's fresh auditor reads it, and that auditor is forbidden a
-   prior verdict (agents/plan-auditor.md, <forbidden_inputs>). One stress run
+   the next fresh auditor reads it — a manual re-audit, or a reaudit under
+   Full mode — and that auditor is forbidden a prior verdict
+   (agents/plan-auditor.md, <forbidden_inputs>). One stress run
    left ten notes naming verdicts in a spec, and every later auditor had to
    disclose and disregard them. The auditor's file states how it treats a note
    that reaches it anyway; do not rely on that.
@@ -1025,17 +1036,25 @@ After writing the audit, capture a per-element baseline in status.json when
 ```
 
 On re-audit (after revision loop or manual re-run), compare current vs baseline:
-- REGRESSION: item was covered/passing, now gap/failing -> flag in audit output
+- REGRESSION: item was covered/passing, now gap/failing, AND at least one line
+  the item's new record cites lies inside the diff between the previous
+  baseline's document and {doc} -> flag in audit output
+- AUDITOR VARIANCE: item was covered/passing, now gap/failing, and every line
+  its new record cites is unchanged since the previous baseline -> report under
+  baseline_comparison as variance, never as a regression. The item still fails
+  its own criterion; it does not also fail LINT-14.
 - IMPROVEMENT: item was gap/failing, now covered/passing -> report as progress
 - NEW: item not in previous baseline -> report for awareness
 
-Report: "Baseline comparison: X regressions, Y improvements, Z new items"
+Report: "Baseline comparison: X regressions, Y improvements, Z new items,
+V auditor-variance flips"
 Regressions are flagged as HIGH priority in the audit output.
 
 This comparison is what LINT-14 is evaluated against (see the registry for its text).
 Only an element that was covered/passing in the previous baseline and is now
-gap/failing counts; pre-existing gaps do not trigger it. Skipped on the first audit,
-when no baseline exists.
+gap/failing, on text the revision changed, counts; pre-existing gaps do not
+trigger it, and neither does a pre-existing defect a fresh auditor is the first
+to notice. Skipped on the first audit, when no baseline exists.
 
 THE PREVIOUS BASELINE is the newest of status.json's baseline and the baseline in
 any gate.json already present in {gate_dir} or in a sibling reaudits/*/ folder —
@@ -1047,11 +1066,22 @@ repository until the iteration's own record is written, and keep them — the
 Revision History and the baseline comparison are built from them by the
 caller, never by the auditor.
 
-When {doc}'s sha256 equals the previous baseline's doc_sha256, the document did
-not change. Record LINT-14 N_A and report any differences under
-baseline_comparison as AUDITOR VARIANCE, not as regressions: two audits of one
-unchanged document disagreeing is a fact about the auditor, and calling it a
-regression fails a document nobody touched.
+The diff needs the previous baseline's document. Keep a copy of {doc} beside
+each baseline as it is written — with the moved-out prior records during a
+loop, and reconstructed from git history by the recorded doc_sha256 on a manual
+re-run. When {doc}'s sha256 equals the previous baseline's doc_sha256 the diff
+is empty and every flip is variance: record LINT-14 N_A and report the
+differences under baseline_comparison as AUDITOR VARIANCE. When no copy of the
+previous document can be found, say so in `## Baseline comparison` and treat
+every flip as a regression; the exemption is never applied on a guess.
+
+Two audits of one unchanged passage disagreeing is a fact about the auditor,
+not the document, and calling it a regression fails text nobody touched. The
+loop mandates a fresh auditor every iteration, which maximises exactly that
+disagreement; before the diff-scoped rule, one stress run booked a pre-existing
+defect first noticed on iteration 3 as a regression because the text left no
+other option, and LINT-14 was unreachable in the loop that exists to change the
+document.
 
 Update the baseline (status.json, or gate.json) after each comparison (append
 to history array for trend tracking).
@@ -1162,19 +1192,35 @@ IF NOT PASS:
   -> Revise ONLY the failing sections (not the entire document).
   -> Re-run the audit on the revised document.
   -> Compare re-audit against baseline: flag any regressions (items that
-     were passing in v1 but now fail in v2). Regressions indicate the
-     revision broke something that was previously working.
+     were passing in v1 but now fail in v2 on text the revision changed).
+     Regressions indicate the revision broke something that was previously
+     working; a flip on unchanged text is auditor variance (baseline
+     comparison above) and fails only its own criterion.
   -> Maximum 2 revision iterations.
 
 <revision_feedback>
-Send the generator defects and locations. One line per unmet criterion:
+Send the generator defects and locations. One line per DEFECT, not per criterion:
+a criterion quantified over the whole document ("every", "all", "each", "no") is
+unmet at every instance the audit found, and each instance is its own line.
+Closing one instance does not close the criterion, and the next fresh auditor
+finds the rest.
 
   {criterion_id} UNMET: {what is missing}. Location: {file}:{line}.
 
-Worked example:
+Worked example — two criteria, one of them with two witnesses:
 
   LINT-03 UNMET: Phase 2 database migration has no rollback step.
     Location: docs/plans/2026-07-20-plugin-hardening-v5/spec.md:142.
+  LINT-07 UNMET: the retry-on-timeout behavior has no test or test delta.
+    Location: docs/specs/scheduled-report-delivery.md:58.
+  LINT-07 UNMET: the SCHEDULES_ENABLED kill switch has no test or test delta.
+    Location: docs/specs/scheduled-report-delivery.md:71.
+
+Send every witness the audit's UNMET table lists, and no count of how many there
+are or might be beyond them: a count of remaining instances is a total. One
+stress run sent one LINT-07 witness per iteration, the generator closed it, and
+the next auditor named a different one — three times, on three mechanisms that
+were all visible in v1 — so both iterations went to one rule.
 
 Never send the rubric, the totals, the bands, or how near the plan came to passing.
 The generator cannot see any of that when it writes, and returning it through the
@@ -1216,7 +1262,8 @@ satisfied and evidenced, or the specific ones that are not get named. A "proceed
 with known gaps" rung was the rung most often used to proceed without reading them,
 and there is nothing here for it to mean.
 
-After the loop ends, append the revision history to audit.md, then re-pin
+After the loop ends, run EVIDENCE REINFORCEMENT once on the final {doc}
+(above), then append the revision history to audit.md, then re-pin
 evidence/LINT-14.json and re-run the validator (LINT-14 write order above).
 The auditor rewrites audit.md on every iteration, so append only after the
 final one:

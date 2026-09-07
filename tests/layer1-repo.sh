@@ -1499,6 +1499,15 @@ else
     printf '%s\n' "$dg43" | grep -qF -- "$piece" \
       || { fail "PH5-043: <design_gate> lost '$piece' — a run-3 fix is gone"; dg43_bad=1; }
   done
+  # Owner decisions D9-D11 (September 7): the revision channel carries one line
+  # per witness, a regression is a flip on text the revision changed, and
+  # evidence reinforcement runs once after the loop, never between iterations.
+  for piece in 'One line per DEFECT, not per criterion' 'unchanged since the previous baseline' 'ONCE, after the revision loop ends'; do
+    printf '%s\n' "$dg43" | grep -qF -- "$piece" \
+      || { fail "PH5-043: <design_gate> lost '$piece' — a D9-D11 decision is gone"; dg43_bad=1; }
+  done
+  grep -qF 'one row per witness, not one per criterion' plugins/toque/agents/plan-auditor.md \
+    || { fail "PH5-043: plan-auditor.md's UNMET table is back to one row per criterion — the revision channel cannot carry a quantified rule (D9)"; dg43_bad=1; }
 fi
 # quick-plan needs the same fallback: no fresh instance, no silent in-context scaffolder pass.
 tr -d '' < plugins/toque/commands/quick-plan.md | tr '

@@ -476,12 +476,16 @@ A record whose only support is a command string is `UNMET`.
 - UNMET: Y
 - N_A: Z
 
-UNMET criteria (one line each — id, and where in the plan the missing content
-should appear):
+UNMET criteria — one row per witness, not one per criterion. A criterion
+quantified over the whole document ("every", "all", "each", "no") gets a row for
+each instance you found, each with its own location; the caller forwards rows to
+the revision channel, and an instance you saw but did not list is one the next
+audit finds again from scratch:
 
 | Criterion | Location expected | Gap |
 |-----------|-------------------|-----|
 | LINT-NN | [section or artifact:line] | [one-line description] |
+| LINT-NN | [a second instance of the same rule, its own line] | [one-line description] |
 
 Report the counts and the UNMET list and stop. Do not state whether the plan
 passes. You have not been told where the cut is, and that is deliberate: a grader
