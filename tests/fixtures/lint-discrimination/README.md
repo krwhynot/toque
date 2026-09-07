@@ -40,7 +40,9 @@ all-MET on both fixtures is a failure of the rules, not a pass of the test.
 The 2026-09-06 run is recorded in `result.md`. Its `prediction.md` is the sealed
 text with one change made at check-in: the Line and Rule columns of the plant-map
 table are swapped, because the repository's PH5-001b check reads a rule id followed
-by prose as a restatement of the rule.
+by prose as a restatement of the rule. `result.md` has one edit of the same
+kind: its parenthetical registry rule count is now prose, because PH5-002 allows a
+rule count only inside the registry.
 
 ## Known gap
 

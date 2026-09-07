@@ -1,7 +1,7 @@
 # Result — LINT-21..24 discrimination test, 2026-09-06
 
 8 of 8 verdicts match the sealed prediction. Two blind auditors, one fixture each,
-both reading rule text from the working-tree registry (24 rules); the installed
+both reading rule text from the working-tree registry, which defines all four; the installed
 plugin is 11.1.0 and stops at LINT-20, so the slash command could not have run this.
 
 | Rule | Line | Fixture A (defect) | Fixture B (repair) | Predicted | Match |
