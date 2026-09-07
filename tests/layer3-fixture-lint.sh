@@ -309,6 +309,24 @@ fi
 
 echo ""
 
+# The third fixture is B with the same four lines rewritten so that each repair
+# still states the property while the mechanism it describes fails. It must
+# differ from B at exactly the planted lines and nowhere else, at the same
+# length, for the same reason as above: prediction-claimed.md names the lines.
+CLAIMED="${FIXTURE}/nightly-export.claimed.md"
+
+if [[ -f "$REPAIRED" && -f "$CLAIMED" ]]; then
+  changed_lines=$({ diff --unchanged-line-format='' --old-line-format='%dn ' --new-line-format='' "$REPAIRED" "$CLAIMED" || true; } | sed 's/ $//')
+  claimed_len=$(wc -l < "$CLAIMED" | tr -d ' ')
+  if [[ "$changed_lines" == "24 37 45 86" && "$claimed_len" -eq 93 ]]; then
+    pass "LINT-21..24 claimed fixture: differs from the repaired twin at exactly the four planted lines (24 37 45 86), 93 lines"
+  else
+    fail "LINT-21..24 claimed fixture: expected changed lines '24 37 45 86' at 93 lines, got '${changed_lines}' (${claimed_len} lines)"
+  fi
+else
+  fail "LINT-21..24 claimed fixture: fixture files missing under ${FIXTURE}"
+fi
+
 # ============================================================================
 # SUMMARY
 # ============================================================================
