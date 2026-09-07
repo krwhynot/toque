@@ -279,6 +279,37 @@ fi
 echo ""
 
 # ============================================================================
+# FIXTURE: lint-discrimination (LINT-21 to LINT-24 discrimination pair)
+# ============================================================================
+echo "--- Fixture: lint-discrimination ---"
+
+# One spec with four planted defects and its repaired twin. The sealed prediction
+# names the four lines, so if the files drift apart anywhere else prediction.md
+# describes a test that no longer exists; and if either file changes length, the
+# line numbers in prediction.md stop pointing at the plants. The rules themselves
+# are judged by an auditor, not by code — this guards the fixture, not the verdict.
+FIXTURE="${FIXTURES_DIR}/lint-discrimination"
+DEFECT="${FIXTURE}/nightly-export.defect.md"
+REPAIRED="${FIXTURE}/nightly-export.repaired.md"
+
+if [[ -f "$DEFECT" && -f "$REPAIRED" ]]; then
+  # diff exits 1 when the files differ, which they must; under pipefail that
+  # status would abort the script before the assertion ran.
+  changed_lines=$({ diff --unchanged-line-format='' --old-line-format='%dn ' --new-line-format='' "$DEFECT" "$REPAIRED" || true; } | sed 's/ $//')
+  defect_len=$(wc -l < "$DEFECT" | tr -d ' ')
+  repaired_len=$(wc -l < "$REPAIRED" | tr -d ' ')
+  if [[ "$changed_lines" == "24 37 45 86" && "$defect_len" -eq 93 && "$repaired_len" -eq 93 ]]; then
+    pass "LINT-21..24 pair: differs at exactly the four planted lines (24 37 45 86), 93 lines each"
+  else
+    fail "LINT-21..24 pair: expected changed lines '24 37 45 86' at 93 lines each, got '${changed_lines}' (${defect_len}/${repaired_len} lines)"
+  fi
+else
+  fail "LINT-21..24 pair: fixture files missing under ${FIXTURE}"
+fi
+
+echo ""
+
+# ============================================================================
 # SUMMARY
 # ============================================================================
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

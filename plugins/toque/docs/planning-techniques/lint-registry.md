@@ -62,6 +62,12 @@ to find rather than to create. Their disposition is in
 [lint-candidates.md](lint-candidates.md); the runs that produced them live in the
 gate records of the plans concerned, not here.
 
+A discrimination pair for the four rules is checked in at
+`tests/fixtures/lint-discrimination/` in the plugin's source repository: one spec
+with a planted instance of each rule, its repaired twin differing at exactly those
+four lines, and the prediction sealed before two blind auditors ran. The installed
+plugin does not carry it.
+
 ## Phase Ownership
 
 - **Phase 4 (Plan):** LINT-17, LINT-18 (enforced during plan creation, audited at Phase 5)
