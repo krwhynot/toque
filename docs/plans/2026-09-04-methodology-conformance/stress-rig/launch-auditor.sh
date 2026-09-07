@@ -40,12 +40,18 @@ TOOLS="Bash,Read,Write,Grep,Glob,Agent,Skill"
 
 ARGV="claude -p --model $MODEL --permission-mode acceptEdits --allowedTools \"$TOOLS\" < $PROMPT"
 START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+START_EPOCH="$(date -u +%s)"
+# Generated before the launch, recorded after it. Its only job is to make two
+# .meta files from one run distinguishable from one file copied twice.
+NONCE="$(node -e "console.log(require('crypto').randomBytes(8).toString('hex'))")"
 RC=0
 if [ "${DRY_RUN:-0}" = "1" ]; then
   echo "DRY RUN: (cd $REPO && $ARGV) > $OUT"
 else
   set +e
-  (cd "$REPO" && claude -p --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" < "$PROMPT") > "$OUT" 2>&1
+  (cd "$REPO" && claude -p --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" < "$PROMPT") > "$OUT" 2>&1 &
+  CHILD=$!
+  wait "$CHILD"
   RC=$?
   set -e
 fi
@@ -58,6 +64,26 @@ END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "START $START"
   echo "END $END"
   echo "EXIT $RC"
+  # Process identity. Run 4 established isolation from a launch record in one
+  # scenario and could only CORROBORATE it in the other, because the .meta
+  # carried nothing that came from a process: argv, cwd, hashes and timestamps
+  # are all things a person could type. A wrapper PID, a distinct child PID and
+  # a launch nonce are still not proof against a determined forger — nothing
+  # written by the wrapper itself can be — but they are the difference between
+  # "this file describes a launch" and "this file was written by one".
+  echo "WRAPPER_PID $$"
+  echo "CHILD_PID ${CHILD:-none}"
+  echo "PPID $PPID"
+  echo "LAUNCH_NONCE $NONCE"
+  echo "HOST $(hostname 2>/dev/null || echo unknown)"
+  echo "CLAUDE_SESSION_ID ${CLAUDE_SESSION_ID:-unset}"
+  echo "START_EPOCH $START_EPOCH"
+  echo "END_EPOCH $(date -u +%s)"
+  if [ -f "$OUT" ]; then
+    echo "OUT_BYTES $(wc -c < "$OUT" | tr -d ' ')"
+    echo "OUT_MTIME_EPOCH $(date -u -r "$OUT" +%s 2>/dev/null || echo unknown)"
+    echo "OUT_SHA256 $(node -e "const f=require('fs'),c=require('crypto');console.log(c.createHash('sha256').update(f.readFileSync(process.argv[1])).digest('hex'))" "$OUT")"
+  fi
   [ "${DRY_RUN:-0}" = "1" ] && echo "DRY_RUN 1"
 } > "$OUT.meta"
 exit "$RC"

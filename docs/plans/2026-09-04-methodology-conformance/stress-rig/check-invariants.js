@@ -132,7 +132,25 @@ switch (scenario) {
       const g = JSON.parse(read(`${gateDir}/gate.json`));
       out.checks.baseline_run_number = g.baseline && g.baseline.run_number;
       out.checks.history_length = Array.isArray(g.history) ? g.history.length : null;
-      out.checks.prior_run_in_history = Array.isArray(g.history) && g.history.some(h => h && h.run_number === 1);
+      // What goes into `history` is the whole previous BASELINE object, which
+      // carries run_number — that is what tq-gate-baseline.js snapshot writes,
+      // and stage-2-design.md now says so. The run-4 rig probed for
+      // `h.run_number` against hand-written entries that carried no such field
+      // and reported a false negative on a scenario that had done it right, so
+      // the probe reports WHAT IT FOUND rather than a bare boolean: a reader
+      // can tell "the prior run is absent" from "history holds a shape this
+      // check does not understand".
+      out.checks.history_shapes = Array.isArray(g.history)
+        ? g.history.map(h => (h && typeof h === 'object' ? Object.keys(h).slice(0, 8) : typeof h))
+        : null;
+      out.checks.history_run_numbers = Array.isArray(g.history)
+        ? g.history.map(h => (h && typeof h === 'object'
+          ? (h.run_number !== undefined ? h.run_number
+            : (h.baseline && h.baseline.run_number !== undefined ? h.baseline.run_number : null))
+          : null))
+        : null;
+      out.checks.prior_run_in_history = Array.isArray(out.checks.history_run_numbers)
+        && out.checks.history_run_numbers.includes(1);
       out.checks.baseline_lint13 = g.baseline && g.baseline.lint_results && g.baseline.lint_results['LINT-13'];
       out.checks.baseline_lint03 = g.baseline && g.baseline.lint_results && g.baseline.lint_results['LINT-03'];
       out.checks.baseline_comparison_recorded = g.baseline_comparison || null;

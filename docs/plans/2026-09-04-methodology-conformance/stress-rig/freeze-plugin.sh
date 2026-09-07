@@ -87,6 +87,27 @@ echo "lock verified: shell and node writes both refused on the gate stage file"
 # mid-run cannot change what the fixtures are.
 ST="$ST" SRC="$SRCW" bash "$SRCW/docs/plans/2026-09-04-methodology-conformance/stress-rig/build-fixtures.sh"
 
+# The opening record, written by the script that took the digest rather than by
+# hand afterwards. Run 4's two verifiers could both re-derive every gate term
+# from disk and neither could reproduce frozen-before.sha, because nothing said
+# WHICH recipe produced it — a digest a reader cannot recompute is a number they
+# have to take on trust, which is the one thing this rig exists not to ask for.
+{
+  echo "run started:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "source:        $LIVE"
+  echo "source commit: $( (cd "$LIVE" && git rev-parse HEAD) 2>/dev/null || echo '(not a git tree)')"
+  echo "source status: $( (cd "$LIVE" && git status --porcelain | wc -l | tr -d ' ') 2>/dev/null || echo '?') uncommitted path(s)"
+  echo "frozen tree:   $FROZEN"
+  echo "excluded:      ./.git ./assets ./node_modules .canary"
+  echo "digest:        $(cat "$BEFORE")"
+  echo "digest recipe: bash $RIG/hash-tree.sh $FROZEN"
+  echo "               (LF-normalised per file, NUL-containing files hashed raw,"
+  echo "                per-file digests sorted by path under LC_ALL=C)"
+  echo "verify with:   RUN=$RUN bash $RIG/freeze-plugin.sh verify"
+  echo "locked:        $locked file(s) read-only under plugins/"
+} > "$RUN/run-started.txt"
+echo "opening record: $RUN/run-started.txt"
+
 echo ""
 echo "PLUGIN (frozen, read-only): $FROZEN/plugins/toque"
 echo "scenarios:                  $ST/s1 .. $ST/s6"
