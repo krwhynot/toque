@@ -217,14 +217,12 @@ to fix, reached from the other side. Only the boundaries of a run whose offset
 differs from the run before it are marked now: the same case marks 4 lines, and a
 block swap is still caught at both its seams.
 
-The interior of a moved block therefore reads as unchanged, and that is stated in
-the gate instructions rather than left to be discovered. It is not a defect to be
-tightened later: inside one diff alignment `cj - pi` is identically (insertions
-above − deletions above), so "this line is displaced" carries no information
-beyond "text changed somewhere above it". Separating a moved block's interior
-from ordinary shifted text needs a real move detector — hash blocks, match them
-across positions — not this diff. Cite the seam or the span, not a lone interior
-line.
+The interior of a moved block was then left reading as unchanged, and that was
+written up as a permanent limit on the argument that inside one diff alignment
+`cj - pi` is identically (insertions above − deletions above), so "displaced"
+carries no information beyond "text changed above". **That argument was wrong and
+the fifth section below retracts it.** The identity holds; the conclusion drawn
+from it does not, because the offset is not the only thing the alignment carries.
 
 **A refusal must not edit the file it refuses to pin.** Two checks fired after
 `writeSection` had already written: the realpath containment check, and the
@@ -296,6 +294,91 @@ own text is unchanged can fail because the lines around it changed — so the
 variance exemption is no better founded than the causal claim already withdrawn
 from the regression side. That bounds what D10 can honestly promise, and no
 wording repairs it.
+
+## Fourth review: the third leniency, and a claim retracted (September 8, 2026)
+
+Two repairs in a row had introduced their own leniency, so the fourth review was
+aimed only at the seven changes in `63991f3` and told to assume a third instance
+existed. It found one, and it disproved the reasoning used to justify the second.
+
+**Seam marking exempted a reordering.** Move the "Commit payment" block above the
+"Validate request" block. A cross-cutting concern reading "authorization happens
+before commit" flips ok → gap and cites a validation line. That line's own text is
+untouched — it sits in the interior of the run the commit block passed over — so
+the comparison returned VARIANCE, LINT-14 MET, exit 0, on a revision whose whole
+content was the reordering the concern is about. Reproduced against the committed
+script before anything was changed.
+
+**The claim that this could not be fixed is retracted.** The previous section
+argued that a moved block's interior is unrecoverable because `cj - pi` is
+identically (insertions above − deletions above). The identity is true. The
+inference from it was wrong: the offset is not the only thing the alignment
+carries. A maximal unmatched run on the previous side whose CONTENT equals a
+maximal unmatched run on the current side is a block deleted from one place and
+inserted in another — a move named by content rather than inferred from position
+— and the matched lines it crossed follow from its two positions. The cost is a
+hash map over unmatched runs; the LCS table is not enlarged.
+
+Measured, marking crossed lines does what marking displaced lines could not:
+
+| Revision | Seams only | With the move detector |
+|---|---|---|
+| Reorder two phases (the defect above) | line 8 exempt, MET | line 8 marked, UNMET |
+| Block swap, interior cited | variance | regression |
+| 300-line, insert at one end | 1 of 302 | 1 of 302 |
+| 300-line, insert and edit at both ends | 4 of 303 | 4 of 303 |
+| 300-line, three scattered edits | 6 of 302 | 6 of 302 |
+
+Ordinary revisions are untouched because their unmatched runs do not pair. The
+limit that survives is narrower and is now stated as such in both the gate
+instructions and the public guide: the diff cannot show a retained requirement was
+UNAFFECTED when only the prose around it was rewritten. Variance means "no cited
+line is in the diff", not "the revision did not disturb this obligation".
+
+**A test was bent around the defect, and the review said so.** Section 8 of
+`tests/gate-baseline-test.js` had been changed to assert that a moved block's
+interior IS variance — turning the defect into behaviour the suite insisted on
+preserving, under a comment calling it a permanent limit. It now asserts the
+interior is a regression, and the reordering case is a test of its own.
+
+**Literal HTML blocks are not markdown.** Two defects, one class. An `# H1`
+written inside an HTML COMMENT terminated the comparison section, so the pin
+quoted three lines and excluded the verdict and regression row the record rests
+on — and the evidence validator passed that record, because quote fidelity says
+nothing about whether the quoted span is the right one. Backticks inside a `<pre>`
+evidence log opened a fence nothing closed, so `record` refused a well-formed
+audit with "close the fence" against a fence that did not exist, and no re-run
+could repair it. Comments and raw-text elements (`pre`, `script`, `style`,
+`textarea`) are now shielded, as CommonMark has them.
+
+**The previous pass's test evidence was weaker than its commit message.** It
+claimed "fourteen protections each verified against a mutant that removes it".
+The fourteen were broad reversions — easy to kill, and therefore weak evidence.
+Asked to write the subtlest mutation of each guard instead, the review found
+eleven that passed all 148 assertions, including `regressions > 0` weakened to
+`=== 1` (two regressions returned MET, because every regression fixture in the
+file had exactly one) and the pre-write containment check reading `process.cwd()`
+rather than the `--root` it was given (every CLI test ran with the two equal).
+Three assertions were also literally `check(name, true)` when the host could not
+create a junction, so a machine that never ran the containment tests reported the
+same green total as one that did.
+
+The suite is 182 assertions. Skips are counted and printed separately from
+passes. The harness now requires a green control run before applying any mutant,
+fails on a stale needle instead of skipping it, and reports a crashed run as
+inconclusive rather than as a kill. Fourteen subtle mutants: 14 killed, 0
+surviving. Two more were shown to be EQUIVALENT rather than chased — merging
+same-offset runs is unobservable because two such runs can only be non-adjacent
+when the gap holds a balanced delete-plus-insert, which already marks the first
+run's end line; and `pi >= mv.prev.end` equals `pi > mv.prev.end` because
+`mv.prev` spans unmatched indices that no matched pair can hold.
+
+**Not fixed, and recorded.** An UNCOMPARED class never has to acquire history:
+fix the named regressions and the next run returns N_A and exit 0 with the class
+still uncompared. The workflow instructs the caller to record it; the script does
+not enforce it. Sharing one `--keep` directory between two documents at the same
+run number is refused, because the copy is named by run number alone; separate
+keep directories are the remedy. Both predate this round.
 
 ## What this does not claim
 

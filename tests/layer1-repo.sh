@@ -1615,6 +1615,25 @@ else
   ' 2>/dev/null)
   [ "$gb_order" = "1,1,UNMET" ] \
     || { fail "PH5-044: an uncompared class erases an established regression (got '$gb_order')"; gb_bad=1; }
+
+  # A RELOCATED block puts every line it crossed inside the diff. Seam marking
+  # alone exempted a reordering: moving the commit phase above the validation
+  # phase left a concern about that ordering citing untouched text, so the one
+  # revision the concern is about came back as auditor variance and exit 0.
+  gb_move=$(node -e '
+    const gb = require("./plugins/toque/scripts/tq-gate-baseline.js");
+    const v1 = "top\nA1\nA2\nA3\nB1\nB2\nend\n";
+    const v2 = "top\nB1\nB2\nA1\nA2\nA3\nend\n";
+    const d = gb.changedLines(v1, v2);
+    const prev = { concern_statuses: [{ name: "ordering", status: "ok" }] };
+    const mk = (ln) => ({ concern_statuses: [{ name: "ordering", status: "gap", lines: [[ln, ln]], line_source: "audit.md" }] });
+    console.log([
+      gb.compare(prev, mk(5), d, {}).rows[0].klass,
+      gb.compare(prev, mk(1), d, {}).rows[0].klass,
+    ].join(","));
+  ' 2>/dev/null)
+  [ "$gb_move" = "REGRESSION,VARIANCE" ] \
+    || { fail "PH5-044: a moved block's interior is not inside the diff (got '$gb_move')"; gb_bad=1; }
 fi
 
 dgb=$(sed -n '/^<design_gate>$/,/^<\/design_gate>$/p' "$DG_STAGE" 2>/dev/null)

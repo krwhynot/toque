@@ -1143,15 +1143,21 @@ named no lines, or a citation past the end of {doc} — is booked as a REGRESSIO
 marked unscoped in the section with the reason.
 The exemption is never applied on a guess.
 
-One limit is worth stating rather than discovering. The diff marks changed lines
-plus the SEAMS of any block whose position moved; the interior of a moved block
-reads as unchanged, so a row citing only an interior line of relocated text is
-classified as variance. This is not an oversight to be tightened: inside a single
-diff alignment, "this line is displaced" carries no information beyond "text
-changed somewhere above it", so marking every displaced line marks the whole
-document as soon as a revision edits it in two places — measured at 302 of 303
-lines on a 300-line document with one edit at each end, which switches the
-exemption off entirely. Cite the seam or the span, not a lone interior line.
+The diff marks three things: the lines the revision changed, the SEAMS of any run
+whose position shifted, and every line a RELOCATED BLOCK crossed. The third makes
+a reordering visible. Move a commit phase above a validation phase and a concern
+about that ordering flips pass to fail while citing a validation line whose own
+text is untouched; the moved block is named by content — a maximal unmatched run
+on one side whose text equals one on the other — and the lines it passed over
+follow from its two positions.
+
+The limit that remains is narrower than the one previously claimed here. This
+diff cannot show that a retained requirement was UNAFFECTED when only the prose
+around it was rewritten: blocks that merely resemble each other do not pair, and
+identical text appearing three times leaves provenance ambiguous. So a variance
+verdict means "no line this element cites is in the diff", not "the revision did
+not disturb this obligation". Cite the lines the obligation actually rests on,
+the governing heading included.
 The fix is to name the lines, not to accept the demotion. Other
 transitions are unaffected: an improvement or a degradation does not become a
 regression for want of a diff.

@@ -312,6 +312,12 @@ function changedLines(prevText, curText) {
   // marked: those are the seams where text actually moved relative to its
   // neighbours. The same 300-line case now marks 4 lines, and the block swap is
   // still caught at both of its seams.
+  //
+  // Seams alone are NOT enough, and the reason is worth stating because the
+  // opposite was asserted here. The offset cj - pi carries no information beyond
+  // "text was added or removed above", so no threshold on it can separate a moved
+  // block from shifted text. But the ALIGNMENT carries more than the offset, and
+  // `crossedByMovedBlocks` below uses it.
   const runs = [];
   for (const [pi, cj] of matched) {
     const off = cj - pi;
@@ -331,7 +337,88 @@ function changedLines(prevText, curText) {
     }
   }
 
+  // Lines a MOVED block passed over count as touched, interior included.
+  for (const cj of crossedByMovedBlocks(matched, prevMid, curMid)) {
+    touched.add(p + cj + 1);
+  }
+
   return { touched, coarse: false, changed: touched.size, total: cur.length };
+}
+
+/**
+ * Find blocks the revision RELOCATED, and return the matched lines they crossed.
+ *
+ * Seam marking alone left a real regression exempt. Move the "Commit payment"
+ * block above "Validate request" and a concern reading "authorization happens
+ * before commit" flips pass -> fail citing a validation line — a line whose own
+ * text is untouched, in the interior of the run that the commit block passed
+ * over. Under seams alone that came back VARIANCE, LINT-14 MET, exit 0, on a
+ * revision that reordered the two phases. The ordering IS what the concern is
+ * about.
+ *
+ * It was asserted here that this could not be recovered, on the grounds that
+ * cj - pi is identically (insertions above - deletions above) and so says
+ * nothing beyond "text changed above". That identity is true and the conclusion
+ * drawn from it was wrong: the offset is not the only thing the alignment holds.
+ * A maximal unmatched run on the previous side whose content EQUALS a maximal
+ * unmatched run on the current side is a block deleted from one place and
+ * inserted in another — a move, named by content rather than inferred from
+ * position. The matched lines it crossed are those it was on one side of before
+ * and is on the other side of now.
+ *
+ * The cost is a hash map over unmatched runs; the LCS table is not enlarged.
+ * Ordinary revisions are untouched because their unmatched runs do not pair:
+ * inserting one line at the top and editing the last line of a 300-line document
+ * still marks 4 lines, not 302.
+ *
+ * What this does NOT do: establish that a retained requirement was unaffected
+ * when only its surrounding prose was rewritten. Two blocks whose content is
+ * merely similar do not pair, and identical text appearing three times leaves
+ * provenance ambiguous. The honest limit is that the alignment cannot show a
+ * retained line was unaffected — not that its interior is auditor variance.
+ */
+function crossedByMovedBlocks(matched, prevMid, curMid) {
+  const crossed = new Set();
+  if (!matched.length) return crossed;
+
+  const runsOf = (taken, len) => {
+    const out = [];
+    let cur = null;
+    for (let i = 0; i < len; i++) {
+      if (taken.has(i)) { cur = null; continue; }
+      if (cur && cur.end === i - 1) cur.end = i;
+      else { cur = { start: i, end: i }; out.push(cur); }
+    }
+    return out;
+  };
+
+  const prevRuns = runsOf(new Set(matched.map(([pi]) => pi)), prevMid.length);
+  const curRuns = runsOf(new Set(matched.map(([, cj]) => cj)), curMid.length);
+  if (!prevRuns.length || !curRuns.length) return crossed;
+
+  const byContent = new Map();
+  for (const r of curRuns) {
+    const key = curMid.slice(r.start, r.end + 1).join('\n');
+    if (!byContent.has(key)) byContent.set(key, []);
+    byContent.get(key).push(r);
+  }
+
+  const used = new Set();
+  const moves = [];
+  for (const pr of prevRuns) {
+    const key = prevMid.slice(pr.start, pr.end + 1).join('\n');
+    const hit = (byContent.get(key) || []).find((c) => !used.has(c));
+    if (hit) { used.add(hit); moves.push({ prev: pr, cur: hit }); }
+  }
+
+  for (const mv of moves) {
+    for (const [pi, cj] of matched) {
+      const crossedDown = pi > mv.prev.end && cj < mv.cur.start;
+      const crossedUp = pi < mv.prev.start && cj > mv.cur.end;
+      if (crossedDown || crossedUp) crossed.add(cj);
+    }
+  }
+  return crossed;
 }
 
 // ---------------------------------------------------------------------------
@@ -806,7 +893,44 @@ function renderSection(cmp, meta) {
 function fencedLines(lines) {
   const inFence = new Array(lines.length).fill(false);
   let fence = null;
+
+  // Literal HTML blocks are not markdown, so neither fences nor headings inside
+  // them are structure. Two shapes matter here, both CommonMark leaf blocks:
+  // a comment (`<!--` to `-->`) and a raw-text element (`<pre>`, `<script>`,
+  // `<style>`, `<textarea>`).
+  //
+  // Both were being read as markdown. An audit whose evidence log wrapped a
+  // delimiter example in `<pre>` had those backticks open a fence that nothing
+  // closed, so `record` refused the file with "close the fence" against a fence
+  // that did not exist — an audit no re-run could repair. And an `# H1` written
+  // inside an HTML COMMENT terminated the comparison section, so the pin quoted
+  // three lines and excluded the verdict and the regression row it rests on.
+  // The validator passed that quote: quote fidelity says nothing about whether
+  // the quoted span is the right one.
+  let html = null;
+  const HTML_RAW = /^ {0,3}<(pre|script|style|textarea)[\s>]/i;
+
   for (let i = 0; i < lines.length; i++) {
+    if (html !== null) {
+      inFence[i] = true;
+      if (html.test(lines[i])) html = null;
+      continue;
+    }
+    if (fence === null) {
+      if (/^ {0,3}<!--/.test(lines[i])) {
+        inFence[i] = true;
+        if (!/-->/.test(lines[i].replace(/^ {0,3}<!--/, ''))) html = /-->/;
+        continue;
+      }
+      const raw = lines[i].match(HTML_RAW);
+      if (raw) {
+        inFence[i] = true;
+        const close = new RegExp(`</${raw[1]}>`, 'i');
+        if (!close.test(lines[i])) html = close;
+        continue;
+      }
+    }
+
     const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
     if (fence === null) {
       // An opening backtick fence may not carry a backtick in its info string,

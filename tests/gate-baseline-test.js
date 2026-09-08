@@ -24,9 +24,22 @@ const validator = require('../plugins/toque/scripts/tq-evidence-validate.js');
 
 let pass = 0;
 let fail = 0;
+let skipped = 0;
 function check(name, cond, detail) {
   if (cond) { console.log(`  ✓ ${name}`); pass++; }
   else { console.log(`  ✗ ${name}${detail ? ` — ${detail}` : ''}`); fail++; }
+}
+
+// A check the host cannot run is NOT a passing check. Three link-containment
+// assertions used to be written `check(name, true)` when symlink creation was
+// unavailable, so a host with no link support reported the same green total as
+// one that had actually exercised the guard — coverage counted without being
+// obtained. Skips are counted and printed separately, and the final line says
+// how many there were so a suite that silently stopped testing something is
+// visible rather than reassuring.
+function skip(name, why) {
+  console.log(`  ~ ${name} — SKIPPED: ${why}`);
+  skipped++;
 }
 
 const tmpRoots = [];
@@ -511,20 +524,20 @@ console.log('\n8. Leniency — the class that lets a regression through');
   // revision plainly moved. LCS is free to represent a swap as "the smaller
   // block moved" and leave the larger one matched.
   //
-  // The SEAMS of the relocated run are marked. Its interior is not, and that is
-  // a deliberate, permanent limit rather than an oversight: inside one LCS
-  // alignment `cj - pi` is identically (insertions above - deletions above), so
-  // "this line is displaced" carries no information beyond "text changed
-  // somewhere above it". Marking every displaced line — which is what the first
-  // version of this rule did — therefore marks the whole document as soon as a
-  // revision edits it in two places, which is measured two blocks below.
-  // Separating a moved block's interior from ordinary shifted text needs a real
-  // move detector (hash blocks, match them across positions), not this diff.
+  // Seams alone are not enough, and this file previously asserted that they were
+  // — that a moved block's INTERIOR is variance, on the argument that `cj - pi`
+  // is identically (insertions above - deletions above) and so no rule could
+  // recover it without marking the whole document. The identity is true; the
+  // conclusion was wrong, and the assertion built on it was a test bent around a
+  // defect. The offset is not the only thing the alignment holds: a maximal
+  // unmatched run on one side whose CONTENT equals a maximal unmatched run on
+  // the other is a relocated block, and the lines it crossed follow from its two
+  // positions. Every line of the moved block is now inside the diff.
   const before = 'header\nA\nB\nC\nD\nx\ny\nfooter\n';
   const after = 'header\nx\ny\nA\nB\nC\nD\nfooter\n';
   const d = gb.changedLines(before, after);
-  check('both seams of a moved block are inside the diff',
-    d.touched.has(4) && d.touched.has(7), [...d.touched].sort((a, b) => a - b).join(','));
+  check('every line of a moved block is inside the diff, interior included',
+    [4, 5, 6, 7].every((l) => d.touched.has(l)), [...d.touched].sort((a, b) => a - b).join(','));
 
   const cite = (l) => gb.compare(
     baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
@@ -534,18 +547,80 @@ console.log('\n8. Leniency — the class that lets a regression through');
 
   check('a concern citing a moved block\'s seam is a REGRESSION, not variance',
     cite(4) === 'REGRESSION', cite(4));
-  check('a concern citing a moved block\'s INTERIOR is variance — the known limit',
-    cite(5) === 'VARIANCE', cite(5));
-  check('a concern spanning the block catches the seam and so is a REGRESSION',
-    gb.compare(
-      baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
-      baseline({
-        concern_statuses: [{
-          name: 'ordering', status: 'gap', lines: [[4, 7]], line_source: 'audit.md',
-        }],
-      }),
-      d, {},
-    ).rows[0].klass === 'REGRESSION', 'span 4-7');
+  check('a concern citing a moved block\'s INTERIOR is also a REGRESSION',
+    cite(5) === 'REGRESSION', cite(5));
+  check('and a line the move did not cross is still variance',
+    cite(1) === 'VARIANCE', cite(1));
+}
+
+{
+  // The regression seam-only marking let through, reproduced by the fourth
+  // review. Moving the commit phase above the validation phase is exactly what a
+  // concern reading "authorization happens before commit" is about, and the
+  // cited validation line's own text is untouched — it sits in the interior of
+  // the run the commit block passed over. Seam marking returned VARIANCE, MET,
+  // exit 0 on it.
+  const prev = [
+    '# Payment capture', '## Ordered steps', '## Validate request',
+    'Check the idempotency key.', 'Reject invalid signatures.', 'Verify available balance.',
+    '## Commit payment', 'Write the ledger entry.', 'Send the receipt.', '## End',
+  ].join('\n') + '\n';
+  const cur = [
+    '# Payment capture', '## Ordered steps', '## Commit payment',
+    'Write the ledger entry.', 'Send the receipt.', '## Validate request',
+    'Check the idempotency key.', 'Reject invalid signatures.', 'Verify available balance.',
+    '## End',
+  ].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  check('a reordered phase puts the phase it crossed inside the diff',
+    d.touched.has(8), [...d.touched].sort((a, b) => a - b).join(','));
+
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'Authorization before commit', status: 'ok' }] }),
+    baseline({
+      concern_statuses: [{
+        name: 'Authorization before commit', status: 'gap',
+        lines: [[8, 8]], line_source: 'audit.md concern table',
+      }],
+    }),
+    d, {},
+  );
+  check('and the concern about that ordering is a REGRESSION, not variance',
+    c.rows[0].klass === 'REGRESSION', c.rows[0].klass);
+  check('so LINT-14 is UNMET', c.verdict === 'UNMET', c.verdict);
+}
+
+{
+  // The move detector must not fire on an ordinary revision. Its unmatched runs
+  // do not pair by content, so nothing is crossed and the seam rule stands alone.
+  const req = [];
+  for (let i = 1; i <= 60; i++) req.push(`REQ-${i}: requirement text ${i}`);
+  const join = (a) => `${a.join('\n')}\n`;
+  const bothEnds = gb.changedLines(join(req), join(['NEW TOP', ...req, 'NEW BOTTOM']));
+  check('an ordinary two-ended revision detects no move and stays at the seams',
+    bothEnds.touched.size <= 8, `${bothEnds.touched.size}/${bothEnds.total}`);
+
+  // Content equality is the pairing rule. The same shape — a three-line block
+  // leaving position 2 and arriving at position 16 — is a MOVE when the block
+  // arrives unchanged and an ordinary delete-plus-insert when it arrives
+  // rewritten. The document is long enough that the twelve lines between the two
+  // positions are marked only by the move detector, so the two cases separate.
+  const body = [];
+  for (let i = 1; i <= 12; i++) body.push(`MIDDLE-${i}`);
+  const block = ['BLOCK a', 'BLOCK b', 'BLOCK c'];
+  const before = ['top', ...block, ...body, 'tail'].join('\n') + '\n';
+
+  const movedAway = ['top', ...body, ...block, 'tail'].join('\n') + '\n';
+  const moved = gb.changedLines(before, movedAway);
+  check('a block that arrives unchanged is a move and marks what it crossed',
+    body.every((_, k) => moved.touched.has(2 + k)),
+    [...moved.touched].sort((x, y) => x - y).join(','));
+
+  const rewritten = ['top', ...body, 'BLOCK a X', 'BLOCK b Y', 'BLOCK c Z', 'tail'].join('\n') + '\n';
+  const rw = gb.changedLines(before, rewritten);
+  check('the same shape with the block REWRITTEN is not a move',
+    !rw.touched.has(5) && !rw.touched.has(9),
+    [...rw.touched].sort((x, y) => x - y).join(','));
 }
 
 {
@@ -1119,9 +1194,9 @@ function runCli(args, cwd) {
     check('and refuses BEFORE editing the file it cannot pin',
       fs.readFileSync(viaLink, 'utf8') === before, 'the audit was rewritten by a run that then failed');
   } else {
-    check('a path that escapes --root through a link is refused (skipped: no link support)', true);
-    check('record refuses it (skipped: no link support)', true);
-    check('and refuses BEFORE editing the file it cannot pin (skipped: no link support)', true);
+    skip('a path that escapes --root through a link is refused', 'this host cannot create a junction');
+    skip('record refuses it', 'this host cannot create a junction');
+    skip('and refuses BEFORE editing the file it cannot pin', 'this host cannot create a junction');
   }
   check('a path inside the root is accepted',
     typeof gb.assertContained(path.join(root, 'cmp.json'), root) === 'string');
@@ -1187,9 +1262,274 @@ function runCli(args, cwd) {
 }
 
 // ---------------------------------------------------------------------------
+// 13. The fourth review: eleven mutants the 148-assertion suite could not kill.
+//
+// The previous pass claimed "fourteen protections each verified against a mutant
+// that removes it". That was true and insufficient — the fourteen were broad
+// reversions, and a review that wrote the SUBTLEST mutation of each guard found
+// eleven that passed every assertion. Each block below is the input that
+// separates the real guard from its weakened twin.
+// ---------------------------------------------------------------------------
+
+{
+  // `counts.regressions > 0` mutated to `=== 1`: two regressions returned MET.
+  // Every regression fixture in this file had exactly one.
+  const d = gb.changedLines(DOC_V1, DOC_V2);
+  const prev = {
+    lint_results: {
+      'LINT-05': { status: 'pass', lines: [[4, 4]], line_source: 'evidence' },
+      'LINT-06': { status: 'pass', lines: [[5, 5]], line_source: 'evidence' },
+      'LINT-07': { status: 'pass', lines: [[4, 5]], line_source: 'evidence' },
+    },
+  };
+  const failing = (n) => {
+    const out = {};
+    const ids = ['LINT-05', 'LINT-06', 'LINT-07'];
+    const lines = [[[4, 4]], [[5, 5]], [[4, 5]]];
+    ids.forEach((id, k) => {
+      out[id] = { status: k < n ? 'fail' : 'pass', lines: lines[k], line_source: 'evidence' };
+    });
+    return { lint_results: out };
+  };
+  for (const n of [1, 2, 3]) {
+    const c = gb.compare(prev, failing(n), d, {});
+    check(`${n} regression(s) still fails LINT-14`,
+      c.counts.regressions === n && c.verdict === 'UNMET',
+      `regressions=${c.counts.regressions} ${c.verdict}`);
+  }
+}
+
+{
+  // Run grouping and the previous-offset comparison, mutated three ways:
+  //   `i > 0 ? runs[i-1].off : 0`  ->  `i > 1 ? ... : 0`   (first seam lost)
+  //   `last.lastPi === pi - 1`     ->  `<= pi - 1`         (runs over-merged)
+  // Both need a diff with more than one run and a non-zero first offset.
+  // The fixture needs TWO surviving runs, so the edits must defeat both the
+  // common-prefix and common-suffix trims — an earlier version of this test put
+  // one edit near the end, the suffix trim absorbed the second run, and the
+  // mutant was indistinguishable.
+  //
+  // Here: an insertion at the top, a same-size replacement in the middle, and an
+  // edit at the last line. Both matched runs carry offset +1; the second is
+  // therefore NOT displaced relative to the first and contributes no seam. The
+  // mutant reads the first run's offset as 0, decides the second run is
+  // displaced after all, and marks line 8.
+  const before = ['a1', 'a2', 'a3', 'a4', 'a5', 'XX', 'b1', 'b2', 'b3', 'b4', 'b5', 'TAIL'].join('\n') + '\n';
+  const after = ['INS', 'a1', 'a2', 'a3', 'a4', 'a5', 'YY', 'b1', 'b2', 'b3', 'b4', 'b5', 'TAILX'].join('\n') + '\n';
+  const d = gb.changedLines(before, after);
+  const marked = [...d.touched].sort((a, b) => a - b).join(',');
+  check('two runs at the same offset mark one seam pair, not two',
+    marked === '1,2,6,7,12,13', marked);
+  check('the second run is not displaced relative to the first and stays exempt',
+    !d.touched.has(8), marked);
+}
+
+{
+  // Containment mutated to use `process.cwd()` rather than the `--root` passed
+  // in. Every existing CLI test ran with cwd equal to the root, so the two were
+  // never distinguishable. Here the process runs from a sibling directory.
+  const root = tmpdir();
+  const elsewhere = tmpdir();
+  fs.mkdirSync(path.join(root, 'evidence'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'audit.md'),
+    '# Audit\n\n## Baseline comparison\n\nold\n', 'utf8');
+  fs.writeFileSync(path.join(root, 'cmp.json'), JSON.stringify({
+    verdict: 'MET', justification: 'caller-decided: t',
+    section: '## Baseline comparison\n\nNEW\n', counts: {},
+  }), 'utf8');
+
+  const r = runCli([
+    'record', path.join(root, 'cmp.json'), path.join(root, 'audit.md'),
+    path.join(root, 'evidence'), '--root', root,
+  ], elsewhere);
+  check('--root is honoured when the process runs from elsewhere',
+    r.code === 0, `exit ${r.code}: ${r.out}`);
+  check('and the record is written',
+    fs.existsSync(path.join(root, 'evidence', 'LINT-14.json')));
+}
+
+{
+  // Fence close length mutated from `>=` to `===`: a fence opened with three
+  // backticks and closed with four is valid CommonMark and stopped closing, so
+  // everything after it read as fenced and the section vanished.
+  const doc = ['# A', '```', 'body', '````', '', '## Baseline comparison', 'real', ''].join('\n') + '\n';
+  const at = gb.locateSection(doc);
+  check('a fence closed by a LONGER run still closes',
+    at && at.start === 6, at ? `line ${at.start}` : 'not found');
+
+  // And the opposite must not close: a four-backtick fence is not closed by three.
+  const shorter = ['# A', '````', '```', '## Baseline comparison', 'decoy', '````', '',
+    '## Baseline comparison', 'real', ''].join('\n') + '\n';
+  const at2 = gb.locateSection(shorter);
+  check('a fence is not closed by a SHORTER run',
+    at2 && at2.start === 8, at2 ? `line ${at2.start}` : 'not found');
+}
+
+{
+  // The backtick info-string rule mutated from `.includes` to `.startsWith`.
+  // Prose carrying an inline example mid-line then opened a fence that nothing
+  // closed, swallowing the section below it.
+  const doc = ['# A', '``` see `code` in the log', '', '## Baseline comparison', 'real', ''].join('\n') + '\n';
+  const at = gb.locateSection(doc);
+  check('a backtick anywhere in the info string means no fence is opened',
+    at && at.start === 4, at ? `line ${at.start}` : 'not found');
+}
+
+{
+  // Heading and terminator indentation mutated from {0,3} to {0,2}. Three spaces
+  // is the maximum an ATX heading may carry and still be a heading.
+  const heading = ['# A', '', '   ## Baseline comparison', 'body', '', '## Next', 'x'].join('\n') + '\n';
+  const at = gb.locateSection(heading);
+  check('a heading indented exactly three spaces is still the section',
+    at && at.start === 3, at ? `line ${at.start}` : 'not found');
+
+  const term = ['# A', '', '## Baseline comparison', 'body', '', '   ## Verdicts', 'rows'].join('\n') + '\n';
+  const at2 = gb.locateSection(term);
+  check('a terminator indented exactly three spaces still ends the section',
+    at2 && at2.end === 4, at2 ? `ends ${at2.end}` : 'not found');
+
+  const four = ['# A', '', '## Baseline comparison', 'body', '', '    ## Example', 'in a code block'].join('\n') + '\n';
+  const at3 = gb.locateSection(four);
+  check('and a FOUR-space heading is an indented code block, not a terminator',
+    at3 && at3.end === 7, at3 ? `ends ${at3.end}` : 'not found');
+}
+
+{
+  // The kept-copy collision guard mutated to require a standing baseline
+  // (`standing && fs.existsSync(kept) && ...`). With a fresh state file and an
+  // orphan copy already in the keep directory, the guard was skipped and the
+  // copy overwritten — the same corruption, reached from an empty history.
+  const root = tmpdir();
+  const keep = path.join(root, 'keep');
+  fs.mkdirSync(keep, { recursive: true });
+  fs.writeFileSync(path.join(keep, 'doc-at-baseline-1.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  // No `baseline` key at all, so `standing` is undefined rather than `{}`. An
+  // earlier version of this fixture wrote `"baseline":{}`, which is truthy, so a
+  // mutant gating the guard on `standing &&` still fired and survived the test.
+  fs.writeFileSync(path.join(root, 'state.json'), '{"history":[]}', 'utf8');
+  fs.writeFileSync(path.join(root, 'b.json'), JSON.stringify({
+    run_number: 1, lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+
+  const r = runCli(['snapshot', 'b.json', 'doc.md', 'state.json', '--keep', 'keep'], root);
+  check('an existing copy is protected even with no standing baseline',
+    r.code === 2, `exit ${r.code}: ${r.out}`);
+  check('and its bytes are intact',
+    fs.readFileSync(path.join(keep, 'doc-at-baseline-1.md'), 'utf8') === DOC_V1);
+}
+
+{
+  // The document-hash comparison mutated to compare only the first eight
+  // characters. A near-miss that agrees on a prefix is exactly the shape a
+  // hand-copied or truncated hash takes.
+  const root = tmpdir();
+  const realPrev = gb.hashContent(DOC_V1);
+  const nearMiss = realPrev.slice(0, 8) + 'f'.repeat(56);
+  check('the doctored hash shares the first eight characters',
+    nearMiss.slice(0, 8) === realPrev.slice(0, 8) && nearMiss !== realPrev);
+
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: nearMiss, lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    lint_results: { 'LINT-05': 'fail' },
+  }), 'utf8');
+  const r = runCli(['compare', 'prev.json', 'cur.json', 'prev-doc.md', 'doc.md'], root);
+  check('a hash matching only on its first eight characters is refused',
+    r.code === 2, `exit ${r.code}`);
+  check('and the message prints the full 64-character values',
+    r.out.includes(realPrev) && r.out.includes(nearMiss), r.out);
+}
+
+{
+  // The locatability guard mutated to `if (!at2 && !at)` — skipped entirely
+  // whenever a section already exists. The replacement path must be guarded too:
+  // an audit whose section is findable can still be followed by content that
+  // makes the rewritten section unfindable.
+  const root = tmpdir();
+  const f = path.join(root, 'audit.md');
+  const original = ['# Audit', '', '## Baseline comparison', '', 'old body', '',
+    '<pre>', 'log excerpt', ''].join('\n') + '\n';
+  fs.writeFileSync(f, original, 'utf8');
+  const at = gb.locateSection(original);
+  check('the section is findable before the write', at !== null && at.start === 3,
+    at ? `line ${at.start}` : 'not found');
+
+  // An unterminated <pre> swallows the tail, but the heading precedes it, so the
+  // write succeeds and stays findable. This is the control for the case below.
+  gb.writeSection(f, '## Baseline comparison\n\nNEW\n');
+  check('replacing it keeps it findable', gb.locateSection(fs.readFileSync(f, 'utf8')) !== null);
+
+  // The section TEXT is caller-supplied — `record` takes `cmp.section` verbatim
+  // when the comparison JSON carries one. A section whose own first line opens a
+  // block shields the heading that follows it, so the replacement is unfindable
+  // even though the file had a findable section before the write. That is the
+  // input the `!at2 && !at` mutant needs, and without it the guard is only ever
+  // exercised on files with no existing section.
+  let threwReplace = null;
+  try {
+    gb.writeSection(f, '<pre>\n## Baseline comparison\n\nNEW\n');
+  } catch (err) { threwReplace = err; }
+  check('replacing a section with text that shields its own heading is refused',
+    threwReplace !== null && /would not be locatable/.test(threwReplace.message),
+    threwReplace && threwReplace.message);
+  check('and the existing section survives that refusal',
+    gb.locateSection(fs.readFileSync(f, 'utf8')) !== null
+    && fs.readFileSync(f, 'utf8').includes('NEW'));
+
+  // The same guard on a file with no section at all: the heading only exists
+  // inside the tail the unterminated block swallows.
+  const g = path.join(root, 'audit2.md');
+  fs.writeFileSync(g, '# Audit\n\n<pre>\nlog excerpt\n', 'utf8');
+  let threw = null;
+  try { gb.writeSection(g, '## Baseline comparison\n\nNEW\n'); } catch (err) { threw = err; }
+  check('an unterminated HTML block refuses the write like an unterminated fence',
+    threw !== null && /would not be locatable/.test(threw.message), threw && threw.message);
+  check('and that file is byte-identical too',
+    fs.readFileSync(g, 'utf8') === '# Audit\n\n<pre>\nlog excerpt\n');
+}
+
+{
+  // Literal HTML blocks are not markdown. An `# H1` inside a COMMENT terminated
+  // the comparison section, so the pin quoted three lines and excluded the very
+  // verdict and regression row the record rests on — and the evidence validator
+  // passed it, because quote fidelity says nothing about whether the span is the
+  // right one. Backticks inside a `<pre>` opened a fence that nothing closed, so
+  // `record` refused a well-formed audit with "close the fence" against a fence
+  // that did not exist, and no re-run could repair it.
+  const commented = ['# Audit', '## Baseline comparison', 'Summary pending.',
+    '<!--', '# Reproduction notes', 'Do not edit generated rows by hand.', '-->',
+    '**LINT-14: UNMET**', '| concern | REGRESSION |', '## Evidence notes', 'tail'].join('\n') + '\n';
+  const at = gb.locateSection(commented);
+  check('an H1 inside an HTML comment does not end the section',
+    at && at.start === 2 && at.end === 9, at ? `${at.start}-${at.end}` : 'not found');
+
+  const B = '```';
+  const pre = ['# Audit', '<pre>', '````', 'Log records delimiter lengths.', B, '</pre>',
+    '', '## Baseline comparison', 'real body', ''].join('\n') + '\n';
+  const at2 = gb.locateSection(pre);
+  check('backticks inside <pre> do not open a fence',
+    at2 && at2.start === 8, at2 ? `line ${at2.start}` : 'not found');
+
+  const script = ['# Audit', '<script>', 'const s = "## Baseline comparison";', '</script>',
+    '', '## Baseline comparison', 'real body', ''].join('\n') + '\n';
+  const at3 = gb.locateSection(script);
+  check('a heading inside <script> is not the section',
+    at3 && at3.start === 6, at3 ? `line ${at3.start}` : 'not found');
+
+  const genuine = ['# Audit', '## Baseline comparison', 'body', '# Appendix', 'content'].join('\n') + '\n';
+  const at4 = gb.locateSection(genuine);
+  check('a genuine H1 outside any block still ends the section',
+    at4 && at4.end === 3, at4 ? `ends ${at4.end}` : 'not found');
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
+console.log(`\n${pass} passed, ${fail} failed${skipped ? `, ${skipped} SKIPPED (not run on this host)` : ''}`);
 process.exit(fail > 0 ? 1 : 0);
