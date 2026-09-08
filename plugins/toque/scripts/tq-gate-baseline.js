@@ -288,7 +288,7 @@ function changedLines(prevText, curText) {
   while (i < n) { markDeletion(j); i++; }
   while (j < m) { touched.add(p + j + 1); j++; }
 
-  // Displaced matches count as touched.
+  // The BOUNDARIES of a displaced run count as touched.
   //
   // LCS finds ONE maximal alignment, and when two blocks swap it is free to
   // represent that as "the smaller block moved" — which leaves the larger
@@ -297,15 +297,38 @@ function changedLines(prevText, curText) {
   // the touched set entirely, so a concern citing a moved line was exempted on
   // text the revision plainly did move.
   //
-  // A line whose offset shifted is marked. This OVER-reports: every line after
-  // a single insertion is displaced by one, and all of them are now touched.
-  // That is the intended direction — over-reporting can only turn a variance
-  // into a regression, and the gate's standing rule is that the exemption is
-  // never applied on a guess. The common prefix and suffix are trimmed before
-  // this runs, so an ordinary revision to one section does not drag the whole
-  // document in with it.
+  // Marking EVERY displaced line instead is what the first version of this rule
+  // did, on the reasoning that over-reporting can only turn a variance into a
+  // regression. It cannot be afforded. Measured on a 300-line document: one
+  // insertion at the top marks 1 line, but an insertion at the top plus a single
+  // edit at the bottom marks 302 of 303 — because trimming the common prefix and
+  // suffix only protects a document edited at ONE end. Two ordinary edits, a
+  // revision note near the front and a review note near the back, switched the
+  // exemption off for the whole document. That kills D10 by the opposite route
+  // to the bug this rule exists to close.
+  //
+  // A run is a maximal stretch of matched pairs sharing one offset. Only the
+  // first and last line of a run whose offset differs from the run before it are
+  // marked: those are the seams where text actually moved relative to its
+  // neighbours. The same 300-line case now marks 4 lines, and the block swap is
+  // still caught at both of its seams.
+  const runs = [];
   for (const [pi, cj] of matched) {
-    if (pi !== cj) touched.add(p + cj + 1);
+    const off = cj - pi;
+    const last = runs[runs.length - 1];
+    if (last && last.off === off && last.lastPi === pi - 1) {
+      last.lastPi = pi;
+      last.lastCj = cj;
+    } else {
+      runs.push({ off, firstCj: cj, lastCj: cj, lastPi: pi });
+    }
+  }
+  for (let i = 0; i < runs.length; i++) {
+    const prevOff = i > 0 ? runs[i - 1].off : 0;
+    if (runs[i].off !== prevOff) {
+      touched.add(p + runs[i].firstCj + 1);
+      touched.add(p + runs[i].lastCj + 1);
+    }
   }
 
   return { touched, coarse: false, changed: touched.size, total: cur.length };
@@ -605,6 +628,21 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     verdict = 'N_A';
     justification = 'caller-decided: {doc} is byte-identical to the previous baseline\'s '
       + 'document, so the diff is empty and every flip is auditor variance.';
+  } else if (counts.regressions > 0) {
+    // A regression is established information, and missing information about a
+    // DIFFERENT class cannot erase it. This branch used to sit below the
+    // uncompared one, so adding the first concern row to a plan whose baseline
+    // had no concerns turned a proven pass-to-fail regression in the lint class
+    // into N_A and exit 0 — and N_A does not block the gate. The rule written to
+    // remove leniency was opening a wider hole than the one it closed.
+    verdict = 'UNMET';
+    justification = `caller-decided from the baseline comparison: ${counts.regressions} `
+      + `regression(s) on text the revision changed, ${counts.variance} auditor-variance flip(s) discounted.`;
+    if (uncompared.length) {
+      justification += ` ${uncompared.reduce((n, u) => n + u.count, 0)} further element(s) in `
+        + `${uncompared.map((u) => u.kind).join(', ')} had no prior record and were not compared; `
+        + 'the regressions above stand on their own.';
+    }
   } else if (uncompared.length) {
     // A comparison that could not look at a whole class of element has not
     // established "no regressions" — it has established "no regressions among
@@ -617,10 +655,6 @@ function compare(prevBaseline, curBaseline, diff, opts) {
       + `${uncompared.map((u) => u.kind).join(', ')} element(s), so `
       + `${uncompared.reduce((n, u) => n + u.count, 0)} element(s) in this audit have nothing to `
       + 'compare against. A comparison missing a whole class cannot report "no regressions".';
-  } else if (counts.regressions > 0) {
-    verdict = 'UNMET';
-    justification = `caller-decided from the baseline comparison: ${counts.regressions} `
-      + `regression(s) on text the revision changed, ${counts.variance} auditor-variance flip(s) discounted.`;
   } else {
     verdict = 'MET';
     justification = 'caller-decided from the baseline comparison: no element that was passing '
@@ -773,12 +807,28 @@ function fencedLines(lines) {
   const inFence = new Array(lines.length).fill(false);
   let fence = null;
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})/);
+    const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
     if (fence === null) {
-      if (m) { fence = m[1][0]; inFence[i] = true; }
+      // An opening backtick fence may not carry a backtick in its info string,
+      // or a line of prose holding ``` mid-sentence opens a block nothing closes.
+      if (m && !(m[1][0] === '`' && m[2].includes('`'))) {
+        fence = { ch: m[1][0], len: m[1].length };
+        inFence[i] = true;
+      }
     } else {
       inFence[i] = true;
-      if (m && m[1][0] === fence) fence = null;
+      // A closing fence is the same character, AT LEAST as long as the opener,
+      // and carries nothing after the run but whitespace.
+      //
+      // Tracking only the character closed a four-backtick block on the first
+      // three-backtick line inside it, and accepted an info-string line such as
+      // ```js as a close. Both put the rest of the document "outside" the fence,
+      // so a `## Baseline comparison` written as an EXAMPLE became the section
+      // this script rewrites: it replaced the example and left the real section
+      // below it, two contradictory comparisons under one heading.
+      if (m && m[1][0] === fence.ch && m[1].length >= fence.len && m[2].trim() === '') {
+        fence = null;
+      }
     }
   }
   return inFence;
@@ -793,13 +843,24 @@ function locateSection(auditText) {
   // rule returned null against those, so `record` appended a SECOND section and
   // left the first one on disk still asserting the previous verdict — two
   // contradictory comparisons under one heading name.
-  const isHeading = (l) => /^##\s+Baseline comparison\s*(\(.*\))?\s*$/.test(l.trim());
+  //
+  // Indentation is load-bearing in both tests below. An ATX heading may be
+  // indented at most three spaces; four or more makes it an indented code block.
+  // This test used to trim the line first, so a heading written as an indented
+  // EXAMPLE — inside a list, or in a plain indented block — matched as a real one.
+  const isHeading = (l) => /^ {0,3}##\s+Baseline comparison\s*(\(.*\))?\s*$/.test(l);
 
   const start = lines.findIndex((l, i) => !inFence[i] && isHeading(l));
   if (start === -1) return null;
+
+  // The section ends at the next heading of level 1 or 2 — not at a column-zero
+  // `##` alone. The old test read the raw line against /^##\s/, so an indented
+  // `  ## Verdicts` and any `# Appendix` failed to stop it and the section ran to
+  // end of file. Every rewrite then DELETED that content, at exit 0, with a
+  // success message. A level-3 heading belongs to this section and does not stop it.
   let end = lines.length - 1;
   for (let i = start + 1; i < lines.length; i++) {
-    if (!inFence[i] && /^##\s/.test(lines[i])) { end = i - 1; break; }
+    if (!inFence[i] && /^ {0,3}#{1,2}\s/.test(lines[i])) { end = i - 1; break; }
   }
   while (end > start && lines[end].trim() === '') end--;
   return { start: start + 1, end: end + 1 };
@@ -844,32 +905,37 @@ function writeSection(auditPath, sectionText) {
 
   let text = next.join('\n');
   if (!text.endsWith('\n')) text += '\n';
+
+  // Refuse to write a section that would not be findable afterwards.
+  //
+  // An audit.md holding an UNTERMINATED code fence swallows everything after it,
+  // so the appended section landed inside that fence and `locateSection` could
+  // not see it. `record` then failed at the pin and exited 2 — having already
+  // appended. Running it again appended another, and three runs left three
+  // contradictory sections on disk behind an exit code that said nothing was
+  // written. The check has to happen on the computed text, before the write:
+  // once the bytes are on disk the caller has to repair the file by hand.
+  const at2 = locateSection(text);
+  if (!at2) {
+    throw new Error(`the section would not be locatable in ${auditPath} after writing, so `
+      + 'nothing was written. The usual cause is an unterminated code fence earlier in the '
+      + 'file, which swallows every line after it. Close the fence and re-run.');
+  }
+
   fs.writeFileSync(auditPath, crlf ? text.replace(/\n/g, '\r\n') : text, 'utf8');
   return locateSection(fs.readFileSync(auditPath, 'utf8'));
 }
 
 /**
- * Write evidence/LINT-14.json citing the section, pinned to audit.md as it now is.
+ * The validator's containment rule, lexical then through links.
  *
- * The quote is sliced back out of the file rather than taken from what was just
- * written, so the record is pinned to what is ON DISK. A CRLF checkout, a
- * trailing-newline difference or an editor hook between the write and the pin
- * would otherwise produce a record that fails the validator it exists to pass,
- * which is the exact failure five of six stress-run executors had to work around.
- *
- * Field order matches plan-auditor.md's schema block: criterion_id, evidence,
- * reasoning, verdict. That order is load-bearing — the validator's
- * unsupported-citation check silently skips a record with no criterion_id.
+ * Split out of `pin` so `record` can run it BEFORE it edits audit.md. It used to
+ * run only inside `pin`, which happens after `writeSection` — so a path that
+ * escaped the root through a junction was rejected with exit 2 and no evidence
+ * record, against a file this script had already rewritten. A refusal that
+ * still edits the caller's document is not a refusal.
  */
-function pin(auditPath, evidenceDir, rootDir, verdict, justification) {
-  const raw = fs.readFileSync(auditPath, 'utf8');
-  const at = locateSection(raw);
-  if (!at) {
-    throw new Error(`no "${SECTION_HEADING}" section in ${auditPath}`);
-  }
-  const lines = splitLines(raw);
-  const quote = lines.slice(at.start - 1, at.end).join('\n');
-
+function assertContained(auditPath, rootDir) {
   const rel = path.relative(path.resolve(rootDir), path.resolve(auditPath))
     .split(path.sep).join('/');
   if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
@@ -894,6 +960,32 @@ function pin(auditPath, evidenceDir, rootDir, verdict, justification) {
     if (/resolves outside/.test(err.message)) throw err;
     throw new Error(`could not resolve audit.md against --root: ${err.message}`);
   }
+  return rel;
+}
+
+/**
+ * Write evidence/LINT-14.json citing the section, pinned to audit.md as it now is.
+ *
+ * The quote is sliced back out of the file rather than taken from what was just
+ * written, so the record is pinned to what is ON DISK. A CRLF checkout, a
+ * trailing-newline difference or an editor hook between the write and the pin
+ * would otherwise produce a record that fails the validator it exists to pass,
+ * which is the exact failure five of six stress-run executors had to work around.
+ *
+ * Field order matches plan-auditor.md's schema block: criterion_id, evidence,
+ * reasoning, verdict. That order is load-bearing — the validator's
+ * unsupported-citation check silently skips a record with no criterion_id.
+ */
+function pin(auditPath, evidenceDir, rootDir, verdict, justification) {
+  const raw = fs.readFileSync(auditPath, 'utf8');
+  const at = locateSection(raw);
+  if (!at) {
+    throw new Error(`no "${SECTION_HEADING}" section in ${auditPath}`);
+  }
+  const lines = splitLines(raw);
+  const quote = lines.slice(at.start - 1, at.end).join('\n');
+
+  const rel = assertContained(auditPath, rootDir);
 
   const record = {
     criterion_id: 'LINT-14',
@@ -1131,7 +1223,20 @@ function cmdRecord(argv) {
   const cmp = readJson(cmpFile, 'comparison');
   const section = cmp.section || renderSection(cmp, cmp.meta || {});
 
-  const at = writeSection(auditPath, section);
+  // Everything that can refuse this run has to refuse it BEFORE audit.md is
+  // touched. Both known refusals — a path that escapes --root through a link,
+  // and a section that would land inside an unterminated fence — used to fire
+  // after the write, so the caller got exit 2, no evidence record, and a
+  // modified document. `writeSection` owns the second check; this owns the first.
+  let at;
+  try {
+    assertContained(auditPath, rootDir);
+    at = writeSection(auditPath, section);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+
   let pinned;
   try {
     pinned = pin(auditPath, evidenceDir, rootDir, cmp.verdict, cmp.justification);
@@ -1253,6 +1358,28 @@ function cmdSnapshot(argv) {
     fs.mkdirSync(keepDir, { recursive: true });
     const ext = path.extname(docArg) || '.md';
     kept = path.join(keepDir, `doc-at-baseline-${baseline.run_number}${ext}`);
+
+    // The copy is named by run number alone, so re-using a run number on a
+    // DIFFERENT document overwrote the copy the earlier run's history entry
+    // points at. That entry keeps its old doc_sha256 while the file on disk now
+    // holds different bytes, and `compare` — which authenticates the previous
+    // document against exactly that hash — then refuses to diff it. The caller's
+    // only remaining option is "-", which books every flip as an unscoped
+    // regression. So this write destroys the one artifact the rest of the script
+    // depends on, and the error it eventually produces tells the caller to
+    // recover a file this step deleted.
+    //
+    // The duplicate guard above does not catch it: that guard keys on the
+    // document hash, and here the document is what changed.
+    if (fs.existsSync(kept) && hashContent(fs.readFileSync(kept, 'utf8')) !== baseline.doc_sha256) {
+      console.error(`run ${baseline.run_number} already kept a copy of a DIFFERENT document:`);
+      console.error(`  ${kept.split(path.sep).join('/')}`);
+      console.error('Overwriting it would leave that run\'s history entry pointing at bytes that no');
+      console.error('longer hash to its recorded doc_sha256, and `compare` refuses to diff against');
+      console.error('a copy that fails that check — the run becomes permanently unscoped.');
+      console.error('Snapshot this document under a run_number it has not already used.');
+      process.exit(2);
+    }
     fs.writeFileSync(kept, docText, 'utf8');
   }
   baseline.doc_copy = kept ? kept.split(path.sep).join('/') : null;
@@ -1285,6 +1412,6 @@ if (require.main === module) {
 module.exports = {
   hashContent, normalizeStatus, normalizeLines, changedLines, readElements,
   fillFromEvidence, scopeOf, compare, renderSection, locateSection, fencedLines,
-  writeSection, pin, SECTION_HEADING, STATUS_ALIASES, RANK, SELF_REFERENTIAL,
+  writeSection, pin, assertContained, SECTION_HEADING, STATUS_ALIASES, RANK, SELF_REFERENTIAL,
   LCS_CELL_LIMIT, SCOPED_CLASSES,
 };

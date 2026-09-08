@@ -510,19 +510,75 @@ console.log('\n8. Leniency — the class that lets a regression through');
   // the touched set, so a concern citing a moved line was exempted on text the
   // revision plainly moved. LCS is free to represent a swap as "the smaller
   // block moved" and leave the larger one matched.
+  //
+  // The SEAMS of the relocated run are marked. Its interior is not, and that is
+  // a deliberate, permanent limit rather than an oversight: inside one LCS
+  // alignment `cj - pi` is identically (insertions above - deletions above), so
+  // "this line is displaced" carries no information beyond "text changed
+  // somewhere above it". Marking every displaced line — which is what the first
+  // version of this rule did — therefore marks the whole document as soon as a
+  // revision edits it in two places, which is measured two blocks below.
+  // Separating a moved block's interior from ordinary shifted text needs a real
+  // move detector (hash blocks, match them across positions), not this diff.
   const before = 'header\nA\nB\nC\nD\nx\ny\nfooter\n';
   const after = 'header\nx\ny\nA\nB\nC\nD\nfooter\n';
   const d = gb.changedLines(before, after);
-  check('a moved block is inside the diff',
-    [4, 5, 6, 7].every((l) => d.touched.has(l)), [...d.touched].sort((a, b) => a - b).join(','));
+  check('both seams of a moved block are inside the diff',
+    d.touched.has(4) && d.touched.has(7), [...d.touched].sort((a, b) => a - b).join(','));
 
-  const c = gb.compare(
+  const cite = (l) => gb.compare(
     baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
-    baseline({ concern_statuses: [{ name: 'ordering', status: 'gap', lines: [[5, 5]], line_source: 'audit.md' }] }),
+    baseline({ concern_statuses: [{ name: 'ordering', status: 'gap', lines: [[l, l]], line_source: 'audit.md' }] }),
     d, {},
-  );
-  check('and a concern citing a moved line is a REGRESSION, not variance',
-    c.rows[0].klass === 'REGRESSION', c.rows[0].klass);
+  ).rows[0].klass;
+
+  check('a concern citing a moved block\'s seam is a REGRESSION, not variance',
+    cite(4) === 'REGRESSION', cite(4));
+  check('a concern citing a moved block\'s INTERIOR is variance — the known limit',
+    cite(5) === 'VARIANCE', cite(5));
+  check('a concern spanning the block catches the seam and so is a REGRESSION',
+    gb.compare(
+      baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
+      baseline({
+        concern_statuses: [{
+          name: 'ordering', status: 'gap', lines: [[4, 7]], line_source: 'audit.md',
+        }],
+      }),
+      d, {},
+    ).rows[0].klass === 'REGRESSION', 'span 4-7');
+}
+
+{
+  // Reproduced, and the reason the rule above marks seams rather than every
+  // displaced line. Marking all of them was justified as "over-reporting can
+  // only turn a variance into a regression" — but it does not stop at one
+  // section. Trimming the common prefix and suffix protects a document edited at
+  // ONE end; a revision note near the front plus a review note near the back
+  // defeats both trims, and every line between them is displaced by one.
+  //
+  // Measured on the blanket rule: 302 of 303. That is D10's exemption switched
+  // off for the whole document by an ordinary two-place edit — the same outcome
+  // as the bug the displacement rule was written to fix, reached from the other
+  // side.
+  const req = [];
+  for (let i = 1; i <= 300; i++) req.push(`REQ-${i}: requirement text ${i}`);
+  const join = (a) => `${a.join('\n')}\n`;
+
+  const oneEnd = gb.changedLines(join(req), join(['NEW TOP', ...req]));
+  check('an insertion at one end marks one line',
+    oneEnd.touched.size === 1, `${oneEnd.touched.size}/${oneEnd.total}`);
+
+  const bothEnds = gb.changedLines(join(req), join(['NEW TOP', ...req, 'NEW BOTTOM']));
+  check('an edit at BOTH ends still marks only the seams, not the document',
+    bothEnds.touched.size <= 8, `${bothEnds.touched.size}/${bothEnds.total}`);
+
+  const spread = req.slice();
+  spread[49] = 'REQ-50: EDITED';
+  spread.splice(59, 0, 'INSERTED');
+  spread[250] = 'REQ-250: EDITED';
+  const three = gb.changedLines(join(req), join(spread));
+  check('three scattered edits mark a handful of lines, not two thirds of the file',
+    three.touched.size <= 12, `${three.touched.size}/${three.total}`);
 }
 
 {
@@ -860,6 +916,276 @@ function runCli(args, cwd) {
     st.baseline.audit_sha256 === gb.hashContent('# Audit\n\nbody\n'),
     st.baseline.audit_sha256);
 }
+// ---------------------------------------------------------------------------
+// 12. The third review: what the sixteen fixes broke, and the assertions that
+//     could not tell a working implementation from a broken one.
+//
+// An external re-test mutated the script and re-ran this file. Four assertions
+// stayed green against a mutant that removed the protection they name. An
+// assertion that cannot fail is worse than no assertion, so each one below
+// names the mutant it now kills.
+// ---------------------------------------------------------------------------
+
+{
+  // Mutant that survived: test the range START against diff.total instead of its
+  // END. A citation whose start is inside the document and whose end runs past
+  // it then scopes normally, which is the stale-line-number case the check
+  // exists for — the previous version's numbers are usually still in range at
+  // the start and out of range at the end.
+  const d = gb.changedLines('a\nb\nc\n', 'a\nB\nc\n');
+  const flip = (lines) => gb.compare(
+    baseline({ lint_results: { 'LINT-05': 'pass' } }),
+    baseline({ lint_results: { 'LINT-05': { status: 'fail', lines, line_source: 'evidence' } } }),
+    d, {},
+  ).rows[0];
+
+  const straddle = flip([[3, 900]]);
+  check('a citation that STARTS in range and ends past the document is refused',
+    straddle.klass === 'REGRESSION' && straddle.unscoped, `${straddle.klass} unscoped=${straddle.unscoped}`);
+  const inside = flip([[2, 2]]);
+  check('and a wholly in-range citation on a changed line still scopes normally',
+    inside.klass === 'REGRESSION' && !inside.unscoped, `${inside.klass} unscoped=${inside.unscoped}`);
+}
+
+{
+  // Mutant that survived: detect a missing class only when kind === 'concern'.
+  // Every other class then slips back to NEW, which does not fail LINT-14 — so
+  // the baseline that records least still buys the most reassuring verdict.
+  const d = gb.changedLines(DOC_V1, DOC_V2);
+  const prevLintOnly = { lint_results: { 'LINT-05': 'pass' } };
+
+  const cases = {
+    coverage: { coverage_items: [{ name: 'auth', status: 'gap', lines: [[4, 4]], line_source: 'audit.md' }] },
+    scenario: { scenario_statuses: [{ id: 'S-1', status: 'FAIL', lines: [[4, 4]], line_source: 'audit.md' }] },
+    concern: { concern_statuses: [{ name: 'perf', status: 'gap', lines: [[4, 4]], line_source: 'audit.md' }] },
+  };
+  for (const [kind, group] of Object.entries(cases)) {
+    const c = gb.compare(prevLintOnly, Object.assign({ lint_results: { 'LINT-05': 'pass' } }, group), d, {});
+    check(`a missing ${kind} class is UNCOMPARED, not NEW`,
+      c.counts.uncompared === 1 && c.counts.new_items === 0 && c.verdict === 'N_A',
+      `uncompared=${c.counts.uncompared} new=${c.counts.new_items} ${c.verdict}`);
+  }
+}
+
+{
+  // The regression this fix pass exists to close, and the worst of the sixteen.
+  //
+  // The uncompared branch sat ABOVE the regression branch, so adding the first
+  // element of a class the previous baseline never carried turned a proven
+  // pass-to-fail regression into N_A and exit 0 — and N_A does not block the
+  // gate. Missing information about one class cannot erase a regression already
+  // established in another.
+  const d = gb.changedLines(DOC_V1, DOC_V2);
+  const prev = { lint_results: { 'LINT-05': { status: 'pass', lines: [[4, 4]], line_source: 'evidence' } } };
+  const failing = { 'LINT-05': { status: 'fail', lines: [[4, 4]], line_source: 'evidence' } };
+
+  const alone = gb.compare(prev, { lint_results: failing }, d, {});
+  check('a regression with no missing class is UNMET',
+    alone.counts.regressions === 1 && alone.verdict === 'UNMET', alone.verdict);
+
+  const withNewClass = gb.compare(prev, {
+    lint_results: failing,
+    concern_statuses: [{ name: 'perf', status: 'OK', lines: [[2, 2]], line_source: 'audit.md' }],
+  }, d, {});
+  check('a regression PLUS a missing class is still UNMET, not N_A',
+    withNewClass.counts.regressions === 1 && withNewClass.verdict === 'UNMET',
+    `regressions=${withNewClass.counts.regressions} ${withNewClass.verdict}`);
+  check('and the justification still reports the uncompared class',
+    /had no prior record and were not compared/.test(withNewClass.justification),
+    withNewClass.justification);
+
+  const cleanWithNewClass = gb.compare(prev, {
+    lint_results: { 'LINT-05': { status: 'pass', lines: [[4, 4]], line_source: 'evidence' } },
+    concern_statuses: [{ name: 'perf', status: 'OK', lines: [[2, 2]], line_source: 'audit.md' }],
+  }, d, {});
+  check('with no regression, a missing class still demotes to N_A',
+    cleanWithNewClass.verdict === 'N_A', cleanWithNewClass.verdict);
+}
+
+{
+  // The fence scanner kept the fence CHARACTER and discarded its length, and
+  // never required a closing fence to be bare. Four shapes therefore closed the
+  // block early or never opened it, and `## Baseline comparison` written as an
+  // EXAMPLE became the section this script rewrites.
+  const B = '```';
+  const REAL = '## Baseline comparison';
+  const shapes = {
+    'an ordinary fence': [['# A', B, REAL, 'decoy', B, '', REAL, 'real', ''], 7],
+    'a tilde fence holding backticks': [['# A', '~~~', B, REAL, 'decoy', B, '~~~', '', REAL, 'real', ''], 9],
+    'a fence indented three spaces': [['# A', `   ${B}`, REAL, 'decoy', `   ${B}`, '', REAL, 'real', ''], 7],
+    'a fence marker in a table cell': [['# A', '| a |', '|---|', `| ${B} |`, '', REAL, 'real', ''], 6],
+    'a four-backtick fence holding a three-backtick example':
+      [['# A', '````', B, REAL, 'decoy', B, '````', '', REAL, 'real', ''], 9],
+    'a closing marker carrying an info string':
+      [['# A', B, 'ex:', `${B}js`, REAL, 'decoy', B, '', REAL, 'real', ''], 9],
+    'a fence inside a list, indented four spaces':
+      [['# A', '- step:', '', `    ${B}`, `    ${REAL}`, '    decoy', `    ${B}`, '', REAL, 'real', ''], 9],
+    'a plain four-space indented example':
+      [['# A', '', `    ${REAL}`, '    decoy', '', REAL, 'real', ''], 6],
+  };
+  for (const [name, [lines, want]] of Object.entries(shapes)) {
+    const at = gb.locateSection(`${lines.join('\n')}\n`);
+    check(`the real section is found past ${name}`,
+      at && at.start === want, at ? `line ${at.start}, wanted ${want}` : 'not found');
+  }
+}
+
+{
+  // The section terminator read the RAW line against /^##\s/, so an indented
+  // `  ## Verdicts` and any `# Appendix` failed to stop it: the section ran to
+  // end of file and every rewrite deleted that content, at exit 0, with a
+  // success message. This is the most destructive defect the three reviews
+  // found, and none of them named it.
+  const survives = (tail) => {
+    const root = tmpdir();
+    const f = path.join(root, 'audit.md');
+    fs.writeFileSync(f, `# Audit\n\n## Baseline comparison\n\nold body\n\n${tail.join('\n')}\n`, 'utf8');
+    gb.writeSection(f, '## Baseline comparison\n\nNEW\n');
+    return fs.readFileSync(f, 'utf8');
+  };
+  const afterH1 = survives(['# Appendix', 'appendix content']);
+  check('a level-1 heading ends the section and its content survives',
+    afterH1.includes('# Appendix') && afterH1.includes('appendix content'), JSON.stringify(afterH1));
+
+  const afterIndented = survives(['  ## Verdicts', 'verdict rows']);
+  check('an indented level-2 heading ends the section and its content survives',
+    afterIndented.includes('## Verdicts') && afterIndented.includes('verdict rows'), JSON.stringify(afterIndented));
+
+  const afterH3 = survives(['### Detail', 'belongs to the section']);
+  check('a level-3 heading belongs to the section and is replaced',
+    !afterH3.includes('belongs to the section'), JSON.stringify(afterH3));
+}
+
+{
+  // An audit holding an unterminated fence swallows every line after it, so the
+  // appended section landed inside that fence and could not be found. `record`
+  // failed at the pin and exited 2 HAVING ALREADY APPENDED; three runs left
+  // three contradictory sections behind an exit code that said nothing was
+  // written. The check has to run on the computed text, before the write.
+  const root = tmpdir();
+  const f = path.join(root, 'audit.md');
+  const original = '# Audit\n\n```\nunterminated\n';
+  fs.writeFileSync(f, original, 'utf8');
+
+  let threw = null;
+  try { gb.writeSection(f, '## Baseline comparison\n\nBODY\n'); } catch (err) { threw = err; }
+  check('writeSection refuses a section that would not be locatable',
+    threw !== null && /would not be locatable/.test(threw.message), threw && threw.message);
+  check('and the file is byte-identical after the refusal',
+    fs.readFileSync(f, 'utf8') === original, JSON.stringify(fs.readFileSync(f, 'utf8')));
+  check('the message names the unterminated fence as the cause',
+    threw !== null && /unterminated code fence/.test(threw.message));
+
+  fs.mkdirSync(path.join(root, 'evidence'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'cmp.json'), JSON.stringify({
+    verdict: 'MET', justification: 'caller-decided: t', section: '## Baseline comparison\n\nBODY\n', counts: {},
+  }), 'utf8');
+  const before = fs.readFileSync(f, 'utf8');
+  const r1 = runCli(['record', 'cmp.json', 'audit.md', 'evidence'], root);
+  const r2 = runCli(['record', 'cmp.json', 'audit.md', 'evidence'], root);
+  check('record exits 2 on that audit', r1.code === 2 && r2.code === 2, `${r1.code}/${r2.code}`);
+  check('and two refused runs leave the file unchanged, not two sections longer',
+    fs.readFileSync(f, 'utf8') === before,
+    `${before.length} -> ${fs.readFileSync(f, 'utf8').length} bytes`);
+}
+
+{
+  // Mutant that survived: remove the realpath containment check entirely. The
+  // standing test only exercised LEXICAL containment, which a junction or a
+  // symlink inside the root passes while pointing outside it.
+  const root = tmpdir();
+  const outside = tmpdir();
+  fs.writeFileSync(path.join(outside, 'audit.md'), '# Audit\n\n## Baseline comparison\n\nbody\n', 'utf8');
+  let linked = true;
+  try {
+    fs.symlinkSync(outside, path.join(root, 'linked'), 'junction');
+  } catch (err) {
+    linked = false;
+  }
+  if (linked) {
+    const viaLink = path.join(root, 'linked', 'audit.md');
+    let threw = null;
+    try { gb.assertContained(viaLink, root); } catch (err) { threw = err; }
+    check('a path that escapes --root through a link is refused',
+      threw !== null && /resolves outside/.test(threw.message), threw && threw.message);
+
+    const before = fs.readFileSync(viaLink, 'utf8');
+    fs.mkdirSync(path.join(root, 'evidence'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'cmp.json'), JSON.stringify({
+      verdict: 'MET', justification: 'caller-decided: t', section: '## Baseline comparison\n\nNEW\n', counts: {},
+    }), 'utf8');
+    const r = runCli(['record', 'cmp.json', path.join('linked', 'audit.md'), 'evidence'], root);
+    check('record refuses it', r.code === 2, `exit ${r.code}`);
+    check('and refuses BEFORE editing the file it cannot pin',
+      fs.readFileSync(viaLink, 'utf8') === before, 'the audit was rewritten by a run that then failed');
+  } else {
+    check('a path that escapes --root through a link is refused (skipped: no link support)', true);
+    check('record refuses it (skipped: no link support)', true);
+    check('and refuses BEFORE editing the file it cannot pin (skipped: no link support)', true);
+  }
+  check('a path inside the root is accepted',
+    typeof gb.assertContained(path.join(root, 'cmp.json'), root) === 'string');
+}
+
+{
+  // Mutant that survived: delete both printed hashes. The assertion checked only
+  // the introductory phrase, so a message that named neither number passed.
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(DOC_V1), lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    lint_results: { 'LINT-05': 'fail' },
+  }), 'utf8');
+  const r = runCli(['compare', 'prev.json', 'cur.json', 'prev-doc.md', 'doc.md'], root);
+  check('the mismatch message prints the hash actually supplied',
+    r.out.includes(gb.hashContent(DOC_V2)), r.out);
+  check('and the hash the baseline recorded',
+    r.out.includes(gb.hashContent(DOC_V1)), r.out);
+}
+
+{
+  // The copy is named by run number alone, so re-using a run number on a
+  // DIFFERENT document overwrote the copy the earlier run's history entry points
+  // at. `compare` authenticates the previous document against exactly that hash
+  // and then refuses to diff it — so this write destroyed the artifact the rest
+  // of the script depends on, and the error it eventually produced told the
+  // caller to recover a file this step had deleted. The duplicate guard does not
+  // catch it: that guard keys on the document hash, and here the document is
+  // what changed.
+  const root = tmpdir();
+  const keep = path.join(root, 'keep');
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'state.json'), '{"history":[],"baseline":{}}', 'utf8');
+  fs.writeFileSync(path.join(root, 'b.json'), JSON.stringify({
+    run_number: 1, lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+
+  const first = runCli(['snapshot', 'b.json', 'doc.md', 'state.json', '--keep', 'keep'], root);
+  check('the first snapshot keeps a copy', first.code === 0, first.out);
+  const copy = path.join(keep, 'doc-at-baseline-1.md');
+  check('and the copy is the document it was taken on',
+    fs.readFileSync(copy, 'utf8') === DOC_V1);
+
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  const second = runCli(['snapshot', 'b.json', 'doc.md', 'state.json', '--keep', 'keep'], root);
+  check('re-using a run number on a DIFFERENT document is refused',
+    second.code === 2, `exit ${second.code}: ${second.out}`);
+  check('and the earlier run\'s copy is untouched',
+    fs.readFileSync(copy, 'utf8') === DOC_V1, 'the copy was overwritten');
+  check('the refusal says the run becomes permanently unscoped',
+    /permanently unscoped/.test(second.out), second.out);
+
+  // The same run number on the SAME document is the duplicate case, refused for
+  // its own reason — the two guards must not be confused for one another.
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V1, 'utf8');
+  const third = runCli(['snapshot', 'b.json', 'doc.md', 'state.json', '--keep', 'keep'], root);
+  check('and an identical re-run is still refused as a duplicate',
+    third.code === 2 && /invent a run/.test(third.out), third.out);
+}
+
 // ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }

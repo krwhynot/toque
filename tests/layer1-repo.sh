@@ -1563,26 +1563,58 @@ else
   # stayed green while claiming the script "names every element it compares".
   # A guard that cannot fail for the thing it asserts is documentation.
   #
-  # The case is stress run 4's s1 in miniature: one concern row, no evidence
-  # record, flipping ok -> gap. Citing changed text it must be a REGRESSION;
-  # citing unchanged text it must be VARIANCE. That discrimination IS the fix,
-  # and it is decidable here without the node test suite.
-  gb_probe=$(node -e '
+  # The case is stress run 4's s1 in miniature: one row, no evidence record,
+  # flipping pass -> fail. Citing changed text it must be a REGRESSION; citing
+  # unchanged text it must be VARIANCE. That discrimination IS the fix, and it is
+  # decidable here without the node test suite.
+  #
+  # Every record-less class is probed, not just concerns. The first version of
+  # this probe used concern rows alone, and the same review then gutted
+  # readElements with `if (kind !== "concern") return;` — deleting every lint,
+  # coverage and scenario row — and the probe stayed green while the guard above
+  # claims the script "names every element it compares".
+  for gb_kind in lint coverage scenario concern; do
+    gb_probe=$(TQ_KIND="$gb_kind" node -e '
+      const gb = require("./plugins/toque/scripts/tq-gate-baseline.js");
+      const kind = process.env.TQ_KIND;
+      const d = gb.changedLines("a\nb\nOLD\n", "a\nb\nNEW\n");
+      const wrap = (status, ln) => {
+        const row = { status, line_source: "audit.md" };
+        if (ln) row.lines = [[ln, ln]];
+        if (kind === "lint") return { lint_results: { "LINT-05": row } };
+        if (kind === "coverage") return { coverage_items: [Object.assign({ name: "c" }, row)] };
+        if (kind === "scenario") return { scenario_statuses: [Object.assign({ id: "S-1" }, row)] };
+        return { concern_statuses: [Object.assign({ name: "c" }, row)] };
+      };
+      const prev = wrap("pass", 3);
+      const changed = gb.compare(prev, wrap("fail", 3), d, {});
+      const same = gb.compare(prev, wrap("fail", 1), d, {});
+      console.log([
+        changed.rows.length, changed.rows[0] && changed.rows[0].klass, changed.verdict,
+        same.rows[0] && same.rows[0].klass, same.verdict,
+      ].join(","));
+    ' 2>/dev/null)
+    [ "$gb_probe" = "1,REGRESSION,UNMET,VARIANCE,MET" ] \
+      || { fail "PH5-044: the comparison does not discriminate a $gb_kind flip by its cited line (got '$gb_probe')"; gb_bad=1; }
+  done
+
+  # A regression already established must not be erased by a class the previous
+  # baseline never carried. That branch ordering was inverted, so adding the
+  # first row of a new class turned UNMET into N_A — and N_A does not block the
+  # gate.
+  gb_order=$(node -e '
     const gb = require("./plugins/toque/scripts/tq-gate-baseline.js");
-    const v1 = "a\nb\nOLD\n";
-    const v2 = "a\nb\nNEW\n";
-    const d = gb.changedLines(v1, v2);
-    const prev = { concern_statuses: [{ name: "c", status: "ok" }] };
-    const mk = (ln) => ({ concern_statuses: [{ name: "c", status: "gap", lines: [[ln, ln]], line_source: "audit.md" }] });
-    const changed = gb.compare(prev, mk(3), d, {});
-    const same = gb.compare(prev, mk(1), d, {});
-    console.log([
-      changed.rows.length, changed.rows[0] && changed.rows[0].klass, changed.verdict,
-      same.rows[0] && same.rows[0].klass, same.verdict,
-    ].join(","));
+    const d = gb.changedLines("a\nb\nOLD\n", "a\nb\nNEW\n");
+    const prev = { lint_results: { "LINT-05": { status: "pass", lines: [[3, 3]], line_source: "evidence" } } };
+    const cur = {
+      lint_results: { "LINT-05": { status: "fail", lines: [[3, 3]], line_source: "evidence" } },
+      concern_statuses: [{ name: "new", status: "ok", lines: [[1, 1]], line_source: "audit.md" }],
+    };
+    const c = gb.compare(prev, cur, d, {});
+    console.log([c.counts.regressions, c.counts.uncompared, c.verdict].join(","));
   ' 2>/dev/null)
-  [ "$gb_probe" = "1,REGRESSION,UNMET,VARIANCE,MET" ] \
-    || { fail "PH5-044: the comparison does not discriminate a matrix-row flip by its cited line (got '$gb_probe')"; gb_bad=1; }
+  [ "$gb_order" = "1,1,UNMET" ] \
+    || { fail "PH5-044: an uncompared class erases an established regression (got '$gb_order')"; gb_bad=1; }
 fi
 
 dgb=$(sed -n '/^<design_gate>$/,/^<\/design_gate>$/p' "$DG_STAGE" 2>/dev/null)

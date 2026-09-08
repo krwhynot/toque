@@ -1116,6 +1116,12 @@ WHAT THE COMPARISON DECIDES, per element:
   regressions" over it. Record that class in the baseline to close it. Without
   this, a failing coverage or concern row whose class had no history read as
   NEW, and the baseline recording least produced the most reassuring verdict.
+  An UNCOMPARED class demotes LINT-14 to N_A ONLY when the comparison found no
+  regression. A regression is established information and missing information
+  about a different class cannot erase it, so any regression outranks any
+  uncompared class and LINT-14 stays UNMET. Ranked the other way, adding the
+  first row of a new class to a plan silently converted a proven regression
+  into N_A and exit 0 — and N_A does not block the gate.
 - AUDITOR VARIANCE — was passing, now failing, and every line it cites is
   unchanged since the previous baseline. Reported under baseline_comparison,
   never as a regression. The element still fails its own criterion; it does not
@@ -1136,6 +1142,16 @@ A PASS-TO-FAIL flip the script CANNOT scope — no previous document, a row that
 named no lines, or a citation past the end of {doc} — is booked as a REGRESSION,
 marked unscoped in the section with the reason.
 The exemption is never applied on a guess.
+
+One limit is worth stating rather than discovering. The diff marks changed lines
+plus the SEAMS of any block whose position moved; the interior of a moved block
+reads as unchanged, so a row citing only an interior line of relocated text is
+classified as variance. This is not an oversight to be tightened: inside a single
+diff alignment, "this line is displaced" carries no information beyond "text
+changed somewhere above it", so marking every displaced line marks the whole
+document as soon as a revision edits it in two places — measured at 302 of 303
+lines on a 300-line document with one edit at each end, which switches the
+exemption off entirely. Cite the seam or the span, not a lone interior line.
 The fix is to name the lines, not to accept the demotion. Other
 transitions are unaffected: an improvement or a degradation does not become a
 regression for want of a diff.
@@ -1330,8 +1346,10 @@ IF NOT PASS:
   -> Compare re-audit against baseline with `tq-gate-baseline.js compare`,
      passing the previous iteration's document copy: it flags any regressions
      (items that were passing in v1 but now fail in v2 on text the revision
-     changed). Regressions indicate the revision broke something that was
-     previously working; a flip on unchanged text is auditor variance (baseline
+     changed). A regression means the item's cited lines OVERLAP the diff, not
+     that the revision caused the failure — the script compares two supplied
+     statuses and a line intersection, and cannot establish causation in either
+     direction. A flip on unchanged text is auditor variance (baseline
      comparison above) and fails only its own criterion. Do not classify the
      flips by reading the two audits side by side — that is the step the script
      replaced, and the referent it kept getting wrong was the matrix row.

@@ -187,6 +187,116 @@ pointed inside `.canary/` with no forbidden-inputs block) are unchanged. The
 open path is still unobserved: s1's fixture has not been re-run against the
 script.
 
+## Third review of the baseline script: what its own fixes broke (September 7, 2026)
+
+The script was reviewed twice and sixteen fixes landed. A third adversarial
+re-test, asked specifically to break the fixes rather than re-find the defects,
+returned six closed cleanly and ten partial. Two of the partials were leniency
+introduced BY the fixes, which is the failure mode the script exists to prevent,
+and one defect none of the three reviews had named was the most destructive
+thing in the file. All were reproduced here before being fixed.
+
+**A regression outranks an uncompared class.** The rule that made LINT-14 `N_A`
+when a whole element class had no history was ordered above the regression test,
+so adding the first concern row to a plan whose baseline carried none turned a
+proven pass-to-fail regression into `N_A` and exit 0 — and `N_A` does not block
+the gate. A regression is established information; missing information about a
+different class cannot erase it. The uncompared demotion now applies only to an
+otherwise-`MET` verdict, and the justification names the uncompared classes
+alongside the regressions that stand regardless. Reproduced at 1 regression,
+`N_A`, exit 0 before; 1 regression, `UNMET`, exit 1 after.
+
+**Displacement marks seams, not every displaced line.** Marking every LCS-matched
+line whose offset shifted was justified as safe over-reporting, on the reasoning
+that it can only turn a variance into a regression. Measured, it marks 302 of 303
+lines on a 300-line document with one insertion at the top and one edit at the
+bottom, because trimming the common prefix and suffix only protects a document
+edited at ONE end. That is D10's exemption switched off for the whole document by
+an ordinary two-place revision — the same outcome as the bug the rule was written
+to fix, reached from the other side. Only the boundaries of a run whose offset
+differs from the run before it are marked now: the same case marks 4 lines, and a
+block swap is still caught at both its seams.
+
+The interior of a moved block therefore reads as unchanged, and that is stated in
+the gate instructions rather than left to be discovered. It is not a defect to be
+tightened later: inside one diff alignment `cj - pi` is identically (insertions
+above − deletions above), so "this line is displaced" carries no information
+beyond "text changed somewhere above it". Separating a moved block's interior
+from ordinary shifted text needs a real move detector — hash blocks, match them
+across positions — not this diff. Cite the seam or the span, not a lone interior
+line.
+
+**A refusal must not edit the file it refuses to pin.** Two checks fired after
+`writeSection` had already written: the realpath containment check, and the
+discovery that the section could not be found afterwards. Both produced exit 2,
+no evidence record, and a modified `audit.md`. On an audit holding an
+unterminated code fence, three identical `record` runs left three contradictory
+sections on disk behind an exit code that said nothing was written (963 → 1,898
+bytes over two). Containment is now checked before the write, and `writeSection`
+verifies the section is locatable in the computed text and throws without
+writing when it is not. Verified: the file is byte-identical after two refused
+runs.
+
+**The section terminator deleted to end of file, and nobody had named it.** The
+terminator tested the raw line against `/^##\s/` while the section START tested
+the trimmed line. An indented `  ## Verdicts` was therefore accepted as a
+heading that opens the section and rejected as one that closes it, and a
+`# Appendix` never closed it at all — so the section ran to end of file and
+every rewrite deleted that content, at exit 0, with a success message. Both
+tests now allow up to three spaces of indentation, and the terminator stops at
+any level-1 or level-2 heading. A level-3 heading belongs to the section.
+
+**The fence scanner kept the character and discarded the length.** Four of eight
+fence shapes mis-located the section: a four-backtick block closed on the first
+three-backtick line inside it, an info-string line closed a block, and a fence
+indented four spaces inside a list was not recognised as a fence at all. In each
+case a `## Baseline comparison` written as an EXAMPLE became the section the
+script rewrote. The scanner now tracks the fence character and its length,
+requires a closing fence to be at least as long and to carry nothing but
+whitespace, and refuses a backtick opener whose info string contains a backtick.
+Eight of eight shapes locate correctly.
+
+**A reused run number destroyed the copy the next comparison needs.** The kept
+document copy is named by run number alone and written unconditionally, so
+snapshotting a CHANGED document under a run number already used overwrote the
+copy the earlier history entry points at. That entry keeps its old `doc_sha256`
+while the file holds different bytes, and `compare` — which authenticates the
+previous document against exactly that hash — then refuses to diff it, leaving
+`-` and unscoped regressions as the only route. The two fixes fought each other:
+one step destroyed the artifact the other demanded, and the error told the
+caller to recover a file that step had deleted. A collision on differing content
+is now refused before anything is written. The duplicate guard does not cover
+this: it keys on the document hash, and here the document is what changed.
+
+**Also closed:** the caller instructions still said "regressions indicate the
+revision broke something that was previously working". The earlier fix corrected
+the public guide and not the instruction the caller executes. A regression means
+the cited lines overlap the diff; the script establishes overlap, not causation,
+in either direction.
+
+**The tests were weaker than the commit claimed.** The re-test mutated the script
+and re-ran the suite: four assertions stayed green against a mutant that removed
+the protection they name, including the realpath check and the out-of-range
+citation bound. `PH5-044`'s behavioural probe — added specifically because the
+grep-only version survived a gutted `readElements` — used concern rows alone, and
+survived `if (kind !== 'concern') return;`, which deletes every lint, coverage
+and scenario row. The probe now runs all four classes and the regression-ordering
+case; the suite is 148 assertions; and each of fourteen protections is verified
+against a mutant that removes it, 14 killed and 0 surviving.
+
+**Not fixed, and recorded rather than closed.** A citation of the form `./doc.md`
+is rejected where the validator accepts it, because path identity is literal
+string equality. Omitting `doc_sha256` from the previous baseline and supplying
+the current document twice still passes with a warning. `normalizeStatus` mangles
+a balanced nested parenthetical while accepting a malformed one. `record` accepts
+a comparison computed for a different document, so hashing the report establishes
+its bytes and not that its statuses belong to this audit. The deepest of them is
+not a defect: the script computes citation-coordinate overlap, and a line whose
+own text is unchanged can fail because the lines around it changed — so the
+variance exemption is no better founded than the causal claim already withdrawn
+from the regression side. That bounds what D10 can honestly promise, and no
+wording repairs it.
+
 ## What this does not claim
 
 - D1 changes what the shortcut commands instruct; it does not add a runtime check that an agent obeyed the instruction. The suite's PH5-042 guard checks that the gate has one definition and that both shortcuts carry the execute-by-reference directive, not that a live run executed it. The evidence re-anchoring step is an instruction to the agent; a script that does it mechanically would be the durable form.

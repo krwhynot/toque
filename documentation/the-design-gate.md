@@ -76,9 +76,11 @@ Every revision iteration spawns a **fresh** auditor, which is what keeps the sec
 - **Regression** — was passing, now failing, and at least one line it cites lies inside the diff. This is the only outcome that fails LINT-14.
 - **Auditor variance** — was passing, now failing, and every line it cites is unchanged. Reported, and the element still fails its own criterion, but the revision is not blamed for it.
 - **Improvement**, **degradation**, **new**, **dropped**, **not comparable** — reported for awareness.
-- **Uncompared** — the element's whole class is missing from the previous baseline, so it has no prior status. LINT-14 is `N_A`: a comparison that could not see a class of element cannot claim there were no regressions in it.
+- **Uncompared** — the element's whole class is missing from the previous baseline, so it has no prior status. LINT-14 is `N_A`: a comparison that could not see a class of element cannot claim there were no regressions in it. This demotion applies only when nothing regressed. A regression is established information and a gap in a different class does not erase it, so any regression keeps LINT-14 at `UNMET`.
 
 Every element carries the lines it is about and the file those lines were read from. Lint criteria take them from their evidence record; coverage, scenario and cross-cutting-concern rows have no record and name them in the baseline. A flip the tool cannot scope — no previous copy of the document, or an element that named no lines — is recorded as a regression and says so. The exemption is never applied on a guess.
+
+**One limit worth knowing before you cite a line.** The diff marks the lines the revision changed plus the seams of any block whose position moved. The interior of a moved block reads as unchanged, so an element citing only an interior line of relocated text is classified as variance. Marking every displaced line instead is not a stricter option — it marks 302 of 303 lines on a 300-line document edited at both ends, because trimming the shared start and end of the two documents only protects a document edited at one end. That is the exemption switched off rather than tightened. Cite the seam or the whole span.
 
 The result is written into `audit.md` as a `## Baseline comparison` section listing every element compared, and the LINT-14 evidence record is pinned to that section.
 
