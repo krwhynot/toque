@@ -1556,6 +1556,33 @@ else
   # could scope is the failure the diff-scoped rule was carved around.
   grep -qF 'no line source on this element' "$gb_script" \
     || { fail "PH5-044: $gb_script no longer says why a flip could not be scoped"; gb_bad=1; }
+
+  # ONE behavioural assertion, because every grep above is satisfied by a script
+  # that does nothing. An external review stubbed readElements to `return new
+  # Map();` — every comparison then returned zero rows and MET, and this guard
+  # stayed green while claiming the script "names every element it compares".
+  # A guard that cannot fail for the thing it asserts is documentation.
+  #
+  # The case is stress run 4's s1 in miniature: one concern row, no evidence
+  # record, flipping ok -> gap. Citing changed text it must be a REGRESSION;
+  # citing unchanged text it must be VARIANCE. That discrimination IS the fix,
+  # and it is decidable here without the node test suite.
+  gb_probe=$(node -e '
+    const gb = require("./plugins/toque/scripts/tq-gate-baseline.js");
+    const v1 = "a\nb\nOLD\n";
+    const v2 = "a\nb\nNEW\n";
+    const d = gb.changedLines(v1, v2);
+    const prev = { concern_statuses: [{ name: "c", status: "ok" }] };
+    const mk = (ln) => ({ concern_statuses: [{ name: "c", status: "gap", lines: [[ln, ln]], line_source: "audit.md" }] });
+    const changed = gb.compare(prev, mk(3), d, {});
+    const same = gb.compare(prev, mk(1), d, {});
+    console.log([
+      changed.rows.length, changed.rows[0] && changed.rows[0].klass, changed.verdict,
+      same.rows[0] && same.rows[0].klass, same.verdict,
+    ].join(","));
+  ' 2>/dev/null)
+  [ "$gb_probe" = "1,REGRESSION,UNMET,VARIANCE,MET" ] \
+    || { fail "PH5-044: the comparison does not discriminate a matrix-row flip by its cited line (got '$gb_probe')"; gb_bad=1; }
 fi
 
 dgb=$(sed -n '/^<design_gate>$/,/^<\/design_gate>$/p' "$DG_STAGE" 2>/dev/null)

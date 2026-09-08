@@ -445,6 +445,421 @@ console.log('\n7. The section, the pin, and the two appends that follow it');
   check('pinning an audit.md outside --root is refused', threw);
 }
 
+
+// ===========================================================================
+// Section 8 onward: the defects an external review (Codex CLI) and a self-pass
+// found after the first commit. Every one of these was REPRODUCED before it was
+// fixed, and each test below is the reproduction.
+//
+// Eight of them shared a direction: they turned a real regression into an
+// exempted "auditor variance", or skipped the comparison and exited 0. That is
+// the failure this whole script exists to prevent, so the leniency cases come
+// first.
+// ===========================================================================
+
+console.log('\n8. Leniency — the class that lets a regression through');
+
+{
+  // Reproduced: `lines: [[900,905]]` against a four-line document matched no
+  // touched line, fell through to "every line cited is unchanged", and earned
+  // the exemption. A stale line number copied from the PREVIOUS version of the
+  // document is the likeliest way to make one, which puts this failure exactly
+  // where the document changed most.
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const c = gb.compare(
+    baseline({ lint_results: { 'LINT-05': 'pass' } }),
+    baseline({ lint_results: { 'LINT-05': { status: 'fail', lines: [[900, 905]], line_source: 'e' } } }),
+    diff, {},
+  );
+  check('a citation past the end of the document does NOT earn the exemption',
+    c.rows[0].klass === 'REGRESSION', c.rows[0].klass);
+  // 8, not 7: splitting a newline-terminated file yields a trailing empty
+  // element, and `total` deliberately equals that split length because
+  // tq-evidence-validate.js bounds its own ranges the same way. A stricter
+  // count here would reject citations the validator accepts, and the pin this
+  // script writes has to survive that validator.
+  check('and the row says the range does not exist',
+    /cites line 905 of a 8-line document/.test(c.rows[0].scope_reason), c.rows[0].scope_reason);
+  check('LINT-14 is UNMET, not MET', c.verdict === 'UNMET', c.verdict);
+}
+
+{
+  // Reproduced: auditing docs/spec.md, a record citing only vendor/spec.md had
+  // its line 1 imported as a coordinate in docs/spec.md. Two files sharing a
+  // name are two files.
+  const root = tmpdir();
+  fs.mkdirSync(path.join(root, 'evidence'));
+  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'docs', 'spec.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'evidence', 'LINT-05.json'), JSON.stringify({
+    criterion_id: 'LINT-05',
+    evidence: [{ artifact: 'vendor/spec.md', line_start: 1, line_end: 1, exact_quote: 'x', sha256: 'y' }],
+    reasoning: 'r',
+    verdict: 'UNMET',
+  }), 'utf8');
+
+  const els = gb.readElements(baseline({ lint_results: { 'LINT-05': 'fail' } }), 'cur');
+  const filled = gb.fillFromEvidence(els, path.join(root, 'evidence'), 'docs/spec.md');
+  check('a same-basename citation in another directory is NOT used',
+    filled.length === 0 && els.get('lint:LINT-05').lines.length === 0,
+    JSON.stringify(filled));
+}
+
+{
+  // Reproduced: swapping two adjacent blocks left the relocated lines outside
+  // the touched set, so a concern citing a moved line was exempted on text the
+  // revision plainly moved. LCS is free to represent a swap as "the smaller
+  // block moved" and leave the larger one matched.
+  const before = 'header\nA\nB\nC\nD\nx\ny\nfooter\n';
+  const after = 'header\nx\ny\nA\nB\nC\nD\nfooter\n';
+  const d = gb.changedLines(before, after);
+  check('a moved block is inside the diff',
+    [4, 5, 6, 7].every((l) => d.touched.has(l)), [...d.touched].sort((a, b) => a - b).join(','));
+
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'ordering', status: 'gap', lines: [[5, 5]], line_source: 'audit.md' }] }),
+    d, {},
+  );
+  check('and a concern citing a moved line is a REGRESSION, not variance',
+    c.rows[0].klass === 'REGRESSION', c.rows[0].klass);
+}
+
+{
+  // Reproduced: on identical evidence citing an UNCHANGED line, omitting the
+  // field gave MET and spelling out `lines: []` gave UNMET. `[]` is truthy, so
+  // the filled evidence was thrown away — the natural spelling for "I have no
+  // lines" was the one that behaved worst.
+  const els = gb.readElements(
+    baseline({ lint_results: { 'LINT-05': { status: 'fail', lines: [] } } }), 'cur',
+  );
+  check('an explicit empty lines array reads as no lines, not as a value',
+    els.get('lint:LINT-05').lines.length === 0);
+  // The write-back path is exercised through the CLI in section 11.
+}
+
+{
+  // Reproduced: passing the CURRENT document as both arguments produced an
+  // empty diff, so every flip became variance and LINT-14 came back MET. The
+  // baseline records doc_sha256 and it was read only for the byte-identical
+  // exemption, never to authenticate the file the caller supplied.
+  //
+  // The guard lives in cmdCompare, so this asserts the ingredient: the hash of
+  // a wrong document differs from the baseline's recorded one.
+  check('a wrong previous document is detectable from the recorded hash',
+    gb.hashContent(DOC_V2) !== gb.hashContent(DOC_V1));
+}
+
+{
+  // Reproduced: a failing coverage or concern row whose CLASS has no history
+  // classified as NEW before its status was examined, and NEW does not fail
+  // LINT-14. So the baseline that records least produces the most reassuring
+  // verdict. This is R4-01 one level up — not rows without line sources, rows
+  // without any prior record at all.
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const c = gb.compare(
+    baseline({ lint_results: { 'LINT-01': 'pass' } }),
+    baseline({
+      lint_results: { 'LINT-01': 'pass' },
+      concern_statuses: [{ name: 'API contract', status: 'gap', lines: [[4, 4]], line_source: 'audit.md' }],
+    }),
+    diff, {},
+  );
+  const row = c.rows.find((r) => r.kind === 'concern');
+  check('a failing row whose whole class has no history is UNCOMPARED, not NEW',
+    row.klass === 'UNCOMPARED', row.klass);
+  check('and LINT-14 is N_A — a comparison missing a class cannot report "no regressions"',
+    c.verdict === 'N_A', c.verdict);
+  check('the uncompared class is named for the reader',
+    c.uncompared.length === 1 && c.uncompared[0].kind === 'concern',
+    JSON.stringify(c.uncompared));
+  check('the section says the class was not compared',
+    /concern elements were NOT COMPARED/.test(gb.renderSection(c, {})));
+}
+
+{
+  // A class present on BOTH sides still compares normally — the guard must not
+  // fire on an ordinary run, or every comparison becomes N_A.
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'API contract', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'API contract', status: 'gap', lines: [[4, 4]], line_source: 'audit.md' }] }),
+    diff, {},
+  );
+  check('a class present on both sides compares as before',
+    c.rows[0].klass === 'REGRESSION' && c.verdict === 'UNMET', c.rows[0].klass);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n9. Sections, fences and headings');
+// ---------------------------------------------------------------------------
+
+{
+  // Reproduced: the gate's own instructions quote `## Baseline comparison` in a
+  // fenced block, so an auditor reproducing them plants a decoy. locateSection
+  // selected the decoy and writeSection wrote the real section INSIDE the
+  // fence, orphaning its closing backticks and deleting the prose after it.
+  const audit = [
+    '# Audit', '',
+    '## Method', '',
+    'The caller appends:', '',
+    '```markdown',
+    '## Baseline comparison',
+    '(the section goes here)',
+    '```', '',
+    '## Verdicts', '',
+    '| id | v |',
+  ].join('\n') + '\n';
+  check('a heading inside a fence is not the section', gb.locateSection(audit) === null);
+
+  const fenced = gb.fencedLines(audit.split('\n'));
+  check('fencedLines marks the fenced region', fenced[6] && fenced[7] && fenced[9]);
+  check('and leaves real headings alone', !fenced[2] && !fenced[11]);
+}
+
+{
+  // Reproduced against a real plan: `## Baseline comparison (caller, run 9 →
+  // run 10)` did not match, so `record` appended a SECOND section and left the
+  // first asserting the previous verdict — two contradictory comparisons under
+  // one heading name, with the pin on the newer.
+  const audit = '# A\n\n## Baseline comparison (caller, run 9 → run 10)\n\nold body\n\n## Next\n\nx\n';
+  const at = gb.locateSection(audit);
+  check('a suffixed heading is the same section', at !== null && at.start === 3, JSON.stringify(at));
+  check('and its range stops at the next heading', at && at.end === 5, JSON.stringify(at));
+}
+
+{
+  // Reproduced: writing the same section twice grew the file by one byte each
+  // time and changed its hash, so an idempotent `record` looked like a real
+  // edit and shifted every section below it.
+  const root = tmpdir();
+  const auditPath = path.join(root, 'audit.md');
+  fs.writeFileSync(auditPath, '# A\n\n## S\n\nx\n', 'utf8');
+  const sec = '## Baseline comparison\n\nBODY\n';
+  gb.writeSection(auditPath, sec);
+  const h1 = gb.hashContent(fs.readFileSync(auditPath, 'utf8'));
+  gb.writeSection(auditPath, sec);
+  const h2 = gb.hashContent(fs.readFileSync(auditPath, 'utf8'));
+  gb.writeSection(auditPath, sec);
+  const h3 = gb.hashContent(fs.readFileSync(auditPath, 'utf8'));
+  check('rewriting the same section is byte-stable', h1 === h2 && h2 === h3);
+
+  // And a following section survives the rewrite intact.
+  fs.appendFileSync(auditPath, '\n## Revision History\n| v1 |\n', 'utf8');
+  const beforeText = fs.readFileSync(auditPath, 'utf8');
+  gb.writeSection(auditPath, sec);
+  const afterText = fs.readFileSync(auditPath, 'utf8');
+  check('a following section is preserved when the comparison is rewritten',
+    /## Revision History/.test(afterText) && beforeText === afterText);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n10. Statuses, records and self-consistency');
+// ---------------------------------------------------------------------------
+
+{
+  // Reproduced: a plain lookup on an object literal reaches Object.prototype,
+  // so `constructor` returned a function — truthy, accepted as a status, not a
+  // status. stage-2-design.md promises unmapped tokens are refused.
+  for (const evil of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+    let threw = false;
+    try { gb.normalizeStatus(evil); } catch (err) { threw = true; }
+    check(`normalizeStatus refuses the prototype member "${evil}"`, threw);
+  }
+}
+
+{
+  // A real audit's matrices emit annotated statuses. Refusing them sends the
+  // caller back to hand-mapping every row, which is the transcription step this
+  // script removes.
+  check('an annotated status maps on its token',
+    gb.normalizeStatus('COVERED (see gap 2)') === 'pass');
+  check('and so does an annotated warning',
+    gb.normalizeStatus('OK (partial — see M13)') === 'pass');
+  check('ADDRESSED maps to pass', gb.normalizeStatus('ADDRESSED') === 'pass');
+  let threw = false;
+  try { gb.normalizeStatus('WOBBLY (see note)'); } catch (err) { threw = true; }
+  check('an unknown token with an annotation is still refused', threw);
+}
+
+{
+  // Reproduced: docUnchanged was applied to the VERDICT after classification,
+  // so an element with no line source scoped `unknown`, classified REGRESSION,
+  // and the section printed one regression and "Regressions are HIGH priority"
+  // above LINT-14 N_A. A record must not cite a section that contradicts it.
+  const emptyDiff = { touched: new Set(), coarse: false, changed: 0, total: 7 };
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'API contract', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'API contract', status: 'gap' }] }),
+    emptyDiff, { docUnchanged: true },
+  );
+  check('on an unchanged document a flip with no lines is VARIANCE, not a regression',
+    c.rows[0].klass === 'VARIANCE', c.rows[0].klass);
+  check('so the counts agree with the N_A verdict',
+    c.counts.regressions === 0 && c.verdict === 'N_A',
+    `${c.counts.regressions} / ${c.verdict}`);
+  check('and the section does not claim a HIGH-priority regression',
+    !/Regressions are HIGH priority/.test(gb.renderSection(c, {})));
+}
+
+{
+  // Reproduced: the first-audit branch fell through to the no-previous-document
+  // text, so the record cited a section reading "no copy of the previous
+  // baseline's document could be found ... every flip below is booked as a
+  // regression" above a verdict correctly reading "first audit".
+  const cmp = {
+    rows: [], counts: { regressions: 0, variance: 0, improvements: 0, degradations: 0,
+      new_items: 0, dropped: 0, not_comparable: 0, uncompared: 0, unchanged: 0, unscoped: 0 },
+    verdict: 'N_A', justification: 'first audit', diff: null, options: { firstAudit: true },
+  };
+  const s = gb.renderSection(cmp, {});
+  check('a first audit says it is a first audit', /Diff: NOT TAKEN/.test(s));
+  check('and does not claim a missing document copy',
+    !/no copy of the previous baseline's document could be found/.test(s));
+}
+
+{
+  // decisions.md says every class records its diff scope, and the rendered
+  // table is the only artifact that survives — the comparison JSON is
+  // explicitly disposable.
+  check('improvements report their diff scope', gb.SCOPED_CLASSES.has('IMPROVEMENT'));
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const c = gb.compare(
+    baseline({ lint_results: { 'LINT-05': 'fail' } }),
+    baseline({ lint_results: { 'LINT-05': { status: 'pass', lines: [[2, 2]], line_source: 'e' } } }),
+    diff, {},
+  );
+  const s = gb.renderSection(c, {});
+  const row = s.split('\n').find((l) => /LINT-05/.test(l));
+  check('and the improvement row shows unchanged rather than a dash',
+    /unchanged/.test(row), row);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n11. The CLI guards — the failures that exited 0');
+// ---------------------------------------------------------------------------
+
+const { execFileSync } = require('child_process');
+const CLI = path.join(__dirname, '..', 'plugins', 'toque', 'scripts', 'tq-gate-baseline.js');
+
+function runCli(args, cwd) {
+  try {
+    const out = execFileSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8' });
+    return { code: 0, out };
+  } catch (err) {
+    return { code: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
+  }
+}
+
+{
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(DOC_V1),
+    lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    run_number: 2, lint_results: { 'LINT-05': { status: 'fail', lines: [[4, 4]], line_source: 'e' } },
+  }), 'utf8');
+
+  // The worst finding of the set: a typo in the baseline filename made the
+  // script announce "first audit", record N_A and exit 0 — the regression check
+  // silently absent, wearing a green exit code.
+  const typo = runCli(['compare', 'prev-TYPO.json', 'cur.json', 'prev-doc.md', 'doc.md'], root);
+  check('a named previous baseline that does not exist is an input error',
+    typo.code === 2, `exit ${typo.code}`);
+  check('and the message says to use "-" for a real first audit',
+    /Pass "-" to declare this a first audit/.test(typo.out));
+
+  // The sentinel still works.
+  const first = runCli(['compare', '-', 'cur.json', '-', 'doc.md'], root);
+  check('the "-" sentinel still gives first-audit behaviour and exit 0',
+    first.code === 0 && /LINT-14: N_A/.test(first.out), `exit ${first.code}`);
+
+  // Reproduced: passing the current document as both arguments produced an
+  // empty diff, so the flip became variance and LINT-14 came back MET.
+  const wrongDoc = runCli(['compare', 'prev.json', 'cur.json', 'doc.md', 'doc.md'], root);
+  check('a previous document that does not match the baseline hash is refused',
+    wrongDoc.code === 2, `exit ${wrongDoc.code}`);
+  check('and the message shows both hashes',
+    /does not match the previous baseline's doc_sha256/.test(wrongDoc.out));
+
+  // The correct previous document still works, and still finds the regression.
+  const good = runCli(['compare', 'prev.json', 'cur.json', 'prev-doc.md', 'doc.md'], root);
+  check('the right previous document is accepted and the regression is found',
+    good.code === 1 && /LINT-14: UNMET/.test(good.out), `exit ${good.code}`);
+}
+
+{
+  // Reproduced: `lines: []` and an omitted `lines` disagreed on identical
+  // evidence — omitting gave MET, spelling it out gave UNMET.
+  const root = tmpdir();
+  fs.mkdirSync(path.join(root, 'ev'));
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(DOC_V1), lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'ev', 'LINT-05.json'), JSON.stringify({
+    criterion_id: 'LINT-05',
+    evidence: [{ artifact: 'doc.md', line_start: 2, line_end: 2, exact_quote: 'line2 unchanged', sha256: gb.hashContent(DOC_V2) }],
+    reasoning: 'r', verdict: 'UNMET',
+  }), 'utf8');
+
+  fs.writeFileSync(path.join(root, 'omitted.json'), JSON.stringify({
+    run_number: 2, lint_results: { 'LINT-05': 'fail' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'empty.json'), JSON.stringify({
+    run_number: 2, lint_results: { 'LINT-05': { status: 'fail', lines: [] } },
+  }), 'utf8');
+
+  const a = runCli(['compare', 'prev.json', 'omitted.json', 'prev-doc.md', 'doc.md', '--evidence', 'ev', '--root', root], root);
+  const b = runCli(['compare', 'prev.json', 'empty.json', 'prev-doc.md', 'doc.md', '--evidence', 'ev', '--root', root], root);
+  check('an omitted lines field fills from evidence and reads as variance',
+    a.code === 0 && /LINT-14: MET/.test(a.out), `exit ${a.code}`);
+  check('an explicit empty lines array behaves identically',
+    b.code === a.code && /LINT-14: MET/.test(b.out), `exit ${b.code}`);
+}
+
+{
+  // Reproduced: three snapshots of an unchanged document produced run_number 3
+  // and two history entries — a trend line invented out of one audit.
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'state.json'), '{}', 'utf8');
+
+  const one = runCli(['snapshot', 'cur.json', 'doc.md', 'state.json'], root);
+  const two = runCli(['snapshot', 'cur.json', 'doc.md', 'state.json'], root);
+  const st = JSON.parse(fs.readFileSync(path.join(root, 'state.json'), 'utf8'));
+  check('the first snapshot writes run 1', one.code === 0 && st.baseline.run_number === 1,
+    `exit ${one.code} run ${st.baseline.run_number}`);
+  check('a second snapshot of the same run on the same document is refused',
+    two.code === 2, `exit ${two.code}`);
+  check('and history is not inflated', st.history.length === 0, `${st.history.length}`);
+  check('the refusal explains what it would have invented',
+    /would push a duplicate into history and invent a run/.test(two.out));
+}
+
+{
+  // A carried-over audit_sha256 is a pin to a file the baseline does not
+  // describe, indistinguishable on disk from a correct one.
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'audit.md'), '# Audit\n\nbody\n', 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    lint_results: { 'LINT-05': 'pass' }, audit_sha256: 'deadbeef'.repeat(8),
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'state.json'), '{}', 'utf8');
+  runCli(['snapshot', 'cur.json', 'doc.md', 'state.json'], root);
+  const st = JSON.parse(fs.readFileSync(path.join(root, 'state.json'), 'utf8'));
+  check('audit_sha256 is recomputed from the audit beside the state file',
+    st.baseline.audit_sha256 === gb.hashContent('# Audit\n\nbody\n'),
+    st.baseline.audit_sha256);
+}
 // ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }

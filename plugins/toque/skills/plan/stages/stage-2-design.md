@@ -1045,6 +1045,18 @@ Exit 0 is LINT-14 MET or N_A, exit 1 is UNMET on at least one regression, exit 2
 is an input error with nothing written. Use its verdict; it is the caller's, and
 the auditor never has one.
 
+`-` IS THE ONLY WAY TO SAY "first audit", in either document position. A named
+previous baseline that does not exist is refused as a typo, not treated as
+nothing-to-compare: that path once made the script announce a first audit,
+record N_A and exit 0, with the regression check silently absent behind a green
+exit code.
+
+The previous document is AUTHENTICATED against the previous baseline's
+`doc_sha256` before it is diffed, and refused when it does not match. A
+recovery from git history is where a near-miss is likely — the right file at
+the wrong revision — and a near-miss would widen the variance exemption over
+text the diff never saw.
+
 `baseline-comparison.json` is an intermediate that `record` and `snapshot` read.
 The committed record of the comparison is the `## Baseline comparison` section
 in audit.md and the LINT-14 record pinned to it; keep the JSON beside them if a
@@ -1088,14 +1100,22 @@ trend tracking and are not classified as elements.
 Three status vocabularies are in use — this schema's
 `covered|partial|ok-excluded|gap`, the auditor's matrices emitting
 `OK|WARNING|GAP`, and its lint tables emitting `PASS|FAIL|N_A`. The script maps
-all three onto pass/partial/fail/n_a in one place. A token outside them is
-refused rather than guessed, because a status guessed as passing turns a real
-regression into an unchanged row and nothing on the page says so.
+all three onto pass/partial/fail/n_a in one place, and strips a trailing
+parenthetical first, so `COVERED (see gap 2)` maps on its token. A token
+outside them is refused rather than guessed, because a status guessed as
+passing turns a real regression into an unchanged row and nothing on the page
+says so.
 
 WHAT THE COMPARISON DECIDES, per element:
 - REGRESSION — was passing, now failing, and at least one line it cites lies
   inside the diff between the previous baseline's document and {doc}. HIGH
   priority in the audit output.
+- UNCOMPARED — the element's whole CLASS is absent from the previous baseline,
+  so it has no prior status. Reported as uncompared, never as new, and LINT-14
+  is N_A: a comparison that could not see a class cannot report "no
+  regressions" over it. Record that class in the baseline to close it. Without
+  this, a failing coverage or concern row whose class had no history read as
+  NEW, and the baseline recording least produced the most reassuring verdict.
 - AUDITOR VARIANCE — was passing, now failing, and every line it cites is
   unchanged since the previous baseline. Reported under baseline_comparison,
   never as a regression. The element still fails its own criterion; it does not
@@ -1112,10 +1132,13 @@ WHAT THE COMPARISON DECIDES, per element:
   cannot read as a regression on a document nobody changed.
 - UNCHANGED — same status.
 
-A flip the script CANNOT scope — no previous document, or a row that named no
-lines — is booked as a REGRESSION, marked unscoped in the section with the
-reason it could not be scoped. The exemption is never applied on a guess. The
-fix is to name the lines, not to accept the demotion.
+A PASS-TO-FAIL flip the script CANNOT scope — no previous document, a row that
+named no lines, or a citation past the end of {doc} — is booked as a REGRESSION,
+marked unscoped in the section with the reason.
+The exemption is never applied on a guess.
+The fix is to name the lines, not to accept the demotion. Other
+transitions are unaffected: an improvement or a degradation does not become a
+regression for want of a diff.
 
 LINT-14 is N_A on the first audit, and N_A when {doc}'s sha256 equals the
 previous baseline's doc_sha256 — the diff is then empty, so every flip is
@@ -1174,8 +1197,12 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/tq-gate-baseline.js" snapshot \
   --keep {the folder holding the moved-out prior records}
 ```
 
-It computes doc_sha256 from {doc} rather than trusting a transcribed one, fills
-run_number and date, moves the previous baseline WHOLE into the `history` array
+It refuses a second snapshot of the same run on the same document — that would
+push a duplicate into history and invent a trend out of one audit. It computes
+doc_sha256 from {doc} rather than trusting a transcribed one, recomputes
+audit_sha256 from the audit beside the state file rather than carrying a stale
+one forward, fills run_number and date, moves the previous baseline WHOLE into
+the `history` array
 — that is what goes into history, not a summary of it — records the
 comparison's verdict and counts on the new baseline for trend tracking, and
 writes the document copy as `doc-at-baseline-{run_number}.md`. Without `--keep`

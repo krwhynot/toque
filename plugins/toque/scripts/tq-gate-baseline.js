@@ -84,6 +84,8 @@ const STATUS_ALIASES = {
   warn: 'partial',
   warning: 'partial',
 
+  addressed: 'pass',
+
   fail: 'fail',
   unmet: 'fail',
   gap: 'fail',
@@ -109,14 +111,28 @@ const STATUS_ALIASES = {
 const RANK = { fail: 1, partial: 2, pass: 3 };
 
 function normalizeStatus(raw) {
-  const key = String(raw == null ? '' : raw).trim().toLowerCase();
-  const mapped = STATUS_ALIASES[key];
-  if (!mapped) {
+  // Strip a trailing parenthetical before looking the token up. Real audits
+  // write `COVERED (see gap 2)` and `OK (partial — see M13)` in their matrices,
+  // and refusing those sends the caller back to hand-mapping every row, which
+  // is the transcription step this script exists to remove. The parenthetical
+  // is a note to a human; the token before it is the status.
+  const key = String(raw == null ? '' : raw)
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim()
+    .toLowerCase();
+
+  // Object.hasOwn, not a truthiness test on the lookup. A plain `in`-style
+  // lookup on an object literal reaches Object.prototype, so `constructor`
+  // returned a function and `valueOf` a method — both truthy, both accepted as
+  // a status, neither a status. An unmapped token must be REFUSED; that promise
+  // is in stage-2-design.md and a prototype member silently kept it from being
+  // true.
+  if (!Object.hasOwn(STATUS_ALIASES, key)) {
     throw new Error(
       `unknown status ${JSON.stringify(raw)} — known: ${Object.keys(STATUS_ALIASES).join(', ')}`,
     );
   }
-  return mapped;
+  return STATUS_ALIASES[key];
 }
 
 /**
@@ -253,8 +269,13 @@ function changedLines(prevText, curText) {
 
   let i = 0;
   let j = 0;
+  // Matched pairs inside the changed middle, kept so displacement can be judged
+  // after the walk. A line that matched at a DIFFERENT offset than its partner
+  // did not survive the revision untouched — the revision moved it.
+  const matched = [];
   while (i < n && j < m) {
     if (prevMid[i] === curMid[j]) {
+      matched.push([i, j]);
       i++; j++;
     } else if (dp[(i + 1) * w + j] >= dp[i * w + (j + 1)]) {
       markDeletion(j);
@@ -266,6 +287,26 @@ function changedLines(prevText, curText) {
   }
   while (i < n) { markDeletion(j); i++; }
   while (j < m) { touched.add(p + j + 1); j++; }
+
+  // Displaced matches count as touched.
+  //
+  // LCS finds ONE maximal alignment, and when two blocks swap it is free to
+  // represent that as "the smaller block moved" — which leaves the larger
+  // block's lines matched, unmarked, and therefore eligible for the variance
+  // exemption. Swapping two adjacent blocks left the relocated lines outside
+  // the touched set entirely, so a concern citing a moved line was exempted on
+  // text the revision plainly did move.
+  //
+  // A line whose offset shifted is marked. This OVER-reports: every line after
+  // a single insertion is displaced by one, and all of them are now touched.
+  // That is the intended direction — over-reporting can only turn a variance
+  // into a regression, and the gate's standing rule is that the exemption is
+  // never applied on a guess. The common prefix and suffix are trimmed before
+  // this runs, so an ordinary revision to one section does not drag the whole
+  // document in with it.
+  for (const [pi, cj] of matched) {
+    if (pi !== cj) touched.add(p + cj + 1);
+  }
 
   return { touched, coarse: false, changed: touched.size, total: cur.length };
 }
@@ -379,7 +420,13 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
     for (const item of items) {
       if (!item || typeof item.artifact !== 'string') continue;
       const art = item.artifact.split(path.sep).join('/');
-      if (art !== wanted && path.basename(art) !== path.basename(wanted)) continue;
+      // The path must match, whole. A basename fallback used to stand here so a
+      // caller who passed the document under a different root still got their
+      // lines filled — and it imported line 1 of `vendor/spec.md` as a
+      // coordinate in `docs/spec.md`, then scoped a flip against it. Two files
+      // sharing a name are two files; the convenience was worth less than the
+      // wrong answer it produced.
+      if (art !== wanted) continue;
       const start = Number(item.line_start);
       const end = Number(item.line_end);
       if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) continue;
@@ -406,6 +453,25 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
 function scopeOf(el, diff) {
   if (!diff) return { scope: 'unknown', reason: 'no previous document to diff against' };
   if (!el.lines.length) return { scope: 'unknown', reason: 'no line source on this element' };
+
+  // A citation past the end of the document is not a citation of unchanged
+  // text — it is a citation of nothing, and the only honest answer is that the
+  // question could not be asked.
+  //
+  // Without this, `lines: [[900, 905]]` against a 400-line spec matched no
+  // touched line, fell through to "every line cited is unchanged", and earned
+  // the variance exemption. A stale line number copied from the PREVIOUS
+  // version of the document is the most likely way to produce one, which makes
+  // this failure most likely exactly when the document changed most — and the
+  // transcription error it rewards is the one this script was written to end.
+  const outOfRange = el.lines.filter(([, b]) => b > diff.total);
+  if (outOfRange.length) {
+    return {
+      scope: 'unknown',
+      reason: `cites line ${outOfRange[0][1]} of a ${diff.total}-line document`,
+    };
+  }
+
   for (const [a, b] of el.lines) {
     for (let l = a; l <= b; l++) {
       if (diff.touched.has(l)) return { scope: 'changed', reason: `line ${l} is inside the diff` };
@@ -434,6 +500,27 @@ function compare(prevBaseline, curBaseline, diff, opts) {
   const rows = [];
   const keys = new Set([...prev.keys(), ...cur.keys()]);
 
+  // A whole element CLASS missing from the previous baseline is not a set of new
+  // elements — it is a class that was never compared, and saying so is the only
+  // honest report.
+  //
+  // Without this, a failing coverage or concern row whose class has no history
+  // classified as NEW before its status was looked at, and NEW does not fail
+  // LINT-14. So the baselines that record the least produce the most reassuring
+  // verdict: a plan whose baseline carries only lint_results gets a clean
+  // LINT-14 no matter how badly its coverage matrix is doing. That is the
+  // leniency this rule exists to refuse, and it is the shape of R4-01 one level
+  // up — R4-01 was rows without line sources, this is rows without any prior
+  // record to compare against.
+  const KINDS = ['lint', 'coverage', 'scenario', 'concern'];
+  const uncompared = [];
+  for (const kind of KINDS) {
+    const prevHas = [...prev.values()].some((e) => e.kind === kind);
+    const curCount = [...cur.values()].filter((e) => e.kind === kind).length;
+    if (!prevHas && curCount > 0) uncompared.push({ kind, count: curCount });
+  }
+  const uncomparedKinds = new Set(uncompared.map((u) => u.kind));
+
   for (const key of [...keys].sort()) {
     const a = prev.get(key);
     const b = cur.get(key);
@@ -442,7 +529,8 @@ function compare(prevBaseline, curBaseline, diff, opts) {
       rows.push({
         key, kind: b.kind, id: b.id, label: b.label,
         from: null, to: b.status, lines: b.lines, line_source: b.line_source,
-        scope: null, scope_reason: null, klass: 'NEW',
+        scope: null, scope_reason: null,
+        klass: uncomparedKinds.has(b.kind) ? 'UNCOMPARED' : 'NEW',
       });
       continue;
     }
@@ -472,10 +560,18 @@ function compare(prevBaseline, curBaseline, diff, opts) {
       row.klass = 'NOT-COMPARABLE';
     } else if (a.status === 'pass' && b.status === 'fail') {
       // D10, stated exactly: a regression is a flip on text the revision changed.
-      row.klass = scope === 'changed' ? 'REGRESSION'
-        : scope === 'unchanged' ? 'VARIANCE'
-          : 'REGRESSION';
-      if (scope === 'unknown') row.unscoped = true;
+      //
+      // docUnchanged is tested FIRST, not applied to the verdict afterwards.
+      // When the document is byte-identical to the previous baseline's, no line
+      // can be inside the diff, so the block's own sentence is "every flip is
+      // variance" — but an element with no line source scoped as `unknown` and
+      // classified REGRESSION anyway. The section then printed one regression,
+      // "Regressions are HIGH priority", and LINT-14 N_A on the same screen.
+      row.klass = options.docUnchanged ? 'VARIANCE'
+        : scope === 'changed' ? 'REGRESSION'
+          : scope === 'unchanged' ? 'VARIANCE'
+            : 'REGRESSION';
+      if (!options.docUnchanged && scope === 'unknown') row.unscoped = true;
     } else if (RANK[b.status] < RANK[a.status]) {
       // covered -> partial, ok -> warn, partial -> gap. R4-06: three of these
       // occurred in one stress scenario and the executor invented a category for
@@ -499,6 +595,7 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     dropped: count('DROPPED'),
     not_comparable: count('NOT-COMPARABLE'),
     unchanged: count('UNCHANGED'),
+    uncompared: count('UNCOMPARED'),
     unscoped: rows.filter((r) => r.unscoped).length,
   };
 
@@ -508,6 +605,18 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     verdict = 'N_A';
     justification = 'caller-decided: {doc} is byte-identical to the previous baseline\'s '
       + 'document, so the diff is empty and every flip is auditor variance.';
+  } else if (uncompared.length) {
+    // A comparison that could not look at a whole class of element has not
+    // established "no regressions" — it has established "no regressions among
+    // the classes I could see". MET would be a stronger claim than the inputs
+    // support, and UNMET would blame the document for a bookkeeping gap. N_A is
+    // what the registry reserves for a comparison that could not be made, and
+    // the section names the missing classes so the fix is obvious.
+    verdict = 'N_A';
+    justification = 'caller-decided: the previous baseline recorded no '
+      + `${uncompared.map((u) => u.kind).join(', ')} element(s), so `
+      + `${uncompared.reduce((n, u) => n + u.count, 0)} element(s) in this audit have nothing to `
+      + 'compare against. A comparison missing a whole class cannot report "no regressions".';
   } else if (counts.regressions > 0) {
     verdict = 'UNMET';
     justification = `caller-decided from the baseline comparison: ${counts.regressions} `
@@ -518,7 +627,7 @@ function compare(prevBaseline, curBaseline, diff, opts) {
       + `now fails on text the revision changed (${counts.variance} auditor-variance flip(s) discounted).`;
   }
 
-  return { rows, counts, verdict, justification, diff, options };
+  return { rows, counts, verdict, justification, diff, options, uncompared };
 }
 
 // ---------------------------------------------------------------------------
@@ -527,8 +636,16 @@ function compare(prevBaseline, curBaseline, diff, opts) {
 
 const SECTION_HEADING = '## Baseline comparison';
 
-/** Classes whose outcome turned on the diff scope, and only those. */
-const SCOPED_CLASSES = new Set(['REGRESSION', 'VARIANCE', 'DEGRADATION']);
+/**
+ * Classes whose row shows its diff scope.
+ *
+ * IMPROVEMENT is here even though nothing turns on it, because decisions.md
+ * says every class records its diff scope and the rendered table is the only
+ * artifact that survives — the intermediate JSON is explicitly disposable. An
+ * improvement on unchanged text is the mirror of a variance, and a reader
+ * comparing two runs should be able to see that without re-running anything.
+ */
+const SCOPED_CLASSES = new Set(['REGRESSION', 'VARIANCE', 'DEGRADATION', 'IMPROVEMENT']);
 
 function plural(n, one, many) {
   return `${n} ${n === 1 ? one : many}`;
@@ -557,14 +674,31 @@ function renderSection(cmp, meta) {
   out.push(`- Previous document: ${m.previous_doc_file ? `\`${m.previous_doc_file}\`` : 'NOT FOUND'}`
     + `${m.previous_doc_sha256 ? `, sha256 \`${m.previous_doc_sha256}\`` : ''}`);
   out.push(`- Current document: \`${m.doc_file || '(unknown)'}\`, sha256 \`${m.doc_sha256 || '(unknown)'}\``);
-  if (cmp.options && cmp.options.docUnchanged) {
-    out.push('- Diff: EMPTY — the document is byte-identical to the previous baseline\'s.');
+  if (cmp.options && cmp.options.firstAudit) {
+    // Its own branch. This used to fall through to the no-previous-document
+    // text, so a first audit's record carried "no copy of the previous
+    // baseline's document could be found ... every flip below is booked as a
+    // regression" directly above a verdict correctly reading "first audit, no
+    // previous baseline". The section a record cites must not contradict the
+    // verdict the record carries.
+    out.push('- Diff: NOT TAKEN — this is the first audit, so there is no previous '
+      + 'baseline and nothing to compare against. LINT-14 is N_A and stays in the denominator.');
+  } else if (cmp.options && cmp.options.docUnchanged) {
+    out.push('- Diff: EMPTY — the document is byte-identical to the previous baseline\'s, '
+      + 'so no line can be inside it and every flip below is auditor variance.');
   } else if (cmp.diff) {
     out.push(`- Diff: ${cmp.diff.changed} of ${cmp.diff.total} current lines changed`
       + `${cmp.diff.coarse ? ' (coarse fallback: the changed region was too large to align line by line, so all of it counts as changed)' : ''}`);
   } else {
     out.push('- Diff: NOT AVAILABLE — no copy of the previous baseline\'s document could be found, '
-      + 'so the variance exemption is not applied and every flip below is booked as a regression.');
+      + 'so the variance exemption is not applied and every pass-to-fail flip below is booked as '
+      + 'a regression. Other transitions are unaffected.');
+  }
+  for (const u of (cmp.uncompared || [])) {
+    out.push(`- **${u.kind} elements were NOT COMPARED** — the previous baseline records none, `
+      + `so this audit's ${u.count} ${u.kind} element(s) have no prior status. They are listed `
+      + 'below as UNCOMPARED, not as new, and LINT-14 cannot report "no regressions" over a '
+      + 'class it could not see. Record them in the baseline to close this.');
   }
   if (m.evidence_filled && m.evidence_filled.length) {
     out.push(`- Line sources filled from evidence records: ${m.evidence_filled.join(', ')}`);
@@ -578,6 +712,7 @@ function renderSection(cmp, meta) {
   out.push(`Also: ${plural(cmp.counts.degradations, 'degradation', 'degradations')}, `
     + `${plural(cmp.counts.dropped, 'dropped element', 'dropped elements')}, `
     + `${plural(cmp.counts.not_comparable, 'not comparable', 'not comparable')}, `
+    + `${plural(cmp.counts.uncompared, 'uncompared', 'uncompared')}, `
     + `${plural(cmp.counts.unchanged, 'unchanged', 'unchanged')}. `
     + 'A DROPPED element beside a NEW one is usually a renamed row, not a lost one.');
   out.push('');
@@ -623,13 +758,48 @@ function renderSection(cmp, meta) {
  * cannot change the range this section occupies, only the file's hash. That
  * makes `repin` a hash update rather than a re-location in the common case.
  */
+/**
+ * Which lines of a markdown file are inside a fenced code block.
+ *
+ * A heading inside a fence is an EXAMPLE of a heading, not one. The gate's own
+ * instructions quote `## Baseline comparison` in a fenced block, so an auditor
+ * that reproduces those instructions in its report plants a decoy — and
+ * `locateSection` selected the decoy, `writeSection` wrote the real section
+ * inside the fence, orphaned its closing backticks and deleted the prose after
+ * it. The record still validated, because quote fidelity says nothing about
+ * whether the quoted lines are the right ones.
+ */
+function fencedLines(lines) {
+  const inFence = new Array(lines.length).fill(false);
+  let fence = null;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (fence === null) {
+      if (m) { fence = m[1][0]; inFence[i] = true; }
+    } else {
+      inFence[i] = true;
+      if (m && m[1][0] === fence) fence = null;
+    }
+  }
+  return inFence;
+}
+
 function locateSection(auditText) {
   const lines = splitLines(auditText);
-  const start = lines.findIndex((l) => l.trim() === SECTION_HEADING);
+  const inFence = fencedLines(lines);
+
+  // Match the heading with or without a trailing parenthetical. Real plans
+  // write `## Baseline comparison (caller, run 9 → run 10)`, and an exact-match
+  // rule returned null against those, so `record` appended a SECOND section and
+  // left the first one on disk still asserting the previous verdict — two
+  // contradictory comparisons under one heading name.
+  const isHeading = (l) => /^##\s+Baseline comparison\s*(\(.*\))?\s*$/.test(l.trim());
+
+  const start = lines.findIndex((l, i) => !inFence[i] && isHeading(l));
   if (start === -1) return null;
   let end = lines.length - 1;
   for (let i = start + 1; i < lines.length; i++) {
-    if (/^##\s/.test(lines[i])) { end = i - 1; break; }
+    if (!inFence[i] && /^##\s/.test(lines[i])) { end = i - 1; break; }
   }
   while (end > start && lines[end].trim() === '') end--;
   return { start: start + 1, end: end + 1 };
@@ -650,15 +820,26 @@ function writeSection(auditPath, sectionText) {
   const lines = splitLines(raw);
   const at = locateSection(raw);
 
+  // Trim the section's own trailing blanks and supply exactly one separator, so
+  // writing the same section twice is a no-op on the bytes. It used to keep the
+  // blank lines already in the file AND the empty final element that splitting
+  // a newline-terminated string produces, so every rewrite grew the file by one
+  // byte and changed its hash — which makes a re-pin after an idempotent
+  // `record` look like a real edit and shifts every section below it.
+  const body = splitLines(sectionText);
+  while (body.length && body[body.length - 1].trim() === '') body.pop();
+
   let next;
   if (at) {
     const before = lines.slice(0, at.start - 1);
     const after = lines.slice(at.end);
-    next = [...before, ...splitLines(sectionText), ...after];
+    // Drop blanks the old section left behind, then emit one.
+    while (after.length && after[0].trim() === '') after.shift();
+    next = [...before, ...body, ...(after.length ? [''] : []), ...after];
   } else {
-    const body = lines.slice();
-    while (body.length && body[body.length - 1].trim() === '') body.pop();
-    next = [...body, '', ...splitLines(sectionText)];
+    const head = lines.slice();
+    while (head.length && head[head.length - 1].trim() === '') head.pop();
+    next = [...head, '', ...body];
   }
 
   let text = next.join('\n');
@@ -693,6 +874,25 @@ function pin(auditPath, evidenceDir, rootDir, verdict, justification) {
     .split(path.sep).join('/');
   if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
     throw new Error(`audit.md is outside the root passed as --root: ${auditPath} vs ${rootDir}`);
+  }
+
+  // Containment again, after resolving links — the same check, in the same
+  // order, as tq-evidence-validate.js. The test above is lexical, and a Windows
+  // junction or a symlink inside the root passes it while pointing outside, so
+  // a record could be written happily here and then demoted EVIDENCE-PATH-ESCAPE
+  // by the validator the gate runs next. A producer that emits records its own
+  // validator rejects is worse than one that refuses: the caller finds out two
+  // steps later, against a file they did not edit.
+  try {
+    const realRoot = fs.realpathSync(path.resolve(rootDir));
+    const realAudit = fs.realpathSync(path.resolve(auditPath));
+    const realRel = path.relative(realRoot, realAudit);
+    if (!realRel || realRel.startsWith('..') || path.isAbsolute(realRel)) {
+      throw new Error(`audit.md resolves outside --root through a link: ${realAudit} vs ${realRoot}`);
+    }
+  } catch (err) {
+    if (/resolves outside/.test(err.message)) throw err;
+    throw new Error(`could not resolve audit.md against --root: ${err.message}`);
   }
 
   const record = {
@@ -778,14 +978,31 @@ function cmdCompare(argv) {
   const curFile = readJson(curBaselineArg, 'current baseline');
   const curBaseline = curFile.baseline || curFile;
 
+  // A NAMED previous baseline that does not exist is an input error, not a
+  // first audit.
+  //
+  // These two used to share a branch, so a mistyped filename made the script
+  // announce "first audit", record LINT-14 N_A and exit 0 — the regression
+  // check silently absent, reported as success. That is the worst shape a
+  // failure can take in this repository: not a wrong answer, a missing one
+  // wearing a green exit code. `-` is the sentinel and the ONLY way to ask for
+  // first-audit behaviour.
+  if (prevBaselineArg !== '-' && !fs.existsSync(prevBaselineArg)) {
+    console.error(`previous baseline not found: ${prevBaselineArg}`);
+    console.error('Pass "-" to declare this a first audit. A named baseline that does not');
+    console.error('exist is a typo, and treating it as "nothing to compare" would turn the');
+    console.error('regression check off and still exit 0.');
+    process.exit(2);
+  }
+
   // A first audit has nothing to compare against. LINT-14 is N_A and stays in
   // the denominator; the registry reserves N_A for exactly this case.
-  if (prevBaselineArg === '-' || !fs.existsSync(prevBaselineArg)) {
+  if (prevBaselineArg === '-') {
     const cmp = {
       rows: [],
       counts: {
         regressions: 0, variance: 0, improvements: 0, degradations: 0,
-        new_items: 0, dropped: 0, not_comparable: 0, unchanged: 0, unscoped: 0,
+        new_items: 0, dropped: 0, not_comparable: 0, uncompared: 0, unchanged: 0, unscoped: 0,
       },
       verdict: 'N_A',
       justification: 'caller-decided: first audit, no previous baseline exists to compare against.',
@@ -810,8 +1027,32 @@ function cmdCompare(argv) {
   if (docUnchanged) {
     diff = { touched: new Set(), coarse: false, changed: 0, total: splitLines(docText).length };
   } else if (prevDocArg !== '-' && fs.existsSync(prevDocArg)) {
+    // The supplied previous document must BE the one the previous baseline was
+    // taken on. The baseline records doc_sha256 and this used to read it only
+    // for the byte-identical exemption, never to check the file it was handed:
+    // passing the current document as both arguments produced an empty diff, so
+    // every flip became variance and LINT-14 came back MET. A recovery from git
+    // history is exactly where a near-miss is likely — an adjacent commit, the
+    // right file at the wrong revision — and a near-miss must not silently
+    // widen the exemption.
+    const prevText = fs.readFileSync(prevDocArg, 'utf8');
+    const prevSha = hashContent(prevText);
+    if (prevBaseline.doc_sha256 && prevSha !== String(prevBaseline.doc_sha256).toLowerCase()) {
+      console.error(`previous document does not match the previous baseline's doc_sha256:`);
+      console.error(`  supplied ${prevDocArg}`);
+      console.error(`    hashes ${prevSha}`);
+      console.error(`  baseline ${String(prevBaseline.doc_sha256).toLowerCase()}`);
+      console.error('Recover the document that hashes to the baseline value, or pass "-" to');
+      console.error('declare no copy is available. A near-miss would widen the variance');
+      console.error('exemption over text this diff never saw.');
+      process.exit(2);
+    }
+    if (!prevBaseline.doc_sha256) {
+      console.error('WARNING: the previous baseline records no doc_sha256, so the supplied');
+      console.error('previous document could not be authenticated. The diff is taken on trust.');
+    }
     prevDocFile = prevDocArg;
-    diff = changedLines(fs.readFileSync(prevDocArg, 'utf8'), docText);
+    diff = changedLines(prevText, docText);
   }
 
   let cmp;
@@ -827,7 +1068,15 @@ function cmdCompare(argv) {
       if (!curBaseline.lint_results) curBaseline.lint_results = {};
       const v = curBaseline.lint_results[el.id];
       if (v && typeof v === 'object' && !Array.isArray(v)) {
-        if (!v.lines) { v.lines = el.lines; v.line_source = el.line_source; }
+        // Test for EMPTINESS, not truthiness. `[]` is truthy, so a baseline
+        // that wrote `"lines": []` — the natural spelling for "I have no lines
+        // to give you" — kept its empty array, the filled evidence was thrown
+        // away, and the element scoped as unscoped. Omitting the field gave MET
+        // and spelling it out gave UNMET, on identical evidence.
+        if (!Array.isArray(v.lines) || v.lines.length === 0) {
+          v.lines = el.lines;
+          v.line_source = el.line_source;
+        }
       } else {
         curBaseline.lint_results[el.id] = {
           status: v, lines: el.lines, line_source: el.line_source,
@@ -946,8 +1195,29 @@ function cmdSnapshot(argv) {
   // the element statuses needs all of them; a summary would have to be re-chosen
   // every time the baseline schema grows a field.
   if (!Array.isArray(state.history)) state.history = [];
-  if (state.baseline && Object.keys(state.baseline).length) {
-    state.history.push(state.baseline);
+
+  // Refuse a second snapshot of the same run.
+  //
+  // This step is not idempotent by nature — it MOVES the standing baseline into
+  // history — so running it twice on an unchanged document pushed the same
+  // baseline again and incremented run_number again. Three runs produced
+  // "run 3" with two history entries: a trend line invented out of one audit.
+  // The guard is the recorded document hash plus the run number, which together
+  // identify the audit this baseline describes.
+  const standing = state.baseline;
+  const docSha = hashContent(docText);
+  if (standing && Object.keys(standing).length) {
+    const sameDoc = standing.doc_sha256 && String(standing.doc_sha256).toLowerCase() === docSha;
+    const sameRun = baseline.run_number != null
+      && Number(baseline.run_number) === Number(standing.run_number);
+    if (sameDoc && (sameRun || baseline.run_number == null)) {
+      console.error(`state already holds a baseline for run ${standing.run_number} on this exact document.`);
+      console.error(`  ${stateArg}`);
+      console.error('Snapshotting again would push a duplicate into history and invent a run.');
+      console.error('Take a new audit first, or edit the state file by hand if this is a repair.');
+      process.exit(2);
+    }
+    state.history.push(standing);
   }
 
   const prevRun = state.history.length
@@ -962,6 +1232,20 @@ function cmdSnapshot(argv) {
   if (cmpFile && fs.existsSync(cmpFile)) {
     const cmp = readJson(cmpFile, 'comparison');
     baseline.comparison = { verdict: cmp.verdict, counts: cmp.counts };
+  }
+
+  // A carried-over audit_sha256 is worse than none. Plans record it beside
+  // doc_sha256, and a baseline prepared by copying the previous one brought the
+  // OLD audit's hash into the new record — a pin to a file this baseline never
+  // describes, indistinguishable on disk from a correct one. Recompute it from
+  // the audit this baseline is being taken on, or drop it.
+  const auditGuess = path.join(path.dirname(stateArg), 'audit.md');
+  if (fs.existsSync(auditGuess)) {
+    baseline.audit_sha256 = hashContent(fs.readFileSync(auditGuess, 'utf8'));
+  } else if (baseline.audit_sha256) {
+    delete baseline.audit_sha256;
+    console.error(`WARNING: no audit.md beside ${stateArg}; dropped a carried-over audit_sha256`);
+    console.error('rather than record a hash of an audit this baseline does not describe.');
   }
 
   let kept = null;
@@ -982,8 +1266,8 @@ function cmdSnapshot(argv) {
   if (kept) {
     console.log(`  document copy kept at ${baseline.doc_copy}`);
   } else {
-    console.log('  NO document copy kept — the next comparison cannot diff, and every flip');
-    console.log('  it finds will be booked as a regression. Pass --keep <dir>.');
+    console.log('  NO document copy kept — the next comparison cannot diff, and every');
+    console.log('  pass-to-fail flip it finds will be booked as a regression. Pass --keep <dir>.');
   }
   process.exit(0);
 }
@@ -1000,6 +1284,7 @@ if (require.main === module) {
 
 module.exports = {
   hashContent, normalizeStatus, normalizeLines, changedLines, readElements,
-  fillFromEvidence, scopeOf, compare, renderSection, locateSection, writeSection,
-  pin, SECTION_HEADING, STATUS_ALIASES, RANK, SELF_REFERENTIAL, LCS_CELL_LIMIT,
+  fillFromEvidence, scopeOf, compare, renderSection, locateSection, fencedLines,
+  writeSection, pin, SECTION_HEADING, STATUS_ALIASES, RANK, SELF_REFERENTIAL,
+  LCS_CELL_LIMIT, SCOPED_CLASSES,
 };

@@ -73,15 +73,16 @@ Every revision iteration spawns a **fresh** auditor, which is what keeps the sec
 
 `tq-gate-baseline.js` decides which is which. It diffs the current document against a copy of the one the previous baseline was taken on, then classifies every element whose status changed:
 
-- **Regression** — was passing, now failing, and at least one line it cites lies inside the diff. The revision broke it. This is the only outcome that fails LINT-14.
+- **Regression** — was passing, now failing, and at least one line it cites lies inside the diff. This is the only outcome that fails LINT-14.
 - **Auditor variance** — was passing, now failing, and every line it cites is unchanged. Reported, and the element still fails its own criterion, but the revision is not blamed for it.
 - **Improvement**, **degradation**, **new**, **dropped**, **not comparable** — reported for awareness.
+- **Uncompared** — the element's whole class is missing from the previous baseline, so it has no prior status. LINT-14 is `N_A`: a comparison that could not see a class of element cannot claim there were no regressions in it.
 
 Every element carries the lines it is about and the file those lines were read from. Lint criteria take them from their evidence record; coverage, scenario and cross-cutting-concern rows have no record and name them in the baseline. A flip the tool cannot scope — no previous copy of the document, or an element that named no lines — is recorded as a regression and says so. The exemption is never applied on a guess.
 
 The result is written into `audit.md` as a `## Baseline comparison` section listing every element compared, and the LINT-14 evidence record is pinned to that section.
 
-**What this establishes:** whether the revision made something worse. It does not establish that the auditor is consistent, and it does not judge an element's status — the auditor does that, and this only compares two of its answers.
+**What this establishes:** that an element which was passing now fails, on text the revision changed. That is a classification under D10's citation-overlap rule, not a finding that the revision *caused* the failure — rewording a harmless line inside a cited range while a fresh reviewer notices a pre-existing defect there produces the same result. It does not establish that the auditor is consistent, and it does not judge an element's status; the auditor does that, and this only compares two of its answers.
 
 ## 4. Evaluate all four conditions
 
