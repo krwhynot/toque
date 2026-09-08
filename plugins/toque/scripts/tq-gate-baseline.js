@@ -338,7 +338,7 @@ function changedLines(prevText, curText) {
   }
 
   // Lines a MOVED block passed over count as touched, interior included.
-  for (const cj of crossedByMovedBlocks(matched, prevMid, curMid)) {
+  for (const cj of crossedByMovedBlocks(matched, prevMid, curMid, prev, cur)) {
     touched.add(p + cj + 1);
   }
 
@@ -377,44 +377,76 @@ function changedLines(prevText, curText) {
  * provenance ambiguous. The honest limit is that the alignment cannot show a
  * retained line was unaffected — not that its interior is auditor variance.
  */
-function crossedByMovedBlocks(matched, prevMid, curMid) {
+function crossedByMovedBlocks(matched, prevMid, curMid, prevAll, curAll) {
   const crossed = new Set();
   if (!matched.length) return crossed;
 
-  const runsOf = (taken, len) => {
-    const out = [];
-    let cur = null;
-    for (let i = 0; i < len; i++) {
-      if (taken.has(i)) { cur = null; continue; }
-      if (cur && cur.end === i - 1) cur.end = i;
-      else { cur = { start: i, end: i }; out.push(cur); }
-    }
-    return out;
+  const matchedPrev = new Set(matched.map(([pi]) => pi));
+  const matchedCur = new Set(matched.map(([, cj]) => cj));
+
+  // DISTINCTIVENESS, counted over the whole documents rather than the diff.
+  //
+  // The first version paired any unmatched run whose bytes were equal. A markdown
+  // document is mostly repeated single lines — blanks, `---`, `|---|---|` — and
+  // one of those pairing with an identical copy at the far end marks everything
+  // between. Measured: deleting one blank line below the title and adding one
+  // before the appendix marked 145 of 150 lines, and relocating a single `---`
+  // marked 334 of 361. That is the variance exemption switched off by a
+  // whitespace edit, which is the third time this file has produced that failure.
+  //
+  // A line that occurs more than once ANYWHERE cannot identify anything: its
+  // provenance is ambiguous, so it supports no claim about what moved. Note that
+  // uniqueness among unmatched runs is not enough — the blank-line case has
+  // exactly one unmatched blank on each side and still blows up.
+  const freq = (lines) => {
+    const m = new Map();
+    for (const l of lines) m.set(l, (m.get(l) || 0) + 1);
+    return m;
   };
+  const fp = freq(prevAll);
+  const fc = freq(curAll);
+  const distinctive = (l) => fp.get(l) === 1 && fc.get(l) === 1;
 
-  const prevRuns = runsOf(new Set(matched.map(([pi]) => pi)), prevMid.length);
-  const curRuns = runsOf(new Set(matched.map(([, cj]) => cj)), curMid.length);
-  if (!prevRuns.length || !curRuns.length) return crossed;
-
-  const byContent = new Map();
-  for (const r of curRuns) {
-    const key = curMid.slice(r.start, r.end + 1).join('\n');
-    if (!byContent.has(key)) byContent.set(key, []);
-    byContent.get(key).push(r);
+  const curAt = new Map();
+  for (let j = 0; j < curMid.length; j++) {
+    if (!matchedCur.has(j) && distinctive(curMid[j])) curAt.set(curMid[j], j);
   }
 
-  const used = new Set();
-  const moves = [];
-  for (const pr of prevRuns) {
-    const key = prevMid.slice(pr.start, pr.end + 1).join('\n');
-    const hit = (byContent.get(key) || []).find((c) => !used.has(c));
-    if (hit) { used.add(hit); moves.push({ prev: pr, cur: hit }); }
+  // Pairing is LINE by line, not run by run. Requiring two whole unmatched runs
+  // to be byte-equal made the detector brittle in the ordinary case: move a block
+  // and write one revision note beside it, and the new run is one line longer, so
+  // the runs no longer pair, no move is found, and the reordering the note is
+  // ABOUT goes back to being auditor variance. Distinctive lines are matched
+  // individually and regrouped below, so text added next to a moved block does
+  // not hide the move.
+  //
+  // No `used` set is needed: a distinctive line has at most one home on each
+  // side, so there is nothing to disambiguate and no greedy choice to get wrong.
+  const pairs = [];
+  for (let i = 0; i < prevMid.length; i++) {
+    if (matchedPrev.has(i) || !distinctive(prevMid[i])) continue;
+    const j = curAt.get(prevMid[i]);
+    if (j !== undefined) pairs.push([i, j]);
+  }
+  if (!pairs.length) return crossed;
+
+  // Regroup: lines that were consecutive before and stayed consecutive after are
+  // one block, so the crossing test runs once per block rather than once per line.
+  const blocks = [];
+  for (const [i, j] of pairs) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.pEnd === i - 1 && last.cEnd === j - 1) {
+      last.pEnd = i;
+      last.cEnd = j;
+    } else {
+      blocks.push({ pStart: i, pEnd: i, cStart: j, cEnd: j });
+    }
   }
 
-  for (const mv of moves) {
+  for (const b of blocks) {
     for (const [pi, cj] of matched) {
-      const crossedDown = pi > mv.prev.end && cj < mv.cur.start;
-      const crossedUp = pi < mv.prev.start && cj > mv.cur.end;
+      const crossedDown = pi > b.pEnd && cj < b.cStart;
+      const crossedUp = pi < b.pStart && cj > b.cEnd;
       if (crossedDown || crossedUp) crossed.add(cj);
     }
   }
@@ -895,23 +927,48 @@ function fencedLines(lines) {
   let fence = null;
 
   // Literal HTML blocks are not markdown, so neither fences nor headings inside
-  // them are structure. Two shapes matter here, both CommonMark leaf blocks:
-  // a comment (`<!--` to `-->`) and a raw-text element (`<pre>`, `<script>`,
-  // `<style>`, `<textarea>`).
+  // them are structure. Three CommonMark shapes matter here: a raw-text element
+  // (type 1), a comment (type 2), and a block-level tag (type 6).
   //
-  // Both were being read as markdown. An audit whose evidence log wrapped a
-  // delimiter example in `<pre>` had those backticks open a fence that nothing
-  // closed, so `record` refused the file with "close the fence" against a fence
-  // that did not exist — an audit no re-run could repair. And an `# H1` written
-  // inside an HTML COMMENT terminated the comparison section, so the pin quoted
-  // three lines and excluded the verdict and the regression row it rests on.
-  // The validator passed that quote: quote fidelity says nothing about whether
-  // the quoted span is the right one.
+  // The first two were being read as markdown. An audit whose evidence log
+  // wrapped a delimiter example in `<pre>` had those backticks open a fence that
+  // nothing closed, so `record` refused the file with "close the fence" against a
+  // fence that did not exist — an audit no re-run could repair. And an `# H1`
+  // written inside an HTML COMMENT terminated the comparison section, so the pin
+  // quoted three lines and excluded the verdict and the regression row it rests
+  // on. The validator passed that quote: quote fidelity says nothing about
+  // whether the quoted span is the right one.
+  //
+  // Type 6 is here for a narrower reason. `<table><tr><td>` followed by a `<pre>`
+  // is an ordinary evidence excerpt; without type 6 the table is invisible, the
+  // nested `<pre>` opens raw-text shielding that never closes, and the audit
+  // becomes unwritable. A type-6 block ends at a BLANK LINE, so recognising it
+  // keeps the nested tag from starting a block of its own.
+  //
+  // Boundaries follow the spec rather than \s: the character after a tag name
+  // must be a space, a tab, `>` or end of line. `\s` also accepted a non-breaking
+  // space and a form feed, which are not tag boundaries. A raw-text block is
+  // closed by ANY of the four closing tags, not only the one that opened it.
   let html = null;
-  const HTML_RAW = /^ {0,3}<(pre|script|style|textarea)[\s>]/i;
+  const RAW_OPEN = /^ {0,3}<(pre|script|style|textarea)([ \t>]|$)/i;
+  const RAW_CLOSE = /<\/(pre|script|style|textarea)>/i;
+  const BLOCK_TAGS = 'address|article|aside|base|basefont|blockquote|body|caption'
+    + '|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption'
+    + '|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html'
+    + '|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option'
+    + '|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr'
+    + '|track|ul';
+  const BLOCK_OPEN = new RegExp(`^ {0,3}</?(${BLOCK_TAGS})([ \\t>]|/>|$)`, 'i');
 
   for (let i = 0; i < lines.length; i++) {
     if (html !== null) {
+      // A type-6 block ends at a blank line, which is not part of it; the other
+      // two end ON the line carrying their closing tag, which is.
+      if (html === 'block') {
+        if (lines[i].trim() === '') { html = null; continue; }
+        inFence[i] = true;
+        continue;
+      }
       inFence[i] = true;
       if (html.test(lines[i])) html = null;
       continue;
@@ -919,14 +976,21 @@ function fencedLines(lines) {
     if (fence === null) {
       if (/^ {0,3}<!--/.test(lines[i])) {
         inFence[i] = true;
-        if (!/-->/.test(lines[i].replace(/^ {0,3}<!--/, ''))) html = /-->/;
+        // `<!-->` and `<!--->` are complete comments in their own right. Stripping
+        // the opener and looking for `-->` in what is left missed both, so either
+        // one opened a block that swallowed the rest of the file.
+        const rest = lines[i].replace(/^ {0,3}<!--/, '');
+        if (!/-->/.test(rest) && !/^-?>/.test(rest)) html = /-->/;
         continue;
       }
-      const raw = lines[i].match(HTML_RAW);
-      if (raw) {
+      if (RAW_OPEN.test(lines[i])) {
         inFence[i] = true;
-        const close = new RegExp(`</${raw[1]}>`, 'i');
-        if (!close.test(lines[i])) html = close;
+        if (!RAW_CLOSE.test(lines[i])) html = RAW_CLOSE;
+        continue;
+      }
+      if (BLOCK_OPEN.test(lines[i])) {
+        inFence[i] = true;
+        html = 'block';
         continue;
       }
     }

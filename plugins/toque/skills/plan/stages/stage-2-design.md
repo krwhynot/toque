@@ -1147,17 +1147,21 @@ The diff marks three things: the lines the revision changed, the SEAMS of any ru
 whose position shifted, and every line a RELOCATED BLOCK crossed. The third makes
 a reordering visible. Move a commit phase above a validation phase and a concern
 about that ordering flips pass to fail while citing a validation line whose own
-text is untouched; the moved block is named by content — a maximal unmatched run
-on one side whose text equals one on the other — and the lines it passed over
-follow from its two positions.
+text is untouched; the lines the block passed over follow from its two positions.
+
+A relocated block is found from DISTINCTIVE lines — text occurring exactly once
+in each version. That requirement is doing real work in both directions. Without
+it, one `---` separator moving among forty marks 334 of 361 lines and a blank-line
+cleanup marks 145 of 150, because boilerplate matches boilerplate anywhere in the
+file; with pairing done line by line rather than whole-block, writing a revision
+note beside the block that moved no longer hides the move.
 
 The limit that remains is narrower than the one previously claimed here. This
 diff cannot show that a retained requirement was UNAFFECTED when only the prose
-around it was rewritten: blocks that merely resemble each other do not pair, and
-identical text appearing three times leaves provenance ambiguous. So a variance
-verdict means "no line this element cites is in the diff", not "the revision did
-not disturb this obligation". Cite the lines the obligation actually rests on,
-the governing heading included.
+around it was rewritten, and text that repeats has no provenance to read. So a
+variance verdict means "no line this element cites is in the diff", not "the
+revision did not disturb this obligation". Cite the lines the obligation actually
+rests on, the governing heading included.
 The fix is to name the lines, not to accept the demotion. Other
 transitions are unaffected: an improvement or a degradation does not become a
 regression for want of a diff.

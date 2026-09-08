@@ -380,6 +380,79 @@ not enforce it. Sharing one `--keep` directory between two documents at the same
 run number is refused, because the copy is named by run number alone; separate
 keep directories are the remedy. Both predate this round.
 
+## Fifth review: the move detector's own blowup (September 8, 2026)
+
+The fifth review was aimed at exactly two functions — `crossedByMovedBlocks` and
+the HTML handling inside `fencedLines`, both new in `8165b37` — and told to
+assume the repair had introduced a defect, as the three before it had.
+
+**Pairing on byte equality re-created the blowup it replaced.** A markdown
+document is mostly repeated single lines: blanks, `---`, `|---|---|`. One of them
+pairing with an identical copy at the far end marks everything between. Measured
+on spec-shaped documents: deleting one blank line below the title and adding one
+before the appendix marked **145 of 150 lines**; relocating a single `---` among
+forty marked **334 of 361**. Both are formatting edits that touch no requirement.
+This is the third distinct route to the same failure — the variance exemption
+switched off wholesale — after the blanket displacement rule's 302 of 303.
+
+The fix is DISTINCTIVENESS, counted over the whole documents rather than the diff
+region: a line occurring more than once anywhere has ambiguous provenance and
+supports no claim about what moved. Uniqueness among unmatched runs is not enough
+and the review said so — the blank-line case has exactly one unmatched blank on
+each side and still fails under the weaker rule.
+
+**Whole-run equality was brittle in the other direction.** Move a block and write
+one revision note beside it: the new unmatched run carries the note, so the runs
+are different lengths, they do not pair, no move is found, and the reordering the
+note is about goes back to being auditor variance — `MET`, exit 0. Pairing is now
+line by line, and lines that were consecutive before and stayed consecutive after
+regroup into a block. Text added next to a moved block no longer hides it. The
+`used` set is gone with it: a distinctive line has at most one home on each side,
+so there is no greedy choice left to get wrong.
+
+**Four HTML deviations from CommonMark 4.6, one of them the same defect twice.**
+A bare `<pre` at end of line is a valid start condition and was rejected, so
+backticks inside such a block opened a fence and made the audit unwritable —
+which is the exact failure the shield was added to fix, reached by a different
+spelling of the tag. A raw-text block is closed by ANY of the four closing tags,
+not only the one that opened it. `<!-->` and `<!--->` are complete comments and
+were opening blocks that swallowed the file. And `<table><tr><td>` followed by a
+nested `<pre>` made an ordinary evidence excerpt unwritable, because type-6
+blocks were not recognised at all; they are now, ending at a blank line, which
+keeps the nested tag from starting a block of its own. Tag boundaries follow the
+spec — space, tab, `>`, end of line — rather than `\s`, which also accepted a
+non-breaking space.
+
+**A previous equivalence proof was wrong.** The fourth round excluded the mutant
+`lastPi === pi - 1` → `<= pi - 1` as equivalent, arguing that merging same-offset
+runs is unobservable because the first run's end line is already marked by the
+deletion rule. That much is true. It missed that merging also invents a NEW last
+boundary at the second run's end, which the real rule leaves exempt. The review
+supplied the counterexample, it is now a pinned test, and the mutant is back in
+the harness. The companion proof — that `pi >= b.pEnd` equals `pi > b.pEnd`
+because a block's span holds only unmatched indices — was independently confirmed
+and stands.
+
+**The tests were thin where it mattered most.** Against the two functions under
+review, thirty subtle mutants passed all 182 assertions. The suite is now 234
+assertions and the harness runs 29 mutants, one per decision either function
+makes: 29 killed, 0 surviving. Five of those took a randomised search to
+separate, because hand-built fixtures were small enough that ordinary
+deletion-adjacency marking covered every line and real and mutant agreed by
+accident. Those five fixtures are kept verbatim rather than tidied.
+
+Cost, on the adjacent-swap worst case: 8 ms at 500 lines, 33 ms at 1,000, 120 ms
+at 2,000 — below the 354 ms the review measured for the previous implementation
+on the same shape. The coarse fallback returns before the detector runs, which is
+correct: it already marks the whole changed middle.
+
+**Not fixed, and recorded.** Greedy pairing can attribute a move to the wrong one
+of two identical blocks, but the review established that no purely geometric
+alternative removes a necessary crossing — the two documents cannot supply the
+provenance, and sorted pairing marks exactly the crossings that must occur. A
+block deleted here and coincidentally identical text inserted there is still read
+as a move; for the gate's purpose those are the same event.
+
 ## What this does not claim
 
 - D1 changes what the shortcut commands instruct; it does not add a runtime check that an agent obeyed the instruction. The suite's PH5-042 guard checks that the gate has one definition and that both shortcuts carry the execute-by-reference directive, not that a live run executed it. The evidence re-anchoring step is an instruction to the agent; a script that does it mechanically would be the durable form.

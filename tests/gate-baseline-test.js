@@ -1527,6 +1527,391 @@ function runCli(args, cwd) {
 }
 
 // ---------------------------------------------------------------------------
+// 14. The fifth review: the move detector and the HTML scanner, which between
+//     them had thirty surviving mutants and two blowups.
+//
+// The move detector closed a reordering that seam marking exempted, and then
+// reintroduced the failure it replaced by a third route: pairing unmatched runs
+// on byte equality made an ordinary blank-line cleanup mark 145 of 150 lines.
+// Requiring whole-run equality was also brittle in the opposite direction — a
+// revision note written beside a moved block made the runs different lengths, so
+// no move was found and the reordering went back to being variance.
+// ---------------------------------------------------------------------------
+
+{
+  // Blowup 1: repeated boilerplate. One blank line removed below the title and
+  // one added before the appendix — every requirement untouched.
+  const spec = [];
+  for (let s = 1; s <= 48; s++) spec.push(`### REQ-${s}`, `Body line for requirement ${s}`, '');
+  const prev = ['# Spec', '', '', ...spec, '## Appendix', 'end'].join('\n') + '\n';
+  const cur = ['# Spec', '', ...spec, '', '## Appendix', 'end'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  check('a blank-line cleanup does not mark the document',
+    d.touched.size <= 8, `${d.touched.size}/${d.total}`);
+  check('and a requirement in the middle keeps the exemption',
+    !d.touched.has(75), [...d.touched].sort((a, b) => a - b).join(','));
+}
+
+{
+  // Blowup 2: a single `---` separator relocated in a document holding forty.
+  const doc = [];
+  for (let s = 1; s <= 40; s++) {
+    doc.push(`## Phase ${s}`, '', '| item | status |', '|---|---|',
+      `| step ${s}a | ok |`, `| step ${s}b | ok |`, '', '---', '');
+  }
+  const moved = doc.slice();
+  moved.splice(7, 1);
+  moved.splice(340, 0, '---');
+  const d = gb.changedLines(`${doc.join('\n')}\n`, `${moved.join('\n')}\n`);
+  check('relocating one separator among forty does not mark the document',
+    d.touched.size <= 8, `${d.touched.size}/${d.total}`);
+}
+
+{
+  // The brittleness: the same reordering, with one revision note written beside
+  // the block that moved. Whole-run equality failed here — the new unmatched run
+  // carried the note and so did not equal the old one — and the concern about the
+  // ordering came back VARIANCE / MET / exit 0.
+  const prev = ['# Payment', '## Validate request', 'Check idempotency.',
+    'Reject invalid signatures.', 'Verify balance.', '## Commit payment',
+    'Write ledger.', 'Send receipt.', '## End'].join('\n') + '\n';
+  const cur = ['# Payment', '## Commit payment', 'Write ledger.', 'Send receipt.',
+    'Revision note: commit now precedes validation.', '## Validate request',
+    'Check idempotency.', 'Reject invalid signatures.', 'Verify balance.',
+    '## End'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  check('a moved block is still detected when a note is added beside it',
+    d.touched.has(8), [...d.touched].sort((a, b) => a - b).join(','));
+
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'Authorization before commit', status: 'ok' }] }),
+    baseline({
+      concern_statuses: [{
+        name: 'Authorization before commit', status: 'gap',
+        lines: [[8, 8]], line_source: 'audit.md',
+      }],
+    }),
+    d, {},
+  );
+  check('so the ordering concern is a REGRESSION, not variance',
+    c.rows[0].klass === 'REGRESSION' && c.verdict === 'UNMET',
+    `${c.rows[0].klass} / ${c.verdict}`);
+}
+
+{
+  // Distinctiveness is counted over the WHOLE document, not among unmatched runs
+  // — the blank-line blowup has exactly one unmatched blank on each side and
+  // still fails under the weaker rule. A line that appears twice anywhere cannot
+  // identify a block.
+  const prevLines = ['head', 'DUP', 'a1', 'a2', 'a3', 'DUP', 'tail'];
+  const curLines = ['head', 'a1', 'a2', 'a3', 'DUP', 'DUP', 'tail'];
+  const d = gb.changedLines(`${prevLines.join('\n')}\n`, `${curLines.join('\n')}\n`);
+  // Line 2 is marked by the ordinary deletion-adjacency rule; line 3 is the one
+  // only a move could reach, so it is the discriminating assertion.
+  check('a line repeated in the document never establishes a move',
+    !d.touched.has(3),
+    [...d.touched].sort((a, b) => a - b).join(','));
+
+  // The same shape with a unique marker DOES establish one.
+  const uniqPrev = ['head', 'UNIQUE MARKER', 'a1', 'a2', 'a3', 'tail'];
+  const uniqCur = ['head', 'a1', 'a2', 'a3', 'UNIQUE MARKER', 'tail'];
+  const d2 = gb.changedLines(`${uniqPrev.join('\n')}\n`, `${uniqCur.join('\n')}\n`);
+  check('a unique line does establish one, and marks what it crossed',
+    d2.touched.has(2) && d2.touched.has(3) && d2.touched.has(4),
+    [...d2.touched].sort((a, b) => a - b).join(','));
+}
+
+{
+  // Both crossing directions, separately, so a mutant that drops one is caught.
+  const up = gb.changedLines(
+    ['top', 'M1', 'M2', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n',
+    ['top', 'k1', 'k2', 'k3', 'M1', 'M2', 'bot'].join('\n') + '\n',
+  );
+  check('a block moving DOWN marks what it passed',
+    up.touched.has(2) && up.touched.has(3) && up.touched.has(4),
+    [...up.touched].sort((a, b) => a - b).join(','));
+
+  const down = gb.changedLines(
+    ['top', 'k1', 'k2', 'k3', 'M1', 'M2', 'bot'].join('\n') + '\n',
+    ['top', 'M1', 'M2', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n',
+  );
+  check('a block moving UP marks what it passed',
+    down.touched.has(4) && down.touched.has(5) && down.touched.has(6),
+    [...down.touched].sort((a, b) => a - b).join(','));
+
+  // A block that moved past nothing marks nothing extra.
+  const still = gb.changedLines(
+    ['top', 'k1', 'M1', 'k2', 'bot'].join('\n') + '\n',
+    ['top', 'k1', 'M1x', 'k2', 'bot'].join('\n') + '\n',
+  );
+  check('an in-place edit crosses nothing',
+    !still.touched.has(4) && !still.touched.has(5),
+    [...still.touched].sort((a, b) => a - b).join(','));
+}
+
+{
+  // The equivalence proof written into the last harness was WRONG, and the fifth
+  // review supplied the counterexample. Merging same-offset runs does leave the
+  // first run's end line already marked by the deletion rule — but it also
+  // creates a NEW last boundary at the second run's end, which the real rule
+  // leaves exempt. The exact set is pinned so the mutant cannot come back.
+  const d = gb.changedLines(
+    ['A', 'B', 'C', 'D', 'E', 'F', 'tail'].join('\n') + '\n',
+    ['new', 'A', 'B', 'X', 'D', 'E', 'F', 'newbottom', 'tail'].join('\n') + '\n',
+  );
+  const marked = [...d.touched].sort((a, b) => a - b).join(',');
+  check('merging same-offset runs would invent a boundary at line 7',
+    marked === '1,2,3,4,8', marked);
+}
+
+{
+  // The HTML scanner, against CommonMark section 4.6. Each row is a shape the
+  // fifth review either found wrong or asked to be held: a raw-text block may
+  // start with the tag at end of line, is closed by ANY of the four closing
+  // tags, and a comment may be the complete `<!-->` or `<!--->`. A type-6 block
+  // (a block-level tag) ends at a blank line, which is what keeps a `<pre>`
+  // nested inside a `<table>` from opening a block that never closes.
+  const S = '## Baseline comparison';
+  const F = '```';
+  const at = (lines) => {
+    const r = gb.locateSection(`${lines.join('\n')}\n`);
+    return r ? r.start : null;
+  };
+  const cases = [
+    ['a bare <pre at end of line shields what follows',
+      ['# A', '<pre', F, 'x', '</pre>', '', S, 'real'], 7],
+    ['a raw block is closed by a DIFFERENT raw closing tag',
+      ['# A', '<pre>', 'x', '</script>', '', S, 'real'], 6],
+    ['a closing tag inside a quoted string still closes',
+      ['# A', '<pre>', 'Captured: "</textarea>"', '', S, 'real'], 5],
+    ['<!--> is a complete comment', ['# A', '<!-->', '', S, 'real'], 4],
+    ['<!---> is a complete comment', ['# A', '<!--->', '', S, 'real'], 4],
+    ['a <pre> nested in a <table> does not swallow the file',
+      ['# A', '', '## Evidence', '<table><tr><td>', '<pre>', 'Response body: 202', '', S, 'real'], 8],
+    ['a non-breaking space is not a tag boundary',
+      ['# A', '<pre x>', '', S, 'real'], 4],
+    ['a tab IS a tag boundary',
+      ['# A', '<pre\tclass="log">', 'x', '</pre>', '', S, 'real'], 6],
+    ['<pretend> is not a raw-text tag', ['# A', '<pretend>', 'x', '', S, 'real'], 5],
+    ['uppercase <PRE> is closed by uppercase </PRE>',
+      ['# A', '<PRE>', 'x', '</PRE>', '', S, 'real'], 6],
+    ['a heading inside <script> is not the section',
+      ['# A', '<script>', S, '</script>', '', S, 'real'], 6],
+    ['a heading inside <style> is not the section',
+      ['# A', '<style>', S, '</style>', '', S, 'real'], 6],
+    ['a heading inside <textarea> is not the section',
+      ['# A', '<textarea>', S, '</textarea>', '', S, 'real'], 6],
+    ['a three-space indented comment still shields',
+      ['# A', '   <!--', S, '   -->', '', S, 'real'], 6],
+    ['a three-space indented <pre> still shields',
+      ['# A', '   <pre>', S, '   </pre>', '', S, 'real'], 6],
+    ['prose mentioning <style> mid-sentence is not a block',
+      ['# A', 'The <style> tag is banned.', '', S, 'body'], 4],
+    ['an unmatched --> in prose opens nothing',
+      ['# A', 'Arrow --> implies.', '', S, 'body'], 4],
+    ['a comment closed on its own line shields only itself',
+      ['# A', '<!-- note -->', '', S, 'body'], 4],
+    ['a comment opener not at the start of a line opens nothing',
+      ['# A', 'See <!-- marker', '', S, 'body'], 4],
+    ['an unterminated comment shields to end of file',
+      ['# A', '<!--', S, 'body'], null],
+    ['an unterminated raw block shields to end of file',
+      ['# A', '<pre>', S, 'body'], null],
+    ['a fence inside <pre> does not leak',
+      ['# A', '<pre>', F, S, F, '</pre>', '', S, 'real'], 8],
+    ['<pre> inside a fence opens no HTML block',
+      ['# A', F, '<pre>', F, '', S, 'real'], 6],
+    ['a comment opened inside a fence opens no HTML block',
+      ['# A', F, '<!--', F, S, 'real', '-->'], 5],
+  ];
+  for (const [label, lines, want] of cases) {
+    const got = at(lines);
+    check(label, got === want, got === null ? 'not found' : `line ${got}, wanted ${want}`);
+  }
+}
+
+{
+  // The shield must not shorten the pinned section. A comparison body carrying a
+  // comment and a <pre> keeps its real end, and the quote the pin slices still
+  // matches what the validator recomputes.
+  const root = tmpdir();
+  fs.mkdirSync(path.join(root, 'evidence'), { recursive: true });
+  const audit = ['# Audit', '', '## Baseline comparison', '', '- Diff: 3 of 10 lines changed',
+    '<!--', '# generated, do not edit', '-->', '<pre>', 'raw excerpt', '</pre>',
+    '**LINT-14: UNMET**', '', '## Evidence notes', 'tail'].join('\n') + '\n';
+  const f = path.join(root, 'audit.md');
+  fs.writeFileSync(f, audit, 'utf8');
+  const at = gb.locateSection(audit);
+  check('a section whose body holds a comment and a <pre> keeps its real end',
+    at && at.start === 3 && at.end === 12, at ? `${at.start}-${at.end}` : 'not found');
+
+  const pinned = gb.pin(f, path.join(root, 'evidence'), root, 'UNMET', 'caller-decided: t');
+  const rec = JSON.parse(fs.readFileSync(pinned.file, 'utf8'));
+  const lines = audit.split('\n');
+  const quoted = lines.slice(pinned.line_start - 1, pinned.line_end).join('\n');
+  check('and the pinned quote covers the verdict line',
+    quoted.includes('**LINT-14: UNMET**'), quoted);
+  check('and the quote matches the file it was sliced from',
+    rec.evidence[0].exact_quote === quoted,
+    JSON.stringify(rec.evidence[0].exact_quote));
+}
+
+// ---------------------------------------------------------------------------
+// 15. Nine mutants that survived section 14. Each fixture below is the input
+//     that separates the real guard from its weakened twin, and nothing else in
+//     the suite distinguishes them.
+// ---------------------------------------------------------------------------
+
+{
+  // M02: distinctiveness tested on the previous side only. A line unique in the
+  // previous document but repeated in the current one has ambiguous provenance
+  // in exactly the direction that matters — which of the two copies is "the"
+  // move is unknowable, so it must establish nothing.
+  const prev = ['top', 'MARK', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n';
+  const cur = ['top', 'k1', 'k2', 'k3', 'MARK', 'bot', 'MARK'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  check('a line repeated on the CURRENT side establishes no move',
+    !d.touched.has(3), [...d.touched].sort((a, b) => a - b).join(','));
+
+  // M05: the pairing key must be the line itself. Trimming it makes two lines
+  // that differ only in leading space pair as the same text, and indentation is
+  // meaningful in a spec — a nested list item is not the top-level one.
+  const prev2 = ['top', '    MARK', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n';
+  const cur2 = ['top', 'k1', 'k2', 'k3', 'MARK', 'bot'].join('\n') + '\n';
+  const d2 = gb.changedLines(prev2, cur2);
+  check('lines differing only in indentation do not pair as a move',
+    !d2.touched.has(3), [...d2.touched].sort((a, b) => a - b).join(','));
+}
+
+{
+  // M06 and M07: a block is a run of moved lines that were consecutive BEFORE
+  // and stayed consecutive AFTER. Checking only one side merges two independent
+  // moves into one span, and the invented span crosses lines neither block did.
+  //
+  // Here P1 and P2 are adjacent in the previous document and separated in the
+  // current one, so the previous-side test alone would merge them.
+  const prev = ['top', 'P1', 'P2', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n';
+  const cur = ['top', 'k1', 'P1', 'k2', 'P2', 'k3', 'bot'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  const marked = [...d.touched].sort((a, b) => a - b).join(',');
+  check('two moves that separated are not merged into one span',
+    !d.touched.has(6), marked);
+
+  // And the mirror: separated before, adjacent after.
+  const prev2 = ['top', 'k1', 'Q1', 'k2', 'Q2', 'k3', 'bot'].join('\n') + '\n';
+  const cur2 = ['top', 'Q1', 'Q2', 'k1', 'k2', 'k3', 'bot'].join('\n') + '\n';
+  const d2 = gb.changedLines(prev2, cur2);
+  check('two moves that joined are not merged into one span either',
+    d2.touched.has(4) && d2.touched.has(5),
+    [...d2.touched].sort((a, b) => a - b).join(','));
+}
+
+{
+  // M10 and M11: a crossing needs BOTH halves. `pi > b.pEnd` alone marks every
+  // matched line below the block's old position whether or not the block passed
+  // it, which is most of the document.
+  // The lines being tested sit two clear of the deletion the move leaves behind,
+  // because the deletion-adjacency rule marks its own neighbours and would
+  // otherwise mask the difference.
+  const prev = ['top', 'k1', 'k2', 'MOVER', 'k3', 'k4', 'k5', 'bot'].join('\n') + '\n';
+  const cur = ['top', 'MOVER', 'k1', 'k2', 'k3', 'k4', 'k5', 'bot'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  const marked = [...d.touched].sort((a, b) => a - b).join(',');
+  // The block moved above k1 and k2, so those are crossed. k4 and k5 were below
+  // it before and are still below it now, so they are not.
+  check('a line the block did NOT pass is left exempt (downward half)',
+    d.touched.has(3) && d.touched.has(4) && !d.touched.has(6) && !d.touched.has(7), marked);
+
+  const prev2 = ['top', 'MOVER', 'k1', 'k2', 'k3', 'k4', 'bot'].join('\n') + '\n';
+  const cur2 = ['top', 'k1', 'k2', 'MOVER', 'k3', 'k4', 'bot'].join('\n') + '\n';
+  const d2 = gb.changedLines(prev2, cur2);
+  const marked2 = [...d2.touched].sort((a, b) => a - b).join(',');
+  check('a line the block did NOT pass is left exempt (upward half)',
+    d2.touched.has(2) && d2.touched.has(3) && !d2.touched.has(5) && !d2.touched.has(6), marked2);
+}
+
+{
+  const S = '## Baseline comparison';
+  const at = (lines) => {
+    const r = gb.locateSection(`${lines.join('\n')}\n`);
+    return r ? r.start : null;
+  };
+
+  // H04: a comment ends on the line carrying `-->` wherever it sits on that
+  // line. Requiring it to stand alone leaves the comment open and swallows the
+  // rest of the file.
+  check('a comment closed by a line with text before --> really closes',
+    at(['# A', '<!--', 'note text -->', '', S, 'real']) === 5,
+    String(at(['# A', '<!--', 'note text -->', '', S, 'real'])));
+
+  // H10: the raw opener is case-insensitive, and it has to shield to matter —
+  // an uppercase block with no heading inside proves nothing.
+  check('an uppercase <PRE> shields a heading written inside it',
+    at(['# A', '<PRE>', S, '</PRE>', '', S, 'real']) === 6,
+    String(at(['# A', '<PRE>', S, '</PRE>', '', S, 'real'])));
+
+  // H15: a type-6 block may open with a CLOSING tag. A stray `</div>` left by a
+  // hand-edited audit starts a block that runs to the next blank line, and a
+  // heading inside it is not a heading.
+  check('a lone closing block tag opens a type-6 block',
+    at(['# A', '</div>', S, '', S, 'real']) === 5,
+    String(at(['# A', '</div>', S, '', S, 'real'])));
+}
+
+{
+  // The last five mutants of section 15, each with the input that separates it.
+  // The first two were found by randomised search rather than by construction:
+  // hand-built fixtures kept being small enough that the ordinary
+  // deletion-adjacency marking covered every line, so real and mutant agreed by
+  // accident. They are kept verbatim, with their exact touched sets pinned,
+  // because their value is that they discriminate — not that they read well.
+  const J = (a) => `${a.join('\n')}\n`;
+  const set = (d) => [...d.touched].sort((a, b) => a - b).join(',');
+
+  // M05: the pairing key is the line itself, never a trimmed copy. Indentation
+  // is meaningful in a spec — a nested list item is not the top-level one — and
+  // trimming makes two different lines pair as a move that did not happen.
+  const trimPrev = ['u3', 'u5', 'u6', 'u8', '  u3', 'u12', 'u4', 'u7', '  u2', '  u1', 'u9', 'u11', 'u2', 'u1'];
+  const trimCur = ['  u1', 'u3', 'u8', 'NEWLINE', 'u6', 'u5', '  u3', 'u12', 'u4', 'u7', '  u2', 'u9', 'u11', 'u2', 'u1'];
+  check('the pairing key is the raw line, not a trimmed one',
+    set(gb.changedLines(J(trimPrev), J(trimCur))) === '1,2,3,4,5,6,7,8,9,10,11,12',
+    set(gb.changedLines(J(trimPrev), J(trimCur))));
+
+  // M06: a block is a run of moved lines consecutive on BOTH sides. Checking
+  // only the previous side merges two independent moves into one span, and the
+  // invented span crosses lines neither block did — and misses one that a real
+  // block crossed.
+  const grpPrev = ['u9', '  u2', '  u1', 'u1', '  u3', 'u12', 'u6', 'u8', 'u11', 'u10', 'u3'];
+  const grpCur = ['  u2', 'u9', '  u1', 'u12', 'u1', 'u6', 'u8', 'NEWLINE', 'u10', '  u3', 'u3'];
+  check('block grouping requires consecutiveness on both sides',
+    set(gb.changedLines(J(grpPrev), J(grpCur))) === '1,2,3,4,5,6,7,8,9,10',
+    set(gb.changedLines(J(grpPrev), J(grpCur))));
+
+  // M07: the mirror of M06 — checking only the current side.
+  const a = (n, p) => Array.from({ length: n }, (_, i) => `${p}${i + 1}`);
+  const joinPrev = ['HEAD', ...a(3, 'a'), 'Q1', ...a(3, 'b'), 'Q2', 'TAIL'];
+  const joinCur = ['HEADX', 'Q1', 'Q2', ...a(3, 'a'), ...a(3, 'b'), 'TAIL'];
+  check('block grouping is not satisfied by the current side alone',
+    set(gb.changedLines(J(joinPrev), J(joinCur))) === '1,2,3,4,5,6,7,8,9,10',
+    set(gb.changedLines(J(joinPrev), J(joinCur))));
+
+  // M10 and M11: a crossing needs BOTH halves of its condition. With `||`, every
+  // matched line below the block's old position counts as crossed — which is
+  // most of the document, and the blowup all over again.
+  const downPrev = ['HEAD', ...a(3, 'a'), 'MOVER', ...a(8, 't'), 'TAIL'];
+  const downCur = ['HEADX', 'MOVER', ...a(3, 'a'), ...a(8, 't'), 'TAILX'];
+  const dd = gb.changedLines(J(downPrev), J(downCur));
+  check('lines below a block that moved UP past them are left exempt',
+    !dd.touched.has(7) && !dd.touched.has(10) && dd.touched.has(3), set(dd));
+
+  const upPrev = ['HEAD', ...a(8, 'h'), 'MOVER', ...a(3, 'a'), 'TAIL'];
+  const upCur = ['HEADX', ...a(8, 'h'), ...a(3, 'a'), 'MOVER', 'TAIL'];
+  const uu = gb.changedLines(J(upPrev), J(upCur));
+  check('lines above a block that moved DOWN past them are left exempt',
+    !uu.touched.has(3) && !uu.touched.has(6) && uu.touched.has(10), set(uu));
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }

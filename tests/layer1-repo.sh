@@ -1634,6 +1634,25 @@ else
   ' 2>/dev/null)
   [ "$gb_move" = "REGRESSION,VARIANCE" ] \
     || { fail "PH5-044: a moved block's interior is not inside the diff (got '$gb_move')"; gb_bad=1; }
+
+  # The two ways move detection has failed, in one probe. A note written beside
+  # the block that moved must not hide the move (whole-run equality did), and
+  # relocating a line of boilerplate must not mark the document (byte-equal
+  # pairing did, at 145 of 150 lines on a blank-line cleanup).
+  gb_move2=$(node -e '
+    const gb = require("./plugins/toque/scripts/tq-gate-baseline.js");
+    const noted = gb.changedLines(
+      "top\nA1\nA2\nB1\nB2\nB3\nend\n",
+      "top\nB1\nB2\nB3\nNOTE: reordered\nA1\nA2\nend\n");
+    const spec = [];
+    for (let s = 1; s <= 30; s++) spec.push("### REQ-" + s, "body " + s, "");
+    const p2 = ["# S", "", ""].concat(spec, ["## App", "end"]).join("\n") + "\n";
+    const c2 = ["# S", ""].concat(spec, ["", "## App", "end"]).join("\n") + "\n";
+    const blanks = gb.changedLines(p2, c2);
+    console.log([noted.touched.has(7), blanks.touched.size <= 8].join(","));
+  ' 2>/dev/null)
+  [ "$gb_move2" = "true,true" ] \
+    || { fail "PH5-044: move detection is hidden by an adjacent note, or fires on boilerplate (got '$gb_move2')"; gb_bad=1; }
 fi
 
 dgb=$(sed -n '/^<design_gate>$/,/^<\/design_gate>$/p' "$DG_STAGE" 2>/dev/null)
