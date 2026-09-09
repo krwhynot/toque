@@ -1912,6 +1912,178 @@ function runCli(args, cwd) {
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n15. R5-01 — the anchor is the text, not the line number');
+// ---------------------------------------------------------------------------
+
+// Run 5 scoped ten flips. The four filled from evidence records were all correct
+// and all six hand-sourced matrix rows were wrong: four false positives, two
+// unscopable. Every false positive is one conflation — a line RANGE cannot tell
+// text that MOVED from text that CHANGED, because any edit above a citation
+// invalidates its coordinate while leaving its content untouched.
+//
+// These tests are falsifiable against that claim: each asserts the same flip
+// classifies differently depending only on whether the cited TEXT survived.
+
+{
+  // Displacement is not modification. The requirement is byte-identical; an
+  // insertion above it moved it down two lines. This is run 5's route 3 in
+  // miniature — there the gate's own LINT-18 remediation restructured a
+  // paragraph into a table and manufactured the false positive.
+  const before = ['intro', 'REQUIREMENT: rollback must be reversible', 'tail'].join('\n') + '\n';
+  const after = ['intro', 'added one', 'added two',
+    'REQUIREMENT: rollback must be reversible', 'tail'].join('\n') + '\n';
+  const diff = gb.changedLines(before, after);
+  const quote = 'REQUIREMENT: rollback must be reversible';
+
+  const coordinate = gb.scopeOf({ lines: [[2, 3]], anchors: [] }, diff);
+  check('a coordinate citation over displaced text scopes as changed',
+    coordinate.scope === 'changed', coordinate.reason);
+
+  const anchored = gb.scopeOf({ lines: [[2, 3]], anchors: [{ lines: [2, 3], quote }] }, diff);
+  check('the same citation anchored on the surviving text scopes as unchanged',
+    anchored.scope === 'unchanged', anchored.reason);
+}
+
+{
+  // The two genuine directions must survive the change, or the fix has traded
+  // false positives for false negatives — the worse trade, since a missed
+  // regression is silent and a false one is at least argued with.
+  const before = ['keep', 'REMOVED BY THE REVISION', 'keep2'].join('\n') + '\n';
+  const after = ['keep', 'keep2', 'WRITTEN BY THE REVISION'].join('\n') + '\n';
+  const diff = gb.changedLines(before, after);
+
+  const gone = gb.scopeOf({ lines: [[1, 1]],
+    anchors: [{ lines: [1, 1], quote: 'REMOVED BY THE REVISION' }] }, diff);
+  check('text the revision removed scopes as changed', gone.scope === 'changed', gone.reason);
+
+  const born = gb.scopeOf({ lines: [[1, 1]],
+    anchors: [{ lines: [1, 1], quote: 'WRITTEN BY THE REVISION' }] }, diff);
+  check('text the revision introduced scopes as changed', born.scope === 'changed', born.reason);
+}
+
+{
+  // Run 5's route 2: a 95-line citation, 64 of its lines touched by an inserted
+  // block, and the defect text byte-identical on both sides. Over-breadth in the
+  // citation must not decide the verdict when the anchor answers it.
+  const body = ['a', 'b', 'DEFECT: lever 2 needs new infrastructure', 'c', 'd'];
+  const before = body.join('\n') + '\n';
+  const after = ['a', 'b', 'INSERTED', 'INSERTED', 'INSERTED',
+    'DEFECT: lever 2 needs new infrastructure', 'c', 'd'].join('\n') + '\n';
+  const diff = gb.changedLines(before, after);
+  const r = gb.scopeOf({ lines: [[1, 8]],
+    anchors: [{ lines: [1, 8], quote: 'DEFECT: lever 2 needs new infrastructure' }] }, diff);
+  check('an over-broad citation is settled by its anchor, not its width',
+    r.scope === 'unchanged', r.reason);
+}
+
+{
+  // An element with a changed anchor and an unchanged one is changed. Scanning
+  // must not stop at the first anchor that happens to have survived.
+  const before = ['alpha', 'GONE', 'omega'].join('\n') + '\n';
+  const after = ['alpha', 'omega'].join('\n') + '\n';
+  const diff = gb.changedLines(before, after);
+  const r = gb.scopeOf({ lines: [[1, 2]], anchors: [
+    { lines: [1, 1], quote: 'alpha' },
+    { lines: [2, 2], quote: 'GONE' },
+  ] }, diff);
+  check('one changed anchor outweighs an unchanged one', r.scope === 'changed', r.reason);
+}
+
+{
+  // Backwards compatibility, and it is load-bearing: every baseline written
+  // before anchors existed carries lines and no quote. Those elements must keep
+  // the coordinate test rather than silently becoming unscoped, which would have
+  // turned the whole lint class unknown on the first run after this change.
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const r = gb.scopeOf({ lines: [[4, 4]], anchors: [] }, diff);
+  check('an element with no anchor still falls through to the coordinate test',
+    r.scope === 'changed', r.reason);
+
+  const stale = gb.scopeOf({ lines: [[2, 2]],
+    anchors: [{ lines: [2, 2], quote: 'text in neither document' }] }, diff);
+  check('an anchor stale against BOTH documents answers nothing and falls through',
+    stale.scope === 'unchanged' && /every line cited/.test(stale.reason), stale.reason);
+}
+
+{
+  // fillFromEvidence used to import line_start and line_end and drop
+  // exact_quote. checkQuote already validates that field against the pinned
+  // hash, so the strongest signal in the record was the one thing not read.
+  const root = tmpdir();
+  const evidence = path.join(root, 'evidence');
+  fs.mkdirSync(evidence, { recursive: true });
+  fs.writeFileSync(path.join(evidence, 'LINT-03.json'), JSON.stringify({
+    criterion: 'LINT-03', verdict: 'UNMET',
+    evidence: [{ artifact: 'audit.md', line_start: 4, line_end: 4,
+      exact_quote: 'Phase 2: old body', sha256: 'x' }],
+  }), 'utf8');
+
+  const els = gb.readElements(baseline({
+    lint_results: { 'LINT-03': { status: 'fail' } },
+  }), 'cur');
+  gb.fillFromEvidence(els, evidence, 'audit.md');
+  const el = els.get('lint:LINT-03');
+  check('fillFromEvidence carries exact_quote onto the element',
+    el.anchors.length === 1 && el.anchors[0].quote === 'Phase 2: old body',
+    JSON.stringify(el.anchors));
+
+  fs.writeFileSync(path.join(evidence, 'LINT-09.json'), JSON.stringify({
+    criterion: 'LINT-09', verdict: 'UNMET',
+    evidence: [{ artifact: 'audit.md', line_start: 2, line_end: 2,
+      exact_quote: '   ', sha256: 'x' }],
+  }), 'utf8');
+  const els2 = gb.readElements(baseline({
+    lint_results: { 'LINT-09': { status: 'fail' } },
+  }), 'cur');
+  gb.fillFromEvidence(els2, evidence, 'audit.md');
+  check('a blank exact_quote is not taken as an anchor',
+    els2.get('lint:LINT-09').anchors.length === 0);
+}
+
+{
+  // The justification pin() writes must say which regressions were established.
+  // In run 5's s8 re-run it claimed all five were on changed text when two
+  // carried no line source at all.
+  const prev = baseline({ concern_statuses: [{ name: 'API contract', status: 'ok' }] });
+  const cur = baseline({ concern_statuses: [{ name: 'API contract', status: 'gap' }] });
+  const c = gb.compare(prev, cur, gb.changedLines(DOC_V1, DOC_V2), {});
+  check('an unscoped regression still blocks', c.verdict === 'UNMET', c.verdict);
+  check('and the justification does not claim it was on changed text',
+    /could not be scoped/.test(c.justification) && !/^.*All are on text/.test(c.justification),
+    c.justification);
+  check('the scoped and unscoped regression counts are reported apart',
+    c.counts.regressions_unscoped === 1 && c.counts.regressions_scoped === 0,
+    JSON.stringify(c.counts));
+}
+
+{
+  // The real documents run 5 scoped, replayed. A synthetic case proves the
+  // mechanism; only these prove the mechanism answers the case that was wrong.
+  const base = 'C:/scratch/toque-run5/logs';
+  const v2 = `${base}/s1-canary-artefacts-iter2/doc/make-report-delivery-faster-and-let-customers-schedule-reports.md`;
+  const v3 = `${base}/s1-canary-artefacts-iter3/doc/make-report-delivery-faster-and-let-customers-schedule-reports.md`;
+  if (!fs.existsSync(v2) || !fs.existsSync(v3)) {
+    skip('run 5 route-3 false positive is eliminated on the real documents',
+      'retained run-5 documents are not on this host');
+  } else {
+    const V2 = fs.readFileSync(v2, 'utf8');
+    const V3 = fs.readFileSync(v3, 'utf8');
+    const diff = gb.changedLines(V2, V3);
+    const requirement = V2.replace(/\r\n/g, '\n').split('\n')[777];  // v2:778
+    const cited = [[386, 389]];   // the split-by-author table, all four touched
+
+    const before = gb.scopeOf({ lines: cited, anchors: [] }, diff);
+    check('run 5: the coordinate citation reproduces the false positive',
+      before.scope === 'changed', before.reason);
+
+    const after = gb.scopeOf({ lines: cited,
+      anchors: [{ lines: [386, 389], quote: requirement }] }, diff);
+    check('run 5: anchored on the surviving requirement it is variance',
+      after.scope === 'unchanged', after.reason);
+  }
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }

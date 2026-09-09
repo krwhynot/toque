@@ -222,7 +222,9 @@ const LCS_CELL_LIMIT = 12000000;
  * over-reports rather than under-reports, in the same direction as the fallback
  * above and for the same reason.
  *
- * Returns { touched: Set<number>, coarse: boolean, changed: number }.
+ * Returns { touched, coarse, changed, total, prevLines, curLines }. The two line
+ * arrays are what lets scopeByAnchor ask whether cited TEXT survived, rather than
+ * only whether its line number was disturbed.
  */
 function changedLines(prevText, curText) {
   const prev = splitLines(prevText);
@@ -248,13 +250,13 @@ function changedLines(prevText, curText) {
   const m = curMid.length;
 
   if (n === 0 && m === 0) {
-    return { touched, coarse: false, changed: 0, total: cur.length };
+    return { touched, coarse: false, changed: 0, total: cur.length, prevLines: prev, curLines: cur };
   }
 
   if ((n + 1) * (m + 1) > LCS_CELL_LIMIT) {
     for (let j = 0; j < m; j++) touched.add(p + j + 1);
     if (n > 0 && m === 0) markDeletion(0);
-    return { touched, coarse: true, changed: touched.size, total: cur.length };
+    return { touched, coarse: true, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur };
   }
 
   const w = m + 1;
@@ -342,7 +344,7 @@ function changedLines(prevText, curText) {
     touched.add(p + cj + 1);
   }
 
-  return { touched, coarse: false, changed: touched.size, total: cur.length };
+  return { touched, coarse: false, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur };
 }
 
 /**
@@ -508,6 +510,14 @@ function readElements(baseline, label) {
       label: name || id,
       status,
       lines,
+      // Filled by fillFromEvidence for lint elements. A matrix row has no
+      // evidence record to fill it from and its NAME is not in the document
+      // either — of the five row names run 5 scoped, four appear zero times in
+      // both documents, because they are the auditor's rubric categories rather
+      // than the document's own text. So a matrix row stays coordinate-anchored
+      // until it emits a record of its own, and the scope test below refuses to
+      // let one decide LINT-14 by itself.
+      anchors: [],
       line_source: obj.line_source || (lines.length ? defaultSource : null),
     });
   };
@@ -559,6 +569,7 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
     }
     const items = Array.isArray(rec.evidence) ? rec.evidence : [];
     const lines = [];
+    const anchors = [];
     for (const item of items) {
       if (!item || typeof item.artifact !== 'string') continue;
       const art = item.artifact.split(path.sep).join('/');
@@ -573,9 +584,27 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
       const end = Number(item.line_end);
       if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) continue;
       lines.push([start, end]);
+      // The quote is the anchor; the line range is only where it was last seen.
+      //
+      // This function used to import line_start and line_end and drop
+      // exact_quote on the floor, so an element that carried its own text was
+      // reduced to a coordinate — and a coordinate is invalidated by any edit
+      // ABOVE it. That is R5-01's whole mechanism: in run 5 the requirement two
+      // matrix rows failed on is byte-identical at v2:778 and v3:929, displaced
+      // one line by an insertion higher up, and the coordinate test called it
+      // changed. checkQuote in tq-evidence-validate.js already validates this
+      // field against the pinned hash, so the strongest signal in the record was
+      // the one thing not being read.
+      const quote = typeof item.exact_quote === 'string'
+        ? item.exact_quote.replace(/\r\n/g, '\n')
+        : '';
+      // An empty quote is not an anchor. tq-evidence-validate.js:175 refuses one
+      // for the same reason: '' === '' is true against any document alive.
+      if (quote.trim()) anchors.push({ lines: [start, end], quote });
     }
     if (lines.length) {
       el.lines = lines;
+      el.anchors = anchors;
       el.line_source = `evidence/${el.id}.json`;
       filled.push(el.id);
     }
@@ -614,12 +643,95 @@ function scopeOf(el, diff) {
     };
   }
 
+  // The anchor test runs BEFORE the coordinate test, and settles the element
+  // when it can answer.
+  //
+  // A coordinate test cannot tell text that MOVED from text that CHANGED, and
+  // every false positive run 5 found is that one conflation: a re-wrapped line
+  // above the citation, a 61-line block inserted inside its range, a prose
+  // paragraph restructured into a table around a requirement that survived
+  // verbatim. In all three the cited text is byte-identical across the two
+  // documents. Asking whether the TEXT survived instead of whether its line
+  // number was disturbed answers all three the same way, and answers them
+  // right.
+  //
+  // The comment on crossedByMovedBlocks names this exact gap: the alignment
+  // "cannot show a retained line was unaffected". It cannot, from position
+  // alone. From content it can.
+  const anchorScope = scopeByAnchor(el, diff);
+  if (anchorScope) return anchorScope;
+
   for (const [a, b] of el.lines) {
     for (let l = a; l <= b; l++) {
       if (diff.touched.has(l)) return { scope: 'changed', reason: `line ${l} is inside the diff` };
     }
   }
   return { scope: 'unchanged', reason: 'every line cited is unchanged since the previous baseline' };
+}
+
+/**
+ * Scope an element by whether its quoted text survived, not by where it sits.
+ *
+ * Returns null when the question cannot be asked — no anchors, or no previous
+ * document text to compare against — and the caller falls through to the
+ * coordinate test. Returning null rather than `unknown` matters: an element
+ * without an anchor is no worse off than it was before this function existed,
+ * and silently downgrading every one of them to unknown would have turned the
+ * whole lint class unscoped on any baseline written before anchors existed.
+ *
+ * Four outcomes per anchor, and only two of them are conclusive:
+ *
+ *   in both     the text survived the revision verbatim -> unchanged
+ *   cur only    the revision wrote it                   -> changed
+ *   prev only   the revision removed it                 -> changed
+ *   in neither  the quote is stale against BOTH sides   -> no answer
+ *
+ * "In neither" is not evidence of anything. It means the record was pinned to a
+ * document that is no longer either side of this comparison, which is a
+ * staleness problem for tq-evidence-validate.js to report, not a licence for
+ * this function to guess.
+ *
+ * The known limit: text occurring more than once leaves provenance ambiguous,
+ * the same limit crossedByMovedBlocks records for moved blocks. Survival of at
+ * least one occurrence is still the honest reading of "this text is still here",
+ * and it is strictly better than the coordinate it replaces.
+ */
+function scopeByAnchor(el, diff) {
+  const anchors = el.anchors || [];
+  if (!anchors.length) return null;
+  if (!Array.isArray(diff.prevLines) || !Array.isArray(diff.curLines)) return null;
+
+  // Joined once per comparison, not once per element. A 1300-line document is
+  // ~60KB and compare() calls this for every element it classifies.
+  if (diff._prevText === undefined) {
+    diff._prevText = diff.prevLines.join('\n');
+    diff._curText = diff.curLines.join('\n');
+  }
+  const prevText = diff._prevText;
+  const curText = diff._curText;
+
+  let settled = null;
+  for (const a of anchors) {
+    const inPrev = prevText.includes(a.quote);
+    const inCur = curText.includes(a.quote);
+    const at = formatLines([a.lines]);
+    if (inCur && !inPrev) {
+      return { scope: 'changed', reason: `the text cited at ${at} was written by this revision` };
+    }
+    if (inPrev && !inCur) {
+      return { scope: 'changed', reason: `the text cited at ${at} was removed by this revision` };
+    }
+    // Both sides carry it. Displacement is not modification, so this anchor is
+    // unchanged — but a LATER anchor on the same element may still be changed,
+    // so record it and keep looking rather than returning here.
+    if (inPrev && inCur) {
+      settled = {
+        scope: 'unchanged',
+        reason: `the text cited at ${at} is byte-identical in both documents`,
+      };
+    }
+  }
+  return settled;
 }
 
 function formatLines(lines) {
@@ -739,6 +851,12 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     unchanged: count('UNCHANGED'),
     uncompared: count('UNCOMPARED'),
     unscoped: rows.filter((r) => r.unscoped).length,
+    // A regression the diff established and a regression nothing established are
+    // both blocking and are NOT the same claim. Splitting the count is what lets
+    // the justification below say which it is holding, and what a later decision
+    // round needs before it can change the verdict rule for either.
+    regressions_scoped: rows.filter((r) => r.klass === 'REGRESSION' && !r.unscoped).length,
+    regressions_unscoped: rows.filter((r) => r.klass === 'REGRESSION' && r.unscoped).length,
   };
 
   let verdict;
@@ -755,8 +873,25 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     // into N_A and exit 0 — and N_A does not block the gate. The rule written to
     // remove leniency was opening a wider hole than the one it closed.
     verdict = 'UNMET';
+    // Say which regressions were established and which were not.
+    //
+    // This string is not commentary: pin() writes it into LINT-14.json and into
+    // audit.md's verdict line, so it is the sentence a later reader treats as
+    // the finding. It used to read "N regression(s) on text the revision
+    // changed" whatever the unscoped count — in the run-5 s8 re-run it claimed
+    // all five regressions were on changed text when two of them carried no
+    // line source at all and were never scoped. An unscoped flip still blocks,
+    // because an unestablished flip is not a cleared one; what it must not do
+    // is get recorded as evidence that was never gathered.
     justification = `caller-decided from the baseline comparison: ${counts.regressions} `
-      + `regression(s) on text the revision changed, ${counts.variance} auditor-variance flip(s) discounted.`;
+      + `regression(s), ${counts.variance} auditor-variance flip(s) discounted.`;
+    if (counts.regressions_unscoped > 0) {
+      justification += ` ${counts.regressions_scoped} of those regression(s) are on text the `
+        + `revision changed; ${counts.regressions_unscoped} could not be scoped to the diff and `
+        + 'are unestablished — they block, but nothing here shows the revision caused them.';
+    } else {
+      justification += ' All are on text the revision changed.';
+    }
     if (uncompared.length) {
       justification += ` ${uncompared.reduce((n, u) => n + u.count, 0)} further element(s) in `
         + `${uncompared.map((u) => u.kind).join(', ')} had no prior record and were not compared; `
@@ -1305,7 +1440,14 @@ function cmdCompare(argv) {
   let diff = null;
   let prevDocFile = null;
   if (docUnchanged) {
-    diff = { touched: new Set(), coarse: false, changed: 0, total: splitLines(docText).length };
+    // Byte-identical documents: both sides are the same text, so every anchor
+    // resolves "in both" and every flip is variance — the rule this branch has
+    // always applied, now reached by the anchor test as well as the empty diff.
+    const same = splitLines(docText);
+    diff = {
+      touched: new Set(), coarse: false, changed: 0, total: same.length,
+      prevLines: same, curLines: same,
+    };
   } else if (prevDocArg !== '-' && fs.existsSync(prevDocArg)) {
     // The supplied previous document must BE the one the previous baseline was
     // taken on. The baseline records doc_sha256 and this used to read it only
