@@ -1064,8 +1064,9 @@ later verifier will re-derive the classification, delete it otherwise.
 
 THE CURRENT BASELINE is a JSON file you write from the audit before comparing,
 in the shape below, and then hand to `snapshot`. It is the published schema plus
-the one addition that is the whole point: every matrix row names the lines of
-{doc} it is about, and the file you read them from.
+the two additions that are the whole point: every matrix row names the lines of
+{doc} it is about, the file you read them from, and the text of {doc} at those
+lines, verbatim.
 
 ```json
 {
@@ -1077,10 +1078,10 @@ the one addition that is the whole point: every matrix row names the lines of
       "LINT-01": "pass",
       "LINT-03": { "status": "fail", "lines": [[100, 103]], "line_source": "evidence/LINT-03.json" }
     },
-    "coverage_items": [{ "name": "...", "status": "covered|partial|ok-excluded|gap", "lines": [[40, 52]], "line_source": "audit.md Coverage Matrix" }],
+    "coverage_items": [{ "name": "...", "status": "covered|partial|ok-excluded|gap", "lines": [[40, 52]], "exact_quote": "{doc lines 40-52, verbatim}", "line_source": "audit.md Coverage Matrix" }],
     "assumption_counts": { "total": N, "verified": N, "unverified": N, "falsified": N, "waived": N },
-    "scenario_statuses": [{ "id": 1, "name": "Happy path", "status": "covered|partial|gap", "lines": [[61, 70]], "line_source": "audit.md Scenario Matrix" }],
-    "concern_statuses": [{ "name": "API contract", "status": "ok|warn|gap", "lines": [[496, 496]], "line_source": "audit.md Cross-Cutting Concerns" }],
+    "scenario_statuses": [{ "id": 1, "name": "Happy path", "status": "covered|partial|gap", "lines": [[61, 70], [204, 204]], "exact_quote": ["{doc lines 61-70}", "{doc line 204}"], "line_source": "audit.md Scenario Matrix" }],
+    "concern_statuses": [{ "name": "API contract", "status": "ok|warn|gap", "lines": [[496, 496]], "exact_quote": "{doc line 496, verbatim}", "line_source": "audit.md Cross-Cutting Concerns" }],
     "infra_gaps": N,
     "infra_planned": N,
     "doc_sha256": "{written by snapshot from {doc}; do not transcribe it}"
@@ -1094,6 +1095,27 @@ element may omit `lines` and `line_source`: `compare --evidence` fills them from
 record may also cite a test file, and a change there is not a change to the
 document being diffed. A MATRIX ROW has no record and must carry them itself;
 the auditor's coverage, scenario and concern matrices are where you read them.
+
+A MATRIX ROW MUST ALSO CARRY `exact_quote`: the text of {doc} at each range in
+`lines`, copied verbatim — a string for one range, an array with one entry per
+range for several. Read {doc} at the range and paste what is there; do not
+paraphrase, trim or reflow it. The script checks every quote against {doc} at
+those lines and refuses the baseline, naming the row, on any mismatch — the
+same check evidence records get. The reason it exists: a line number is a
+coordinate, and any edit ABOVE a citation moves the coordinate while leaving
+the text untouched. Run 5 scoped four matrix regressions on line numbers and
+all four were false positives — the requirement each row rested on survived
+byte-identical, displaced by insertions higher up. The quote is what
+`compare` tests instead: text in both documents is unchanged, text in only one
+is changed. A row with `lines` and no `exact_quote` is accepted for
+compatibility, falls back to the line-number test, and is named by `snapshot`
+as a warning and by the comparison row's scope reason; treat that warning as a
+defect in the baseline you wrote. Quote the narrowest range that carries the
+row's finding — a requirement line, not the phase table around it — since a
+quote spanning text the revision legitimately rewrote scopes as changed and
+the row becomes a regression. Text that occurs more than once in {doc} anchors
+ambiguously; 94 of 94 quotes in run 5's records occurred exactly once, so this
+is a limit to know rather than one to expect.
 `assumption_counts`, `infra_gaps` and `infra_planned` ride in the baseline for
 trend tracking and are not classified as elements.
 

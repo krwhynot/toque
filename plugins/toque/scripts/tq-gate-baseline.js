@@ -480,6 +480,78 @@ const SELF_REFERENTIAL = new Set(['LINT-14']);
  * record and must carry them itself. That is R4-01 closed at the input, before
  * any classification happens.
  */
+/**
+ * Read a row's inline `exact_quote` into anchors, one per line range.
+ *
+ * Accepts a string when the row cites exactly one range, or an array with one
+ * entry per range. Anything else is a shape error, thrown so the caller can name
+ * the row: a quote that cannot be paired with its range cannot be validated, and
+ * an unvalidated quote is the fabricated citation this field exists to refuse.
+ * A blank quote is refused for the reason tq-evidence-validate.js gives: it
+ * survives against any document alive. No quote at all is not an error — it is
+ * every baseline written before this field existed.
+ */
+function readInlineAnchors(raw, lines) {
+  if (raw == null) return [];
+  const quotes = Array.isArray(raw) ? raw : [raw];
+  if (!lines.length) {
+    throw new Error('exact_quote given with no lines to anchor it to');
+  }
+  if (quotes.length !== lines.length) {
+    throw new Error(`exact_quote has ${quotes.length} entries for ${lines.length} line range(s); give one quote per range`);
+  }
+  const anchors = [];
+  for (let i = 0; i < quotes.length; i++) {
+    const q = quotes[i];
+    if (typeof q !== 'string') {
+      throw new Error(`exact_quote[${i}] is not a string`);
+    }
+    const quote = q.replace(/\r\n/g, '\n');
+    if (!quote.trim()) {
+      throw new Error(`exact_quote[${i}] is blank; a quote that says nothing anchors nothing`);
+    }
+    anchors.push({ lines: lines[i], quote });
+  }
+  return anchors;
+}
+
+/**
+ * Check every anchor against the document it claims to quote.
+ *
+ * The same test checkQuote in tq-evidence-validate.js applies to an evidence
+ * record: the lines cited, sliced out of the document, must equal the quote
+ * byte for byte after CRLF normalisation. Returns the list of failures, one
+ * string per anchor, empty when every quote matches. The caller decides what a
+ * failure costs; both callers refuse the baseline, because a quote that does
+ * not match the pinned document is a citation of text the author did not read,
+ * and the coordinate test it would fall back to is the false positive R5-01
+ * exists to end.
+ *
+ * Only anchors read INLINE are checked here. An anchor fillFromEvidence took
+ * from a record was already validated by tq-evidence-validate.js against the
+ * pinned hash, and an element that was filled has no inline quote to check.
+ */
+function checkAnchors(els, docText, label) {
+  const where = label || 'baseline';
+  const docLines = String(docText).replace(/\r\n/g, '\n').split('\n');
+  const failures = [];
+  for (const el of els.values()) {
+    if (el.line_source && /^evidence\//.test(el.line_source)) continue;
+    for (const a of el.anchors || []) {
+      const [start, end] = a.lines;
+      if (end > docLines.length) {
+        failures.push(`${where}: ${el.key}: exact_quote at ${start}-${end} cites past the end of a ${docLines.length}-line document`);
+        continue;
+      }
+      const actual = docLines.slice(start - 1, end).join('\n');
+      if (actual !== a.quote) {
+        failures.push(`${where}: ${el.key}: exact_quote at ${start}-${end} does not match the document at those lines`);
+      }
+    }
+  }
+  return failures;
+}
+
 function readElements(baseline, label) {
   const els = new Map();
   const where = label || 'baseline';
@@ -503,6 +575,12 @@ function readElements(baseline, label) {
     } catch (err) {
       throw new Error(`${where}: ${key}: ${err.message}`);
     }
+    let anchors;
+    try {
+      anchors = readInlineAnchors(obj.exact_quote, lines);
+    } catch (err) {
+      throw new Error(`${where}: ${key}: ${err.message}`);
+    }
     els.set(key, {
       key,
       kind,
@@ -510,14 +588,19 @@ function readElements(baseline, label) {
       label: name || id,
       status,
       lines,
-      // Filled by fillFromEvidence for lint elements. A matrix row has no
-      // evidence record to fill it from and its NAME is not in the document
-      // either — of the five row names run 5 scoped, four appear zero times in
-      // both documents, because they are the auditor's rubric categories rather
-      // than the document's own text. So a matrix row stays coordinate-anchored
-      // until it emits a record of its own, and the scope test below refuses to
-      // let one decide LINT-14 by itself.
-      anchors: [],
+      // A lint element is filled by fillFromEvidence from its record. A matrix
+      // row has no record and its NAME is not in the document either — of the
+      // five row names run 5 scoped, four appear zero times in both documents,
+      // because they are the auditor's rubric categories rather than the
+      // document's own text. So a matrix row carries its anchor INLINE: an
+      // `exact_quote` beside `lines`, one quote per range, the text of {doc} at
+      // that range verbatim. That is R5-01's remainder. The quote is validated
+      // against the document by checkAnchors before any comparison runs, so a
+      // row that cites lines it did not read cannot enter a baseline. A row
+      // that carries lines and no quote is still accepted — every baseline
+      // written before this field existed is that shape — and stays on the
+      // coordinate test, which the scope reason then says.
+      anchors,
       line_source: obj.line_source || (lines.length ? defaultSource : null),
     });
   };
@@ -677,12 +760,20 @@ function scopeOf(el, diff) {
   const anchorScope = scopeByAnchor(el, diff);
   if (anchorScope) return anchorScope;
 
+  // The coordinate route says so in its reason. Every false positive run 5
+  // recorded took this route, and the record read "line 386 is inside the
+  // diff" with nothing to show that no anchor had been asked. A reader of the
+  // next run's record can now tell a scoped-by-text row from a scoped-by-
+  // position one without re-deriving it.
+  const route = (el.anchors && el.anchors.length)
+    ? ' (anchor stale against both documents; fell back to the coordinate test)'
+    : ' (coordinate test; this element carries no anchor quote)';
   for (const [a, b] of el.lines) {
     for (let l = a; l <= b; l++) {
-      if (diff.touched.has(l)) return { scope: 'changed', reason: `line ${l} is inside the diff` };
+      if (diff.touched.has(l)) return { scope: 'changed', reason: `line ${l} is inside the diff${route}` };
     }
   }
-  return { scope: 'unchanged', reason: 'every line cited is unchanged since the previous baseline' };
+  return { scope: 'unchanged', reason: `every line cited is unchanged since the previous baseline${route}` };
 }
 
 /**
@@ -1455,6 +1546,7 @@ function cmdCompare(argv) {
 
   let diff = null;
   let prevDocFile = null;
+  let prevText = null;
   if (docUnchanged) {
     // Byte-identical documents: both sides are the same text, so every anchor
     // resolves "in both" and every flip is variance — the rule this branch has
@@ -1473,7 +1565,7 @@ function cmdCompare(argv) {
     // history is exactly where a near-miss is likely — an adjacent commit, the
     // right file at the wrong revision — and a near-miss must not silently
     // widen the exemption.
-    const prevText = fs.readFileSync(prevDocArg, 'utf8');
+    prevText = fs.readFileSync(prevDocArg, 'utf8');
     const prevSha = hashContent(prevText);
     if (prevBaseline.doc_sha256 && prevSha !== String(prevBaseline.doc_sha256).toLowerCase()) {
       console.error(`previous document does not match the previous baseline's doc_sha256:`);
@@ -1499,6 +1591,22 @@ function cmdCompare(argv) {
     const curEls = readElements(curBaseline, 'current baseline');
     const docRel = path.relative(path.resolve(rootDir), path.resolve(docArg));
     filled = fillFromEvidence(curEls, evidenceDir, docRel);
+    // An inline quote is checked against the document BEFORE it can scope
+    // anything. snapshot checks the same thing when the baseline is written,
+    // but compare reads the current baseline from a file the caller hands it,
+    // and that file need not have passed through snapshot yet. The previous
+    // baseline is re-checked against the previous document when one was
+    // supplied; it passed the same check when it was snapshotted, and the hash
+    // guard above already proved the document is the one it was taken on.
+    const bad = checkAnchors(curEls, docText, 'current baseline');
+    if (prevText !== null) {
+      bad.push(...checkAnchors(readElements(prevBaseline, 'previous baseline'), prevText, 'previous baseline'));
+    }
+    if (bad.length) {
+      throw new Error(bad.join('\n')
+        + '\nA quote that does not match the document at the lines it cites is a citation of text\n'
+        + 'the author did not read. Re-read {doc} at those lines and quote it verbatim.');
+    }
     // readElements runs again inside compare(); re-inject the filled lines by
     // writing them back onto the baseline object so both reads agree.
     for (const el of curEls.values()) {
@@ -1638,6 +1746,37 @@ function cmdSnapshot(argv) {
   const curFile = readJson(curBaselineArg, 'current baseline');
   const baseline = curFile.baseline || curFile;
 
+  // The baseline entering history must quote the document it is taken on.
+  // This is the write that the next run's compare reads as its previous side,
+  // so a quote that fails here would fail there too — but there it fails a
+  // comparison, here it fails a file the author can still correct.
+  let els;
+  try {
+    els = readElements(baseline, 'baseline');
+    const bad = checkAnchors(els, docText, 'baseline');
+    if (bad.length) {
+      throw new Error(bad.join('\n')
+        + '\nA quote that does not match the document at the lines it cites is a citation of text\n'
+        + 'the author did not read. Re-read the document at those lines and quote it verbatim.');
+    }
+  } catch (err) {
+    console.error(err.message);
+    process.exit(2);
+  }
+  // A matrix row with lines and no quote is accepted and named. It will be
+  // scoped by position in the next comparison, and position is what produced
+  // four false positives out of four in run 5. Naming the rows at write time
+  // is the one moment the author can still fix them.
+  const unanchored = [...els.values()]
+    .filter((el) => el.kind !== 'lint' && el.lines.length && !el.anchors.length)
+    .map((el) => el.key);
+  if (unanchored.length) {
+    console.error(`WARNING: ${unanchored.length} matrix row(s) carry lines but no exact_quote:`);
+    for (const k of unanchored) console.error(`  ${k}`);
+    console.error('These will be scoped by line number in the next comparison, and a line number');
+    console.error('is invalidated by any edit above it. Quote the document at each range verbatim.');
+  }
+
   const state = fs.existsSync(stateArg) ? readJson(stateArg, 'state file') : {};
 
   // What goes into history: the WHOLE previous baseline object, unmodified.
@@ -1757,6 +1896,7 @@ if (require.main === module) {
 
 module.exports = {
   hashContent, normalizeStatus, normalizeLines, changedLines, readElements,
+  readInlineAnchors, checkAnchors,
   fillFromEvidence, scopeOf, compare, renderSection, locateSection, fencedLines,
   writeSection, pin, assertContained, SECTION_HEADING, STATUS_ALIASES, RANK, SELF_REFERENTIAL,
   LCS_CELL_LIMIT, SCOPED_CLASSES,

@@ -2112,6 +2112,212 @@ console.log('\n15. R5-01 — the anchor is the text, not the line number');
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n16. R5-01 remainder — a matrix row carries its anchor inline');
+
+{
+  // The row quotes the document beside its lines. That quote is the anchor.
+  const els = gb.readElements(baseline({
+    coverage_items: [{ name: 'Auth flow', status: 'gap', lines: [[4, 4]],
+      exact_quote: 'Phase 2: old body', line_source: 'audit.md Coverage Matrix' }],
+  }), 'cur');
+  const el = els.get('coverage:Auth flow');
+  check('an inline exact_quote becomes the row\'s anchor',
+    el.anchors.length === 1 && el.anchors[0].quote === 'Phase 2: old body'
+      && el.anchors[0].lines[0] === 4, JSON.stringify(el.anchors));
+  const s = gb.scopeOf(el, gb.changedLines(DOC_V1, DOC_V2));
+  check('and the row scopes by that anchor', s.scope === 'changed' && /removed by this revision/.test(s.reason), s.reason);
+
+  // One quote per range. The run-5 rows cite three and four ranges each.
+  const multi = gb.readElements(baseline({
+    concern_statuses: [{ name: 'API contract', status: 'gap', lines: [[2, 2], [6, 7]],
+      exact_quote: ['line2 unchanged', 'line6\nline7'] }],
+  }), 'cur').get('concern:API contract');
+  check('an array quote pairs one entry with each range',
+    multi.anchors.length === 2 && multi.anchors[1].quote === 'line6\nline7'
+      && multi.anchors[1].lines[1] === 7, JSON.stringify(multi.anchors));
+
+  const throwsWith = (over, re) => {
+    try { gb.readElements(baseline(over), 'cur'); return 'no error'; } catch (err) {
+      return re.test(err.message) ? true : err.message;
+    }
+  };
+  check('a single string against two ranges is refused',
+    throwsWith({ coverage_items: [{ name: 'x', status: 'gap', lines: [[2, 2], [6, 6]], exact_quote: 'line2 unchanged' }] },
+      /1 entries for 2 line range/) === true);
+  check('a blank quote is refused',
+    throwsWith({ coverage_items: [{ name: 'x', status: 'gap', lines: [[2, 2]], exact_quote: '  ' }] },
+      /blank/) === true);
+  check('a quote with no lines to anchor to is refused',
+    throwsWith({ coverage_items: [{ name: 'x', status: 'gap', exact_quote: 'line1' }] },
+      /no lines/) === true);
+  check('and the refusal names the row',
+    throwsWith({ coverage_items: [{ name: 'Named row', status: 'gap', lines: [[2, 2]], exact_quote: '' }] },
+      /coverage:Named row/) === true);
+  check('a row with lines and no quote is still accepted (every pre-anchor baseline)',
+    gb.readElements(baseline({ coverage_items: [{ name: 'x', status: 'gap', lines: [[2, 2]] }] }), 'cur')
+      .get('coverage:x').anchors.length === 0);
+}
+
+{
+  // The quote is checked against the document, the way checkQuote checks a
+  // record against the pinned hash. A quote that does not match is a citation
+  // of text the author did not read.
+  const ok = gb.readElements(baseline({
+    coverage_items: [{ name: 'a', status: 'gap', lines: [[4, 5]], exact_quote: 'Phase 2: old body\nold detail' }],
+  }), 'cur');
+  check('checkAnchors passes a quote that matches the document at its lines',
+    gb.checkAnchors(ok, DOC_V1, 'cur').length === 0);
+  check('checkAnchors survives a CRLF document', gb.checkAnchors(ok, DOC_V1.replace(/\n/g, '\r\n'), 'cur').length === 0);
+
+  const wrong = gb.readElements(baseline({
+    coverage_items: [{ name: 'a', status: 'gap', lines: [[4, 4]], exact_quote: 'Phase 2: NEW body' }],
+  }), 'cur');
+  const f = gb.checkAnchors(wrong, DOC_V1, 'cur');
+  check('a quote that does not match the document at its lines fails',
+    f.length === 1 && /coverage:a: exact_quote at 4-4 does not match/.test(f[0]), JSON.stringify(f));
+
+  const past = gb.readElements(baseline({
+    coverage_items: [{ name: 'a', status: 'gap', lines: [[40, 41]], exact_quote: 'x' }],
+  }), 'cur');
+  check('a quote past the end of the document fails',
+    /past the end/.test(gb.checkAnchors(past, DOC_V1, 'cur')[0] || ''));
+
+  // An anchor a record supplied was validated by tq-evidence-validate.js and is
+  // not re-checked here — the element records where its lines came from.
+  const filled = gb.readElements(baseline({ lint_results: { 'LINT-03': 'fail' } }), 'cur');
+  const el = filled.get('lint:LINT-03');
+  el.lines = [[4, 4]]; el.anchors = [{ lines: [4, 4], quote: 'not in the doc' }];
+  el.line_source = 'evidence/LINT-03.json';
+  check('an anchor filled from an evidence record is not re-checked against the document',
+    gb.checkAnchors(filled, DOC_V1, 'cur').length === 0);
+}
+
+{
+  // The scope reason names its route. Run 5's records read "line 386 is inside
+  // the diff" with nothing to show the coordinate test had decided it.
+  const diff = gb.changedLines(DOC_V1, DOC_V2);
+  const coord = gb.scopeOf({ lines: [[4, 4]], anchors: [] }, diff);
+  check('a coordinate-scoped element says it carries no anchor',
+    /carries no anchor quote/.test(coord.reason), coord.reason);
+  const stale = gb.scopeOf({ lines: [[2, 2]], anchors: [{ lines: [2, 2], quote: 'in neither' }] }, diff);
+  check('an element whose anchor was stale says it fell back',
+    /stale against both documents/.test(stale.reason), stale.reason);
+}
+
+{
+  // End to end through the CLI: compare refuses a baseline whose quote does not
+  // match, and snapshot names the rows that carry lines without one.
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), DOC_V1, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(DOC_V1),
+    concern_statuses: [{ name: 'API contract', status: 'ok', lines: [[2, 2]], exact_quote: 'line2 unchanged' }],
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'cur-bad.json'), JSON.stringify({
+    run_number: 2,
+    concern_statuses: [{ name: 'API contract', status: 'gap', lines: [[2, 2]], exact_quote: 'line2 CHANGED' }],
+  }), 'utf8');
+  const bad = runCli(['compare', 'prev.json', 'cur-bad.json', 'prev-doc.md', 'doc.md'], root);
+  check('compare refuses a current baseline whose quote does not match the document',
+    bad.code === 2 && /concern:API contract: exact_quote at 2-2 does not match/.test(bad.out), `exit ${bad.code}: ${bad.out}`);
+
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    run_number: 2,
+    concern_statuses: [{ name: 'API contract', status: 'gap', lines: [[2, 2]], exact_quote: 'line2 unchanged' }],
+  }), 'utf8');
+  const good = runCli(['compare', 'prev.json', 'cur.json', 'prev-doc.md', 'doc.md', '--out', 'cmp.json'], root);
+  const cmp = JSON.parse(fs.readFileSync(path.join(root, 'cmp.json'), 'utf8'));
+  check('compare accepts a matching quote and scopes the flip by it',
+    good.code === 0 && cmp.verdict === 'MET' && cmp.rows[0].klass === 'VARIANCE'
+      && /byte-identical/.test(cmp.rows[0].scope_reason), `exit ${good.code}: ${cmp.rows[0] && cmp.rows[0].scope_reason}`);
+
+  // The previous side is re-checked too when its document is supplied.
+  fs.writeFileSync(path.join(root, 'prev-bad.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(DOC_V1),
+    concern_statuses: [{ name: 'API contract', status: 'ok', lines: [[2, 2]], exact_quote: 'never there' }],
+  }), 'utf8');
+  const prevBad = runCli(['compare', 'prev-bad.json', 'cur.json', 'prev-doc.md', 'doc.md'], root);
+  check('compare refuses a previous baseline whose quote does not match its document',
+    prevBad.code === 2 && /previous baseline: concern:API contract/.test(prevBad.out), `exit ${prevBad.code}`);
+
+  fs.writeFileSync(path.join(root, 'snap-bad.json'), JSON.stringify({
+    run_number: 3,
+    coverage_items: [{ name: 'Auth flow', status: 'gap', lines: [[4, 4]], exact_quote: 'Phase 2: old body' }],
+  }), 'utf8');
+  const snapBad = runCli(['snapshot', 'snap-bad.json', 'doc.md', 'state.json'], root);
+  check('snapshot refuses a baseline whose quote does not match the document it is taken on',
+    snapBad.code === 2 && /coverage:Auth flow: exact_quote at 4-4 does not match/.test(snapBad.out)
+      && !fs.existsSync(path.join(root, 'state.json')), `exit ${snapBad.code}: ${snapBad.out}`);
+
+  fs.writeFileSync(path.join(root, 'snap.json'), JSON.stringify({
+    run_number: 3,
+    coverage_items: [
+      { name: 'Auth flow', status: 'gap', lines: [[4, 4]], exact_quote: 'Phase 2: NEW body' },
+      { name: 'Unquoted row', status: 'gap', lines: [[6, 6]] },
+    ],
+    lint_results: { 'LINT-03': { status: 'fail', lines: [[4, 4]] } },
+  }), 'utf8');
+  // runCli returns stdout alone on exit 0; the warning is on stderr.
+  const snapRun = require('child_process').spawnSync(process.execPath,
+    [CLI, 'snapshot', 'snap.json', 'doc.md', 'state.json'], { cwd: root, encoding: 'utf8' });
+  const snap = { code: snapRun.status, out: `${snapRun.stdout}${snapRun.stderr}` };
+  check('snapshot accepts a matching quote and names the matrix rows that carry none',
+    snap.code === 0 && /1 matrix row\(s\) carry lines but no exact_quote/.test(snap.out)
+      && /coverage:Unquoted row/.test(snap.out) && !/coverage:Auth flow/.test(snap.out)
+      && !/lint:LINT-03/.test(snap.out), `exit ${snap.code}: ${snap.out}`);
+}
+
+{
+  // The four run-5 false positives, replayed through compare() with the rows
+  // carrying the anchor this change asks the executor to write. Section 15
+  // proved scopeOf answers when handed an anchor; this proves a baseline row
+  // in the published shape reaches that answer with nothing else in the way.
+  const base = 'C:/scratch/toque-run5/logs';
+  const v2 = `${base}/s1-canary-artefacts-iter2/doc/make-report-delivery-faster-and-let-customers-schedule-reports.md`;
+  const v3 = `${base}/s1-canary-artefacts-iter3/doc/make-report-delivery-faster-and-let-customers-schedule-reports.md`;
+  if (!fs.existsSync(v2) || !fs.existsSync(v3)) {
+    skip('run 5 false positives are variance through compare() with inline anchors',
+      'retained run-5 documents are not on this host');
+  } else {
+    const V2 = fs.readFileSync(v2, 'utf8');
+    const V3 = fs.readFileSync(v3, 'utf8');
+    const line = (t, n) => t.replace(/\r\n/g, '\n').split('\n')[n - 1];
+    const diff = gb.changedLines(V2, V3);
+    // The requirement both rows rest on: v2:778, byte-identical at v3:929.
+    check('run 5: the requirement survives verbatim, displaced 151 lines',
+      line(V2, 778) === line(V3, 929) && line(V2, 778).length > 20);
+
+    const rows = ['Migration/backward compat'];
+    const prevB = baseline({
+      concern_statuses: rows.map((name) => ({ name, status: 'ok', lines: [[778, 778]], exact_quote: line(V2, 778) })),
+      scenario_statuses: [{ id: 4, name: 'Backward compatibility', status: 'ok', lines: [[778, 778]], exact_quote: line(V2, 778) }],
+    });
+    const curCoord = baseline({
+      concern_statuses: rows.map((name) => ({ name, status: 'gap', lines: [[386, 389]] })),
+      scenario_statuses: [{ id: 4, name: 'Backward compatibility', status: 'gap', lines: [[386, 389]] }],
+    });
+    const curAnch = baseline({
+      concern_statuses: rows.map((name) => ({ name, status: 'gap', lines: [[929, 929]], exact_quote: line(V3, 929) })),
+      scenario_statuses: [{ id: 4, name: 'Backward compatibility', status: 'gap', lines: [[929, 929]], exact_quote: line(V3, 929) }],
+    });
+    check('run 5: the inline quotes validate against their documents',
+      gb.checkAnchors(gb.readElements(prevB, 'p'), V2, 'p').length === 0
+        && gb.checkAnchors(gb.readElements(curAnch, 'c'), V3, 'c').length === 0);
+
+    const before = gb.compare(prevB, curCoord, diff, {});
+    check('run 5: without a quote both rows are still REGRESSION and LINT-14 UNMET',
+      before.verdict === 'UNMET' && before.counts.regressions === 2
+        && before.rows.every((r) => /carries no anchor quote/.test(r.scope_reason)),
+      `${before.verdict} ${JSON.stringify(before.counts)}`);
+    const after = gb.compare(prevB, curAnch, diff, {});
+    check('run 5: with the quote both rows are VARIANCE and LINT-14 MET',
+      after.verdict === 'MET' && after.counts.variance === 2 && after.counts.regressions === 0,
+      `${after.verdict} ${JSON.stringify(after.counts)}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }
