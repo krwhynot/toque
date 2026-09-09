@@ -116,6 +116,48 @@ console.log('\n2. Unverifiable claims');
     `flags=${JSON.stringify(out.flags)}`);
 }
 
+// Stress run 5, R5-06. The exemption above used to be total: any non-MET
+// record returned before its citations were looked at. LINT-14 is pinned to
+// audit.md's hash and has been UNMET in every iteration run so far, so when
+// audit.md was appended to after the pin, checkQuote said EVIDENCE-STALE when
+// called directly and the CLI said "0 flagged", exit 0. A negative finding
+// keeps its verdict and needs no evidence; evidence it carries is still checked.
+{
+  const stale = validateRecord(record({
+    verdict: 'UNMET',
+    evidence: [{ artifact: ARTIFACT, line_start: 9, line_end: 9, exact_quote: TRUE_QUOTE, sha256: 'deadbeef'.repeat(8) }],
+  }), ROOT);
+  check('UNMET with a stale citation keeps its verdict', stale.verdict === 'UNMET', `got ${stale.verdict}`);
+  check('and is flagged EVIDENCE-STALE',
+    (stale.flags || []).includes('EVIDENCE-STALE'), `flags=${JSON.stringify(stale.flags)}`);
+
+  const fine = validateRecord(record({ verdict: 'UNMET' }), ROOT);
+  check('UNMET with a valid citation is not promoted to MET',
+    fine.verdict === 'UNMET' && (fine.flags || []).length === 0,
+    `got ${fine.verdict} flags=${JSON.stringify(fine.flags)}`);
+
+  const na = validateRecord(record({
+    verdict: 'N_A',
+    evidence: [{ artifact: ARTIFACT, line_start: 9, line_end: 9, exact_quote: 'a paraphrase', sha256: FIXTURE_SHA }],
+  }), ROOT);
+  check('N_A with a bad quote keeps its verdict and carries the flag',
+    na.verdict === 'N_A' && (na.flags || []).length === 1, `got ${na.verdict} flags=${JSON.stringify(na.flags)}`);
+
+  // The directory counts are what the CLI prints and exits on: a stale UNMET
+  // is flagged, not demoted, and one flag is exit 1.
+  const os = require('os');
+  const fs = require('fs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-evidence-r506-'));
+  fs.writeFileSync(path.join(dir, 'LINT-14.json'), JSON.stringify(record({
+    criterion_id: 'LINT-14', verdict: 'UNMET',
+    evidence: [{ artifact: ARTIFACT, line_start: 9, line_end: 9, exact_quote: TRUE_QUOTE, sha256: 'deadbeef'.repeat(8) }],
+  })), 'utf8');
+  const out = validateDirectory(dir, ROOT);
+  check('a directory holding a stale UNMET reports 0 demoted, 1 flagged',
+    out.demoted === 0 && out.flagged === 1, `demoted=${out.demoted} flagged=${out.flagged}`);
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log('\n3. Staleness');
 
 // The quote can still match its lines while the surrounding document has moved on.

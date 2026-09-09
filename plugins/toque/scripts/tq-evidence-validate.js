@@ -209,7 +209,27 @@ function validateRecord(rec, rootDir) {
   }
 
   if (claimed !== 'MET') {
-    return { criterion_id: rec && rec.criterion_id, verdict: claimed, flags };
+    // A negative finding needs no evidence — you cannot cite the absence of a
+    // thing — but evidence it DOES carry is still a claim about a file, and a
+    // claim about a file can be stale. This return used to send every non-MET
+    // record home unexamined. LINT-14 is pinned to audit.md's hash and has been
+    // UNMET in every stress iteration run so far; audit.md was appended to, the
+    // pin went stale, checkQuote said EVIDENCE-STALE when called directly, and
+    // the CLI printed "0 flagged" and exited 0 — so EVIDENCE_OK, a gate term,
+    // read true on a pin nothing had refreshed (stress run 5, R5-06). The
+    // documented hazard was a false alarm; the real one was silence.
+    //
+    // The verdict is kept either way. An UNMET cannot be demoted further, and it
+    // must not be promoted because its citations happen to hold — the final
+    // MET-or-UNMET expression below is for records that CLAIMED MET. Only the
+    // flags are collected, and `flagged` is what validateDirectory and the CLI
+    // exit on. Absent evidence raises nothing here, as before.
+    const supplied = Array.isArray(rec.evidence) ? rec.evidence : [];
+    for (const item of supplied) {
+      const flag = checkQuote(item, rootDir);
+      if (flag && !flags.includes(flag)) flags.push(flag);
+    }
+    return { criterion_id: rec.criterion_id, verdict: claimed, flags };
   }
 
   const evidence = Array.isArray(rec.evidence) ? rec.evidence : [];

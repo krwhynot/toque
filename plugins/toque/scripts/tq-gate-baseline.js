@@ -530,13 +530,16 @@ function readInlineAnchors(raw, lines) {
  * Only anchors read INLINE are checked here. An anchor fillFromEvidence took
  * from a record was already validated by tq-evidence-validate.js against the
  * pinned hash, and an element that was filled has no inline quote to check.
+ * "Filled" is the mark fillFromEvidence sets, not the line_source label: the
+ * label is part of the published baseline schema and the author writes it, so
+ * it cannot be what decides whether the author's quote is read.
  */
 function checkAnchors(els, docText, label) {
   const where = label || 'baseline';
   const docLines = String(docText).replace(/\r\n/g, '\n').split('\n');
   const failures = [];
   for (const el of els.values()) {
-    if (el.line_source && /^evidence\//.test(el.line_source)) continue;
+    if (el.filled) continue;
     for (const a of el.anchors || []) {
       const [start, end] = a.lines;
       if (end > docLines.length) {
@@ -705,6 +708,12 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
       el.lines = lines;
       el.anchors = anchors;
       el.line_source = `evidence/${el.id}.json`;
+      // Provenance, set only here. checkAnchors skips an element on this mark
+      // and on nothing else — it used to skip on the `evidence/` prefix of
+      // line_source, a label the baseline author writes, so an inline quote
+      // that matched nothing entered a baseline unchecked under
+      // `"line_source": "evidence/anything.json"`.
+      el.filled = true;
       filled.push(el.id);
     }
   }
@@ -855,8 +864,17 @@ function formatLines(lines) {
  */
 function compare(prevBaseline, curBaseline, diff, opts) {
   const options = opts || {};
-  const prev = readElements(prevBaseline, 'previous baseline');
-  const cur = readElements(curBaseline, 'current baseline');
+  // A caller that has already read the elements hands them in; otherwise they
+  // are read here. cmdCompare reads them, fills anchors from evidence records,
+  // and used to hand this function the raw baseline object instead — which was
+  // re-read from scratch. The filled `lines` were copied back onto the object
+  // first, for lint rows only, and the anchors were not, so every anchor a
+  // record supplied was dropped at that handoff: the CLI scoped a
+  // record-anchored element by coordinate while the in-process tests, which
+  // call this function directly, scoped it by text. Passing the elements
+  // through is the whole fix. There is nothing to copy back.
+  const prev = options.prevElements || readElements(prevBaseline, 'previous baseline');
+  const cur = options.curElements || readElements(curBaseline, 'current baseline');
 
   const rows = [];
   const keys = new Set([...prev.keys(), ...cur.keys()]);
@@ -1607,29 +1625,11 @@ function cmdCompare(argv) {
         + '\nA quote that does not match the document at the lines it cites is a citation of text\n'
         + 'the author did not read. Re-read {doc} at those lines and quote it verbatim.');
     }
-    // readElements runs again inside compare(); re-inject the filled lines by
-    // writing them back onto the baseline object so both reads agree.
-    for (const el of curEls.values()) {
-      if (el.kind !== 'lint' || !el.lines.length) continue;
-      if (!curBaseline.lint_results) curBaseline.lint_results = {};
-      const v = curBaseline.lint_results[el.id];
-      if (v && typeof v === 'object' && !Array.isArray(v)) {
-        // Test for EMPTINESS, not truthiness. `[]` is truthy, so a baseline
-        // that wrote `"lines": []` — the natural spelling for "I have no lines
-        // to give you" — kept its empty array, the filled evidence was thrown
-        // away, and the element scoped as unscoped. Omitting the field gave MET
-        // and spelling it out gave UNMET, on identical evidence.
-        if (!Array.isArray(v.lines) || v.lines.length === 0) {
-          v.lines = el.lines;
-          v.line_source = el.line_source;
-        }
-      } else {
-        curBaseline.lint_results[el.id] = {
-          status: v, lines: el.lines, line_source: el.line_source,
-        };
-      }
-    }
-    cmp = compare(prevBaseline, curBaseline, diff, { docUnchanged });
+    // The filled elements go in as read. A write-back loop used to stand here
+    // that copied the filled `lines` onto the baseline object for compare() to
+    // re-read — lint rows only, lines and source label only — and the anchors
+    // fillFromEvidence had attached went with neither. See compare().
+    cmp = compare(prevBaseline, curBaseline, diff, { docUnchanged, curElements: curEls });
   } catch (err) {
     console.error(err.message);
     process.exit(2);

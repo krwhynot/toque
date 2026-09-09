@@ -2183,11 +2183,17 @@ console.log('\n16. R5-01 remainder — a matrix row carries its anchor inline');
     /past the end/.test(gb.checkAnchors(past, DOC_V1, 'cur')[0] || ''));
 
   // An anchor a record supplied was validated by tq-evidence-validate.js and is
-  // not re-checked here — the element records where its lines came from.
+  // not re-checked here. What says "a record supplied it" is the mark
+  // fillFromEvidence sets, not the line_source label: this test used to set
+  // only the label and expect the exemption, which is the bypass section 17
+  // closes — the label is a baseline field the author writes.
   const filled = gb.readElements(baseline({ lint_results: { 'LINT-03': 'fail' } }), 'cur');
   const el = filled.get('lint:LINT-03');
   el.lines = [[4, 4]]; el.anchors = [{ lines: [4, 4], quote: 'not in the doc' }];
   el.line_source = 'evidence/LINT-03.json';
+  check('the evidence/ label alone does not exempt an anchor from the check',
+    gb.checkAnchors(filled, DOC_V1, 'cur').length === 1);
+  el.filled = true;
   check('an anchor filled from an evidence record is not re-checked against the document',
     gb.checkAnchors(filled, DOC_V1, 'cur').length === 0);
 }
@@ -2269,7 +2275,8 @@ console.log('\n16. R5-01 remainder — a matrix row carries its anchor inline');
 }
 
 {
-  // The four run-5 false positives, replayed through compare() with the rows
+  // Two of the four run-5 false positives — the iteration-3 pair, route 3 —
+  // replayed through compare() with the rows
   // carrying the anchor this change asks the executor to write. Section 15
   // proved scopeOf answers when handed an anchor; this proves a baseline row
   // in the published shape reaches that answer with nothing else in the way.
@@ -2315,6 +2322,107 @@ console.log('\n16. R5-01 remainder — a matrix row carries its anchor inline');
       after.verdict === 'MET' && after.counts.variance === 2 && after.counts.regressions === 0,
       `${after.verdict} ${JSON.stringify(after.counts)}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n17. The CLI reaches the anchor — a second review of part B');
+// ---------------------------------------------------------------------------
+
+{
+  // Found by a second reviewer reading the CLI path, not by a run. cmdCompare
+  // read the elements, filled anchors from evidence, then handed compare() the
+  // raw baseline object, which re-read the elements from scratch; a write-back
+  // loop copied the filled `lines` onto the object first — lint rows only — and
+  // copied no anchors. So every anchor a record supplied was dropped at the
+  // handoff, and the CLI scoped a record-anchored element by coordinate while
+  // section 15 and 16, which call compare() directly, scoped it by text.
+  //
+  // The shape is run 5's route 1: a line inserted above the citation and an
+  // edit below it. The cited line survives byte-identical and lands on a seam,
+  // so the coordinate test marks it and the anchor test does not. Asserting
+  // the diff first makes the disagreement part of the test rather than an
+  // assumption about the seam rule.
+  const v1 = ['line1', 'line2 unchanged', 'line3', 'line4', 'line5', 'line6'].join('\n') + '\n';
+  const v2 = ['line1', 'inserted', 'line2 unchanged', 'line3', 'line4 NEW', 'line5', 'line6'].join('\n') + '\n';
+  const d = gb.changedLines(v1, v2);
+  check('the surviving line sits on a seam the coordinate test marks',
+    d.touched.has(3) && v2.split('\n')[2] === 'line2 unchanged', [...d.touched].join(','));
+
+  const root = tmpdir();
+  fs.mkdirSync(path.join(root, 'ev'));
+  fs.writeFileSync(path.join(root, 'doc.md'), v2, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev-doc.md'), v1, 'utf8');
+  fs.writeFileSync(path.join(root, 'prev.json'), JSON.stringify({
+    run_number: 1, doc_sha256: gb.hashContent(v1), lint_results: { 'LINT-05': 'pass' },
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'ev', 'LINT-05.json'), JSON.stringify({
+    criterion_id: 'LINT-05',
+    evidence: [{ artifact: 'doc.md', line_start: 3, line_end: 3, exact_quote: 'line2 unchanged', sha256: gb.hashContent(v2) }],
+    reasoning: 'r', verdict: 'UNMET',
+  }), 'utf8');
+  fs.writeFileSync(path.join(root, 'cur.json'), JSON.stringify({
+    run_number: 2, lint_results: { 'LINT-05': 'fail' },
+  }), 'utf8');
+
+  // In-process, the coordinate route alone: the flip is a REGRESSION.
+  const coord = gb.compare(
+    baseline({ lint_results: { 'LINT-05': 'pass' } }),
+    baseline({ lint_results: { 'LINT-05': { status: 'fail', lines: [[3, 3]], line_source: 'evidence/LINT-05.json' } } }),
+    d, {},
+  );
+  check('by coordinate alone the same flip is a REGRESSION and LINT-14 UNMET',
+    coord.verdict === 'UNMET' && coord.rows[0].klass === 'REGRESSION', `${coord.verdict} ${coord.rows[0].klass}`);
+
+  // Through the CLI with the evidence record: the anchor must reach compare().
+  const r = runCli(['compare', 'prev.json', 'cur.json', 'prev-doc.md', 'doc.md',
+    '--evidence', 'ev', '--root', root, '--out', 'cmp.json'], root);
+  const cmp = fs.existsSync(path.join(root, 'cmp.json'))
+    ? JSON.parse(fs.readFileSync(path.join(root, 'cmp.json'), 'utf8')) : { rows: [] };
+  const row = cmp.rows.find((x) => x.id === 'LINT-05') || {};
+  check('through the CLI the record-anchored flip is VARIANCE and LINT-14 MET',
+    r.code === 0 && /LINT-14: MET/.test(r.out), `exit ${r.code}: ${r.out}`);
+  check('and the scope reason says the text was found, not that the line was clear',
+    /byte-identical/.test(row.scope_reason || ''), row.scope_reason);
+  check('the comparison records which element was filled from evidence',
+    Array.isArray(cmp.meta && cmp.meta.evidence_filled) && cmp.meta.evidence_filled.includes('LINT-05'),
+    JSON.stringify(cmp.meta && cmp.meta.evidence_filled));
+}
+
+{
+  // The other finding of the same review. checkAnchors skipped any element
+  // whose line_source began `evidence/` — the label the schema tells the author
+  // to write on a lint row — so an inline quote that matched nothing entered a
+  // baseline unchecked under `"line_source": "evidence/anything.json"`. The
+  // skip now keys on the mark fillFromEvidence sets, which no baseline field
+  // can spell.
+  const wrong = baseline({
+    coverage_items: [{ name: 'Invented', status: 'gap', lines: [[1, 1]], exact_quote: 'not what line 1 says', line_source: 'evidence/anything.json' }],
+  });
+  const bad = gb.checkAnchors(gb.readElements(wrong, 'b'), DOC_V2, 'b');
+  check('an evidence/ label on an inline row does not exempt its quote from the check',
+    bad.length === 1 && /does not match the document/.test(bad[0]), JSON.stringify(bad));
+  check('readElements never marks an element as filled',
+    [...gb.readElements(wrong, 'b').values()].every((el) => !el.filled));
+
+  const root = tmpdir();
+  fs.writeFileSync(path.join(root, 'doc.md'), DOC_V2, 'utf8');
+  fs.writeFileSync(path.join(root, 'b.json'), JSON.stringify(wrong), 'utf8');
+  const snap = runCli(['snapshot', 'b.json', 'doc.md', 'state.json'], root);
+  check('snapshot refuses it, whatever the label says',
+    snap.code === 2 && /does not match the document/.test(snap.out), `exit ${snap.code}: ${snap.out}`);
+
+  // And an element that WAS filled from a record still skips the inline check,
+  // because its quote was validated against the pinned hash by the validator.
+  fs.mkdirSync(path.join(root, 'evidence'));
+  fs.writeFileSync(path.join(root, 'evidence', 'LINT-03.json'), JSON.stringify({
+    criterion_id: 'LINT-03',
+    evidence: [{ artifact: 'docs/spec.md', line_start: 2, line_end: 2, exact_quote: 'line2 unchanged', sha256: gb.hashContent(DOC_V2) }],
+    reasoning: 'r', verdict: 'UNMET',
+  }), 'utf8');
+  const els = gb.readElements(baseline({ lint_results: { 'LINT-03': 'fail' } }), 'c');
+  gb.fillFromEvidence(els, path.join(root, 'evidence'), 'docs/spec.md');
+  check('fillFromEvidence marks the element it filled',
+    els.get('lint:LINT-03') && els.get('lint:LINT-03').filled === true);
 }
 
 // ---------------------------------------------------------------------------
