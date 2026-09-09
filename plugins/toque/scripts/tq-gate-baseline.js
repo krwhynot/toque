@@ -558,7 +558,23 @@ function fillFromEvidence(els, evidenceDir, docRelPath) {
   const wanted = String(docRelPath).split(path.sep).join('/');
 
   for (const el of els.values()) {
-    if (el.kind !== 'lint' || el.lines.length > 0) continue;
+    // Any element with a record, not only a lint one.
+    //
+    // This read `el.kind !== 'lint'` and that was right when the only anchor was
+    // a line number: a matrix row had no record to take one from, so the guard
+    // documented an absence rather than imposing a rule. It has now become the
+    // rule. Nothing about a coverage, scenario or concern row makes its evidence
+    // less usable than a lint criterion's — the id is the file name either way,
+    // the artifact must still match the audited document, and the quote is still
+    // checked against the pinned hash. Leaving the guard in would mean that when
+    // the matrix rows finally emit records, R5-01 needs a code change here as
+    // well as a schema change. It does not: the anchor arrives the moment the
+    // record does.
+    //
+    // No such record exists yet, so this changes nothing about today's runs. It
+    // is the difference between part B being a data change and a data change
+    // plus another edit to this function.
+    if (el.lines.length > 0) continue;
     const file = path.join(evidenceDir, `${el.id}.json`);
     if (!fs.existsSync(file)) continue;
     let rec;

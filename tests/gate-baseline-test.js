@@ -2038,6 +2038,34 @@ console.log('\n15. R5-01 — the anchor is the text, not the line number');
   gb.fillFromEvidence(els2, evidence, 'audit.md');
   check('a blank exact_quote is not taken as an anchor',
     els2.get('lint:LINT-09').anchors.length === 0);
+
+  // A matrix row with a record must be anchored from it too. The guard here read
+  // `el.kind !== 'lint'`, which was a true statement about what existed rather
+  // than a rule, and would have made part B a code change as well as a schema
+  // one. No matrix row emits a record yet, so this changes no run today.
+  fs.writeFileSync(path.join(evidence, 'Auth flow.json'), JSON.stringify({
+    evidence: [{ artifact: 'audit.md', line_start: 4, line_end: 4,
+      exact_quote: 'Phase 2: old body', sha256: 'x' }],
+  }), 'utf8');
+  const els3 = gb.readElements(baseline({
+    coverage_items: [{ name: 'Auth flow', status: 'gap' }],
+  }), 'cur');
+  gb.fillFromEvidence(els3, evidence, 'audit.md');
+  const matrix = els3.get('coverage:Auth flow');
+  check('a matrix row with an evidence record is anchored from it',
+    matrix.anchors.length === 1 && matrix.anchors[0].quote === 'Phase 2: old body',
+    JSON.stringify(matrix.anchors));
+  check('and it scopes by that anchor, not by its line number',
+    gb.scopeOf(matrix, gb.changedLines(DOC_V1, DOC_V2)).scope === 'changed');
+
+  // A matrix row with no record is unchanged by any of this: still no anchor,
+  // still the coordinate test. That is exactly the R5-01 remainder.
+  const els4 = gb.readElements(baseline({
+    coverage_items: [{ name: 'No record here', status: 'gap', lines: [[2, 2]] }],
+  }), 'cur');
+  gb.fillFromEvidence(els4, evidence, 'audit.md');
+  check('a matrix row with no record still has no anchor (R5-01 remainder)',
+    els4.get('coverage:No record here').anchors.length === 0);
 }
 
 {
