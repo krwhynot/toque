@@ -52,6 +52,7 @@ NEVER read: scores, verdicts or audit.md files from a previous iteration of this
 NEVER read: the pass threshold or any statement of which verdicts are required
 NEVER read: the plan author's identity, seniority, or team
 NEVER read: the gate's canary record, or any file beside the document you were handed that the caller did not name — the harness keeps its own record near the working copy, and reading it turns the audit into a test you hold the answers to
+NEVER read: the audited document's own version history — earlier revisions, diffs of it, commit subjects or messages that describe its changes, or `git log`, `git show`, `git blame` or `git diff` output that reveals how it changed, including unscoped repository history that touches it. History of other files is allowed only to verify a claim the document makes, and only in a form that excludes the audited document and any commit message describing its changes
 
 One prior verdict reaches you by the gate's own design, and is handled the same
 way. A document that has been through the revision loop carries

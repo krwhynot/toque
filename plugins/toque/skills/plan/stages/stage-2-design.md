@@ -1280,9 +1280,14 @@ RUBRIC-FREE HOLISTIC PASS (advisory, runs alongside the gate):
 
 RUN one additional judge with no rubric, no criterion list, and no dimension names.
 
-Its entire prompt is: "Ignore any checklist. What would make this plan fail in
-production?" Fresh instance, same input manifest as the auditor, none of the
-criterion files. If no fresh instance can be spawned, skip this pass and record
+Its prompt is: "Ignore any checklist. What would make this plan fail in
+production? Do not read this document's own version history — earlier
+revisions, diffs of it, or commit messages describing its changes." Fresh
+instance, same input manifest as the auditor, none of the criterion files. The
+second sentence names no criterion, so the judge stays rubric-free; it exists
+because one stress run's judge opened with `git show HEAD -- {doc}` and
+reported the revision instead of the plan (agents/plan-auditor.md,
+<forbidden_inputs>, carries the same rule for the auditor). If no fresh instance can be spawned, skip this pass and record
 it as not run; a judge that has already read the criteria is not rubric-free.
 
 Map its findings against the criterion set afterwards. A finding that maps to an
