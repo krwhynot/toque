@@ -50,7 +50,7 @@ function gateFolderChecks(gateDir, docPath) {
   // caller quoting an inject command, both hit it. The invariant is citations.canary.
   c.audit_prose_mentions_canary_path = audit.includes('.canary/');
   // mode tolerates the bolded form `Audit mode: **LITE (spec-only)**`, which returned null in run 3 (s6).
-  c.audit_mentions = { PASS: /\bPASS\b/.test(audit), NOT_PASS: /NOT PASS/.test(audit), revision_history: /Revision History/.test(audit), mode: (audit.match(/Audit mode:\s*\**\s*([A-Za-z]+)/) || [])[1] || null, not_applicable: /not-applicable/.test(audit) };
+  c.audit_mentions = { raw_pass_word_count: (audit.match(/\bPASS\b/g) || []).length, raw_not_pass_mentions: (audit.match(/NOT PASS/g) || []).length, revision_history: /Revision History/.test(audit), mode: (audit.match(/Audit mode:\s*\**\s*([A-Za-z]+)/) || [])[1] || null, not_applicable: /not-applicable/.test(audit) };
   return c;
 }
 
@@ -63,7 +63,7 @@ function newSpec() {
 }
 
 const git = run('git status --porcelain');
-out.git_status = git.out.trim().split('\n').filter(Boolean);
+out.git_status = git.out.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.length > 0);
 out.stray_canary_dirs = run('git ls-files --others --ignored --exclude-standard --directory').out.split('\n').filter(l => l.includes('.canary')).concat(run('git ls-files --others --exclude-standard').out.split('\n').filter(l => l.includes('.canary')));
 
 switch (scenario) {

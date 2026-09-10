@@ -25,6 +25,30 @@
 # 2.1.267. The .meta records the override so the isolation is provable from
 # disk.
 #
+# One thing run 7 learned (R7-02): --settings only overrode outputStyle — both
+# ~/.claude/CLAUDE.md and ~/.claude/rules/*.md still loaded, and a rule asking
+# for a "[Confidence: NN%]" line rode into the auditor's own text unprompted
+# (s10-auditor-1.txt:44). A first fix attempt, --bare plus --plugin-dir, failed
+# outright: --bare requires API-key auth and this operator uses OAuth (exit 1,
+# "Not logged in"). The working fix is --restricted --tools "$TOOLS"
+# --strict-mcp-config --plugin-dir "$PLUGIN_DIR" --add-dir "$PLUGIN_DIR":
+# --restricted drops ~/.claude/CLAUDE.md, rules/*.md and every other user/
+# project/local setting (managed settings and --settings still apply); --tools
+# restores exactly the plugin's declared grant, which --restricted otherwise
+# removes; --plugin-dir loads the plugin's own agent/skill definitions without
+# depending on the operator's enabledPlugins setting; and --add-dir is required
+# alongside --plugin-dir because --restricted confines file-tool reads to the
+# working directory by default, and a fresh auditor cannot read the plugin's
+# own lint registry or SKILL.md without it — measured directly: the first real
+# audit attempt without --add-dir made zero writes and refused to fabricate a
+# report ("Without the registry, the records would be made up") rather than
+# work around the limit. With --add-dir, a full real s10 audit ran clean: 12
+# MET / 9 UNMET / 1 N_A, evidence validator 0 flagged, and zero occurrences of
+# the "[Confidence:" tracer anywhere in its output or the gate folder it wrote.
+# Only measured for the auditor launch; the holistic judge (a separately
+# composed prompt through this same script) was not independently re-run under
+# these flags.
+#
 #   bash launch-auditor.sh <prompt-file> <scenario-repo> <out-file>
 #
 # The executor composes the prompt file: the frozen agent text, the bindings
@@ -35,8 +59,12 @@
 # and its route are provable from disk afterwards without relying on the CLI
 # failing, which is what established the route in run 3.
 #
-#   MODEL=opus   model passed to the subprocess (default opus, the run-3 pin)
-#   DRY_RUN=1    print the argv and write the .meta, launch nothing, exit 0
+#   MODEL=opus        model passed to the subprocess (default opus, the run-3 pin)
+#   PLUGIN_DIR=<path> frozen plugin root (default: derived from <scenario-repo>
+#                     as <the part before "/stress/...">/frozen/plugins/toque,
+#                     the layout every run in this rig uses; pass explicitly
+#                     for any other layout)
+#   DRY_RUN=1         print the argv and write the .meta, launch nothing, exit 0
 set -euo pipefail
 
 PROMPT="${1:?usage: launch-auditor.sh <prompt-file> <scenario-repo> <out-file>}"
@@ -44,15 +72,18 @@ REPO="${2:?usage: launch-auditor.sh <prompt-file> <scenario-repo> <out-file>}"
 OUT="${3:?usage: launch-auditor.sh <prompt-file> <scenario-repo> <out-file>}"
 MODEL="${MODEL:-opus}"
 TOOLS="Bash,Read,Write,Grep,Glob,Agent,Skill"
-# R6-01: override the operator's outputStyle only; every other user setting
-# (the plugin enablement above all) still loads.
+PLUGIN_DIR="${PLUGIN_DIR:-${REPO%/stress/*}/frozen/plugins/toque}"
+# R6-01 + R7-02: --restricted drops the operator's CLAUDE.md/rules/settings;
+# --tools restores the plugin's own declared grant; --plugin-dir/--add-dir load
+# the plugin and let the auditor read its own reference files. See above.
 SETTINGS='{"outputStyle":"default"}'
 
 [ -f "$PROMPT" ] || { echo "launch-auditor: no prompt file at $PROMPT"; exit 64; }
 [ -d "$REPO" ] || { echo "launch-auditor: no scenario repo at $REPO"; exit 64; }
+[ -d "$PLUGIN_DIR" ] || { echo "launch-auditor: no plugin dir at $PLUGIN_DIR (set PLUGIN_DIR explicitly)"; exit 64; }
 [ "$#" -eq 3 ] || { echo "launch-auditor: takes exactly three arguments; extra CLI flags are not accepted"; exit 64; }
 
-ARGV="claude -p --model $MODEL --permission-mode acceptEdits --allowedTools \"$TOOLS\" --settings '$SETTINGS' < $PROMPT"
+ARGV="claude -p --restricted --tools $TOOLS --strict-mcp-config --plugin-dir $PLUGIN_DIR --add-dir $PLUGIN_DIR --model $MODEL --permission-mode acceptEdits --allowedTools \"$TOOLS\" --settings '$SETTINGS' < $PROMPT"
 START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date -u +%s)"
 # Generated before the launch, recorded after it. Its only job is to make two
@@ -63,7 +94,7 @@ if [ "${DRY_RUN:-0}" = "1" ]; then
   echo "DRY RUN: (cd $REPO && $ARGV) > $OUT"
 else
   set +e
-  (cd "$REPO" && claude -p --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" --settings "$SETTINGS" < "$PROMPT") > "$OUT" 2>&1 &
+  (cd "$REPO" && claude -p --restricted --tools "$TOOLS" --strict-mcp-config --plugin-dir "$PLUGIN_DIR" --add-dir "$PLUGIN_DIR" --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" --settings "$SETTINGS" < "$PROMPT") > "$OUT" 2>&1 &
   CHILD=$!
   wait "$CHILD"
   RC=$?
