@@ -1,0 +1,1464 @@
+{
+  "rows": [
+    {
+      "key": "concern:API contract",
+      "kind": "concern",
+      "id": "API contract",
+      "label": "API contract",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          355,
+          355
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 355 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Auth/authz",
+      "kind": "concern",
+      "id": "Auth/authz",
+      "label": "Auth/authz",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          285,
+          285
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 285 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:CORS/network/browser",
+      "kind": "concern",
+      "id": "CORS/network/browser",
+      "label": "CORS/network/browser",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          402,
+          404
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 402-404 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Caching",
+      "kind": "concern",
+      "id": "Caching",
+      "label": "Caching",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          398,
+          400
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 398-400 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Config",
+      "kind": "concern",
+      "id": "Config",
+      "label": "Config",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          134,
+          134
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 134 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Data model/query limits",
+      "kind": "concern",
+      "id": "Data model/query limits",
+      "label": "Data model/query limits",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          398,
+          400
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 398-400 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Migration/backward compat",
+      "kind": "concern",
+      "id": "Migration/backward compat",
+      "label": "Migration/backward compat",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          398,
+          398
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 398 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Observability",
+      "kind": "concern",
+      "id": "Observability",
+      "label": "Observability",
+      "from": "partial",
+      "to": "pass",
+      "lines": [
+        [
+          260,
+          262
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 260-262 is byte-identical in both documents",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "concern:Pagination",
+      "kind": "concern",
+      "id": "Pagination",
+      "label": "Pagination",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          404,
+          404
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 404 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Rollout/rollback",
+      "kind": "concern",
+      "id": "Rollout/rollback",
+      "label": "Rollout/rollback",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          287,
+          291
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 287-291 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "concern:Tests",
+      "kind": "concern",
+      "id": "Tests",
+      "label": "Tests",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          436,
+          441
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 436-441 is byte-identical in both documents",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "concern:UI behavior",
+      "kind": "concern",
+      "id": "UI behavior",
+      "label": "UI behavior",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          203,
+          204
+        ]
+      ],
+      "line_source": "audit.md Cross-Cutting Concerns",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 203-204 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Artifact: pre-change render capture",
+      "kind": "coverage",
+      "id": "Artifact: pre-change render capture",
+      "label": "Artifact: pre-change render capture",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          220,
+          226
+        ]
+      ],
+      "line_source": "audit.md Criterion Verdicts (LINT-23 record); not a separate Coverage Matrix row in run 2",
+      "scope": "changed",
+      "scope_reason": "the text cited at 220-226 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "coverage:Dep: Node >= 18",
+      "kind": "coverage",
+      "id": "Dep: Node >= 18",
+      "label": "Dep: Node >= 18",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          594,
+          594
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 594 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Dep: npm registry",
+      "kind": "coverage",
+      "id": "Dep: npm registry",
+      "label": "Dep: npm registry",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          593,
+          593
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 593 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Dep: product confirmation",
+      "kind": "coverage",
+      "id": "Dep: product confirmation",
+      "label": "Dep: product confirmation",
+      "from": "pass",
+      "to": "partial",
+      "lines": [
+        [
+          597,
+          597
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 597 is byte-identical in both documents",
+      "klass": "DEGRADATION"
+    },
+    {
+      "key": "coverage:Dep: repo write access",
+      "kind": "coverage",
+      "id": "Dep: repo write access",
+      "label": "Dep: repo write access",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          599,
+          599
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 599 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Dep: running database for Phase 3 smoke check",
+      "kind": "coverage",
+      "id": "Dep: running database for Phase 3 smoke check",
+      "label": "Dep: running database for Phase 3 smoke check",
+      "from": "fail",
+      "to": "partial",
+      "lines": [
+        [
+          596,
+          596
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Dep: reachable seeded database for Phase 3\")",
+      "scope": "changed",
+      "scope_reason": "the text cited at 596 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "coverage:Dep: staging schema read access",
+      "kind": "coverage",
+      "id": "Dep: staging schema read access",
+      "label": "Dep: staging schema read access",
+      "from": "pass",
+      "to": "partial",
+      "lines": [
+        [
+          595,
+          595
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 595 is byte-identical in both documents",
+      "klass": "DEGRADATION"
+    },
+    {
+      "key": "coverage:Dep: three consecutive engineer-days",
+      "kind": "coverage",
+      "id": "Dep: three consecutive engineer-days",
+      "label": "Dep: three consecutive engineer-days",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          598,
+          598
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 598 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Desired: src/pricing.js exports a pure function",
+      "kind": "coverage",
+      "id": "Desired: src/pricing.js exports a pure function",
+      "label": "Desired: src/pricing.js exports a pure function",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          41,
+          42
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 41-42 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Desired: tests/pricing.test.js covers the ugly parts",
+      "kind": "coverage",
+      "id": "Desired: tests/pricing.test.js covers the ugly parts",
+      "label": "Desired: tests/pricing.test.js covers the ugly parts",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          46,
+          47
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (folded into the SC4 and Phase 2 deliverable rows in run 2)",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 46-47 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Non-goal: no CI in this change",
+      "kind": "coverage",
+      "id": "Non-goal: no CI in this change",
+      "label": "Non-goal: no CI in this change",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          767,
+          775
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "changed",
+      "scope_reason": "the text cited at 767-775 was written by this revision",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Non-goal: no new dependencies",
+      "kind": "coverage",
+      "id": "Non-goal: no new dependencies",
+      "label": "Non-goal: no new dependencies",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          59,
+          60
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 59-60 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Non-goal: no rounding / currency formatting",
+      "kind": "coverage",
+      "id": "Non-goal: no rounding / currency formatting",
+      "label": "Non-goal: no rounding / currency formatting",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          81,
+          85
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 81-85 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Non-goal: no schema/data migration",
+      "kind": "coverage",
+      "id": "Non-goal: no schema/data migration",
+      "label": "Non-goal: no schema/data migration",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          398,
+          400
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 398-400 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 10: out-of-repo render consumer",
+      "kind": "coverage",
+      "id": "Risk 10: out-of-repo render consumer",
+      "label": "Risk 10: out-of-repo render consumer",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          355,
+          355
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 355 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 11: no CI enforcing tests",
+      "kind": "coverage",
+      "id": "Risk 11: no CI enforcing tests",
+      "label": "Risk 11: no CI enforcing tests",
+      "from": "fail",
+      "to": "partial",
+      "lines": [
+        [
+          356,
+          356
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "changed",
+      "scope_reason": "the text cited at 356 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "coverage:Risk 1: || -> ?? transcription",
+      "kind": "coverage",
+      "id": "Risk 1: || -> ?? transcription",
+      "label": "Risk 1: || -> ?? transcription",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          346,
+          346
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 346 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 2: toFixed cleanup",
+      "kind": "coverage",
+      "id": "Risk 2: toFixed cleanup",
+      "label": "Risk 2: toFixed cleanup",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          347,
+          347
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 347 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 3: re-association",
+      "kind": "coverage",
+      "id": "Risk 3: re-association",
+      "label": "Risk 3: re-association",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          348,
+          348
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 348 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 4: timing log reflowed",
+      "kind": "coverage",
+      "id": "Risk 4: timing log reflowed",
+      "label": "Risk 4: timing log reflowed",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          349,
+          349
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 349 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 5: dependencies unresolvable",
+      "kind": "coverage",
+      "id": "Risk 5: dependencies unresolvable",
+      "label": "Risk 5: dependencies unresolvable",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          350,
+          350
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 350 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 6: no lockfile",
+      "kind": "coverage",
+      "id": "Risk 6: no lockfile",
+      "label": "Risk 6: no lockfile",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          351,
+          351
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 6-7\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 351 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 7: node_modules committed",
+      "kind": "coverage",
+      "id": "Risk 7: node_modules committed",
+      "label": "Risk 7: node_modules committed",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          352,
+          352
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 6-7\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 352 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 8: unrealistic row shape",
+      "kind": "coverage",
+      "id": "Risk 8: unrealistic row shape",
+      "label": "Risk 8: unrealistic row shape",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          353,
+          353
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 8-9\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 353 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:Risk 9: pg returns strings",
+      "kind": "coverage",
+      "id": "Risk 9: pg returns strings",
+      "label": "Risk 9: pg returns strings",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          354,
+          354
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix (row \"Risk 8-9\")",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 354 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:SC1: npm test exits 0, two canView tests pass",
+      "kind": "coverage",
+      "id": "SC1: npm test exits 0, two canView tests pass",
+      "label": "SC1: npm test exits 0, two canView tests pass",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          53,
+          53
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 53 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:SC2: byte-identical HTML for ~20 inputs",
+      "kind": "coverage",
+      "id": "SC2: byte-identical HTML for ~20 inputs",
+      "label": "SC2: byte-identical HTML for ~20 inputs",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          54,
+          56
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 54-56 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:SC3: src/reports.js:21 unchanged in diff",
+      "kind": "coverage",
+      "id": "SC3: src/reports.js:21 unchanged in diff",
+      "label": "SC3: src/reports.js:21 unchanged in diff",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          57,
+          58
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 57-58 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:SC4: zero require in pricing.js, deps unchanged",
+      "kind": "coverage",
+      "id": "SC4: zero require in pricing.js, deps unchanged",
+      "label": "SC4: zero require in pricing.js, deps unchanged",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          59,
+          60
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 59-60 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "coverage:SC5: null-row TypeError same message",
+      "kind": "coverage",
+      "id": "SC5: null-row TypeError same message",
+      "label": "SC5: null-row TypeError same message",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          61,
+          61
+        ]
+      ],
+      "line_source": "audit.md Coverage Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 61 is byte-identical in both documents",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-01",
+      "kind": "lint",
+      "id": "LINT-01",
+      "label": "LINT-01",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          53,
+          61
+        ],
+        [
+          258,
+          267
+        ]
+      ],
+      "line_source": "evidence/LINT-01.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 258-267 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-02",
+      "kind": "lint",
+      "id": "LINT-02",
+      "label": "LINT-02",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          344,
+          351
+        ],
+        [
+          356,
+          356
+        ]
+      ],
+      "line_source": "evidence/LINT-02.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 356 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-03",
+      "kind": "lint",
+      "id": "LINT-03",
+      "label": "LINT-03",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          182,
+          184
+        ],
+        [
+          237,
+          239
+        ],
+        [
+          287,
+          291
+        ],
+        [
+          334,
+          335
+        ]
+      ],
+      "line_source": "evidence/LINT-03.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 334-335 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-04",
+      "kind": "lint",
+      "id": "LINT-04",
+      "label": "LINT-04",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          591,
+          599
+        ]
+      ],
+      "line_source": "evidence/LINT-04.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 591-599 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-05",
+      "kind": "lint",
+      "id": "LINT-05",
+      "label": "LINT-05",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          263,
+          264
+        ],
+        [
+          402,
+          404
+        ]
+      ],
+      "line_source": "evidence/LINT-05.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 402-404 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-06",
+      "kind": "lint",
+      "id": "LINT-06",
+      "label": "LINT-06",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          355,
+          355
+        ],
+        [
+          393,
+          396
+        ],
+        [
+          523,
+          525
+        ]
+      ],
+      "line_source": "evidence/LINT-06.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 523-525 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-07",
+      "kind": "lint",
+      "id": "LINT-07",
+      "label": "LINT-07",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          279,
+          285
+        ],
+        [
+          438,
+          441
+        ]
+      ],
+      "line_source": "evidence/LINT-07.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 438-441 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-08",
+      "kind": "lint",
+      "id": "LINT-08",
+      "label": "LINT-08",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          369,
+          369
+        ],
+        [
+          374,
+          380
+        ]
+      ],
+      "line_source": "evidence/LINT-08.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 369 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-09",
+      "kind": "lint",
+      "id": "LINT-09",
+      "label": "LINT-09",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          398,
+          408
+        ],
+        [
+          484,
+          487
+        ]
+      ],
+      "line_source": "evidence/LINT-09.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 484-487 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-10",
+      "kind": "lint",
+      "id": "LINT-10",
+      "label": "LINT-10",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          186,
+          188
+        ],
+        [
+          241,
+          244
+        ],
+        [
+          293,
+          295
+        ],
+        [
+          337,
+          340
+        ]
+      ],
+      "line_source": "evidence/LINT-10.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 337-340 was written by this revision",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-13",
+      "kind": "lint",
+      "id": "LINT-13",
+      "label": "LINT-13",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          130,
+          140
+        ]
+      ],
+      "line_source": "evidence/LINT-13.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 130-140 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-15",
+      "kind": "lint",
+      "id": "LINT-15",
+      "label": "LINT-15",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          32,
+          35
+        ],
+        [
+          179,
+          180
+        ],
+        [
+          265,
+          266
+        ]
+      ],
+      "line_source": "evidence/LINT-15.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 265-266 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-16",
+      "kind": "lint",
+      "id": "LINT-16",
+      "label": "LINT-16",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          356,
+          356
+        ],
+        [
+          405,
+          408
+        ]
+      ],
+      "line_source": "evidence/LINT-16.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 356 was written by this revision",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-17",
+      "kind": "lint",
+      "id": "LINT-17",
+      "label": "LINT-17",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          436,
+          441
+        ]
+      ],
+      "line_source": "evidence/LINT-17.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 436-441 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-18",
+      "kind": "lint",
+      "id": "LINT-18",
+      "label": "LINT-18",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          459,
+          467
+        ],
+        [
+          479,
+          481
+        ]
+      ],
+      "line_source": "evidence/LINT-18.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 479-481 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-19",
+      "kind": "lint",
+      "id": "LINT-19",
+      "label": "LINT-19",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          641,
+          643
+        ],
+        [
+          669,
+          676
+        ],
+        [
+          696,
+          704
+        ],
+        [
+          711,
+          712
+        ],
+        [
+          722,
+          724
+        ]
+      ],
+      "line_source": "evidence/LINT-19.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 669-676 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-20",
+      "kind": "lint",
+      "id": "LINT-20",
+      "label": "LINT-20",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          627,
+          648
+        ],
+        [
+          729,
+          745
+        ]
+      ],
+      "line_source": "evidence/LINT-20.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 729-745 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-21",
+      "kind": "lint",
+      "id": "LINT-21",
+      "label": "LINT-21",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          346,
+          348
+        ],
+        [
+          489,
+          491
+        ],
+        [
+          517,
+          521
+        ]
+      ],
+      "line_source": "evidence/LINT-21.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 517-521 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-22",
+      "kind": "lint",
+      "id": "LINT-22",
+      "label": "LINT-22",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          254,
+          256
+        ],
+        [
+          421,
+          424
+        ],
+        [
+          583,
+          585
+        ]
+      ],
+      "line_source": "evidence/LINT-22.json",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 583-585 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "lint:LINT-23",
+      "kind": "lint",
+      "id": "LINT-23",
+      "label": "LINT-23",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          220,
+          226
+        ],
+        [
+          313,
+          315
+        ]
+      ],
+      "line_source": "evidence/LINT-23.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 220-226 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "lint:LINT-24",
+      "kind": "lint",
+      "id": "LINT-24",
+      "label": "LINT-24",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          55,
+          58
+        ],
+        [
+          514,
+          514
+        ],
+        [
+          517,
+          521
+        ]
+      ],
+      "line_source": "evidence/LINT-24.json",
+      "scope": "changed",
+      "scope_reason": "the text cited at 514 was written by this revision",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "scenario:1",
+      "kind": "scenario",
+      "id": "1",
+      "label": "1 Happy path",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          498,
+          499
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 498-499 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:2",
+      "kind": "scenario",
+      "id": "2",
+      "label": "2 Failure path",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          512,
+          515
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "changed",
+      "scope_reason": "the text cited at 512-515 was written by this revision",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:3",
+      "kind": "scenario",
+      "id": "3",
+      "label": "3 Partial rollout (mixed state)",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          393,
+          396
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 393-396 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:4",
+      "kind": "scenario",
+      "id": "4",
+      "label": "4 Backward compatibility",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          355,
+          355
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 355 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:5",
+      "kind": "scenario",
+      "id": "5",
+      "label": "5 Scale/volume edge",
+      "from": "fail",
+      "to": "partial",
+      "lines": [
+        [
+          489,
+          491
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 489-491 is byte-identical in both documents",
+      "klass": "IMPROVEMENT"
+    },
+    {
+      "key": "scenario:6",
+      "kind": "scenario",
+      "id": "6",
+      "label": "6 Auth/permission edge",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          285,
+          285
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 285 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:7",
+      "kind": "scenario",
+      "id": "7",
+      "label": "7 Config/environment difference",
+      "from": "pass",
+      "to": "pass",
+      "lines": [
+        [
+          165,
+          165
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 165 is byte-identical in both documents",
+      "klass": "UNCHANGED"
+    },
+    {
+      "key": "scenario:8",
+      "kind": "scenario",
+      "id": "8",
+      "label": "8 Rollback path",
+      "from": "fail",
+      "to": "pass",
+      "lines": [
+        [
+          391,
+          396
+        ]
+      ],
+      "line_source": "audit.md Scenario Matrix",
+      "scope": "unchanged",
+      "scope_reason": "the text cited at 391-396 is byte-identical in both documents",
+      "klass": "IMPROVEMENT"
+    }
+  ],
+  "counts": {
+    "regressions": 0,
+    "variance": 0,
+    "improvements": 14,
+    "degradations": 2,
+    "new_items": 0,
+    "dropped": 0,
+    "not_comparable": 0,
+    "unchanged": 55,
+    "uncompared": 0,
+    "unscoped": 0,
+    "regressions_scoped": 0,
+    "regressions_unscoped": 0,
+    "moved_over_anchor": 0,
+    "anchored": 71
+  },
+  "verdict": "MET",
+  "justification": "caller-decided from the baseline comparison: no element that was passing now fails on text the revision changed (0 auditor-variance flip(s) discounted).",
+  "diff": {
+    "coarse": false,
+    "changed": 127,
+    "moved": 0,
+    "total": 841
+  },
+  "options": {
+    "docUnchanged": false,
+    "curElements": {}
+  },
+  "uncompared": [],
+  "meta": {
+    "previous_baseline_file": "C:/scratch/toque-run6/logs/s9-prior-records/iter1/gate.json",
+    "previous_run_number": 1,
+    "previous_date": "2026-09-09",
+    "previous_doc_file": "C:/scratch/toque-run6/logs/s9-prior-records/iter1/doc-at-baseline-1.md",
+    "previous_doc_sha256": "4e00826635c27667204211c1d457a98b22ff7b325c496fdd66c04c1d24a0a673",
+    "doc_file": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+    "doc_sha256": "4fd13fb06eb303d69a6427c235883a912acaeaab6395304a8be76938c2c692eb",
+    "evidence_filled": [
+      "LINT-01",
+      "LINT-02",
+      "LINT-03",
+      "LINT-04",
+      "LINT-05",
+      "LINT-06",
+      "LINT-07",
+      "LINT-08",
+      "LINT-09",
+      "LINT-10",
+      "LINT-13",
+      "LINT-15",
+      "LINT-16",
+      "LINT-17",
+      "LINT-18",
+      "LINT-19",
+      "LINT-20",
+      "LINT-21",
+      "LINT-22",
+      "LINT-23",
+      "LINT-24"
+    ]
+  },
+  "section": "## Baseline comparison\n\nCaller-decided, not the auditor's. Produced by `tq-gate-baseline.js compare`.\n\n- Previous baseline: run 1, read from `C:/scratch/toque-run6/logs/s9-prior-records/iter1/gate.json` (2026-09-09)\n- Previous document: `C:/scratch/toque-run6/logs/s9-prior-records/iter1/doc-at-baseline-1.md`, sha256 `4e00826635c27667204211c1d457a98b22ff7b325c496fdd66c04c1d24a0a673`\n- Current document: `docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md`, sha256 `4fd13fb06eb303d69a6427c235883a912acaeaab6395304a8be76938c2c692eb`\n- Diff: 127 of 841 current lines changed\n- Line sources filled from evidence records: LINT-01, LINT-02, LINT-03, LINT-04, LINT-05, LINT-06, LINT-07, LINT-08, LINT-09, LINT-10, LINT-13, LINT-15, LINT-16, LINT-17, LINT-18, LINT-19, LINT-20, LINT-21, LINT-22, LINT-23, LINT-24\n\nBaseline comparison: 0 regressions, 14 improvements, 0 new items, 0 auditor-variance flips\n\nAlso: 2 degradations, 0 dropped elements, 0 not comparable, 0 uncompared, 55 unchanged. A DROPPED element beside a NEW one is usually a renamed row, not a lost one.\n\n**LINT-14: MET** — caller-decided from the baseline comparison: no element that was passing now fails on text the revision changed (0 auditor-variance flip(s) discounted).\n\n| Element | Baseline | Now | Lines cited | Line source | Diff scope | Class |\n| --- | --- | --- | --- | --- | --- | --- |\n| concern: API contract | pass | pass | 355 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Auth/authz | pass | pass | 285 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: CORS/network/browser | pass | pass | 402-404 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Caching | pass | pass | 398-400 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Config | pass | pass | 134 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Data model/query limits | pass | pass | 398-400 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Migration/backward compat | pass | pass | 398 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Observability | partial | pass | 260-262 | audit.md Cross-Cutting Concerns | unchanged | IMPROVEMENT |\n| concern: Pagination | pass | pass | 404 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Rollout/rollback | pass | pass | 287-291 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| concern: Tests | fail | pass | 436-441 | audit.md Cross-Cutting Concerns | unchanged | IMPROVEMENT |\n| concern: UI behavior | pass | pass | 203-204 | audit.md Cross-Cutting Concerns | — | UNCHANGED |\n| coverage: Artifact: pre-change render capture | fail | pass | 220-226 | audit.md Criterion Verdicts (LINT-23 record); not a separate Coverage Matrix row in run 2 | changed | IMPROVEMENT |\n| coverage: Dep: Node >= 18 | pass | pass | 594 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Dep: npm registry | pass | pass | 593 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Dep: product confirmation | pass | partial | 597 | audit.md Coverage Matrix | unchanged | DEGRADATION |\n| coverage: Dep: repo write access | pass | pass | 599 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Dep: running database for Phase 3 smoke check | fail | partial | 596 | audit.md Coverage Matrix (row \"Dep: reachable seeded database for Phase 3\") | changed | IMPROVEMENT |\n| coverage: Dep: staging schema read access | pass | partial | 595 | audit.md Coverage Matrix | unchanged | DEGRADATION |\n| coverage: Dep: three consecutive engineer-days | pass | pass | 598 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Desired: src/pricing.js exports a pure function | pass | pass | 41-42 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Desired: tests/pricing.test.js covers the ugly parts | pass | pass | 46-47 | audit.md Coverage Matrix (folded into the SC4 and Phase 2 deliverable rows in run 2) | — | UNCHANGED |\n| coverage: Non-goal: no CI in this change | pass | pass | 767-775 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Non-goal: no new dependencies | pass | pass | 59-60 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Non-goal: no rounding / currency formatting | pass | pass | 81-85 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Non-goal: no schema/data migration | pass | pass | 398-400 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Risk 10: out-of-repo render consumer | pass | pass | 355 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Risk 11: no CI enforcing tests | fail | partial | 356 | audit.md Coverage Matrix | changed | IMPROVEMENT |\n| coverage: Risk 1: \\|\\| -> ?? transcription | pass | pass | 346 | audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\") | — | UNCHANGED |\n| coverage: Risk 2: toFixed cleanup | pass | pass | 347 | audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\") | — | UNCHANGED |\n| coverage: Risk 3: re-association | pass | pass | 348 | audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\") | — | UNCHANGED |\n| coverage: Risk 4: timing log reflowed | pass | pass | 349 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Risk 5: dependencies unresolvable | pass | pass | 350 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: Risk 6: no lockfile | pass | pass | 351 | audit.md Coverage Matrix (row \"Risk 6-7\") | — | UNCHANGED |\n| coverage: Risk 7: node_modules committed | pass | pass | 352 | audit.md Coverage Matrix (row \"Risk 6-7\") | — | UNCHANGED |\n| coverage: Risk 8: unrealistic row shape | pass | pass | 353 | audit.md Coverage Matrix (row \"Risk 8-9\") | — | UNCHANGED |\n| coverage: Risk 9: pg returns strings | pass | pass | 354 | audit.md Coverage Matrix (row \"Risk 8-9\") | — | UNCHANGED |\n| coverage: SC1: npm test exits 0, two canView tests pass | pass | pass | 53 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: SC2: byte-identical HTML for ~20 inputs | pass | pass | 54-56 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: SC3: src/reports.js:21 unchanged in diff | pass | pass | 57-58 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: SC4: zero require in pricing.js, deps unchanged | pass | pass | 59-60 | audit.md Coverage Matrix | — | UNCHANGED |\n| coverage: SC5: null-row TypeError same message | fail | pass | 61 | audit.md Coverage Matrix | unchanged | IMPROVEMENT |\n| lint: LINT-01 | pass | pass | 53-61, 258-267 | evidence/LINT-01.json | — | UNCHANGED |\n| lint: LINT-02 | fail | pass | 344-351, 356 | evidence/LINT-02.json | changed | IMPROVEMENT |\n| lint: LINT-03 | pass | pass | 182-184, 237-239, 287-291, 334-335 | evidence/LINT-03.json | — | UNCHANGED |\n| lint: LINT-04 | fail | pass | 591-599 | evidence/LINT-04.json | changed | IMPROVEMENT |\n| lint: LINT-05 | pass | pass | 263-264, 402-404 | evidence/LINT-05.json | — | UNCHANGED |\n| lint: LINT-06 | pass | pass | 355, 393-396, 523-525 | evidence/LINT-06.json | — | UNCHANGED |\n| lint: LINT-07 | pass | pass | 279-285, 438-441 | evidence/LINT-07.json | — | UNCHANGED |\n| lint: LINT-08 | fail | pass | 369, 374-380 | evidence/LINT-08.json | changed | IMPROVEMENT |\n| lint: LINT-09 | pass | pass | 398-408, 484-487 | evidence/LINT-09.json | — | UNCHANGED |\n| lint: LINT-10 | pass | pass | 186-188, 241-244, 293-295, 337-340 | evidence/LINT-10.json | — | UNCHANGED |\n| lint: LINT-13 | pass | pass | 130-140 | evidence/LINT-13.json | — | UNCHANGED |\n| lint: LINT-15 | pass | pass | 32-35, 179-180, 265-266 | evidence/LINT-15.json | — | UNCHANGED |\n| lint: LINT-16 | pass | pass | 356, 405-408 | evidence/LINT-16.json | — | UNCHANGED |\n| lint: LINT-17 | pass | pass | 436-441 | evidence/LINT-17.json | — | UNCHANGED |\n| lint: LINT-18 | pass | pass | 459-467, 479-481 | evidence/LINT-18.json | — | UNCHANGED |\n| lint: LINT-19 | fail | pass | 641-643, 669-676, 696-704, 711-712, 722-724 | evidence/LINT-19.json | changed | IMPROVEMENT |\n| lint: LINT-20 | pass | pass | 627-648, 729-745 | evidence/LINT-20.json | — | UNCHANGED |\n| lint: LINT-21 | pass | pass | 346-348, 489-491, 517-521 | evidence/LINT-21.json | — | UNCHANGED |\n| lint: LINT-22 | pass | pass | 254-256, 421-424, 583-585 | evidence/LINT-22.json | — | UNCHANGED |\n| lint: LINT-23 | fail | pass | 220-226, 313-315 | evidence/LINT-23.json | changed | IMPROVEMENT |\n| lint: LINT-24 | fail | pass | 55-58, 514, 517-521 | evidence/LINT-24.json | changed | IMPROVEMENT |\n| scenario: 1 Happy path | pass | pass | 498-499 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 2 Failure path | pass | pass | 512-515 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 3 Partial rollout (mixed state) | pass | pass | 393-396 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 4 Backward compatibility | pass | pass | 355 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 5 Scale/volume edge | fail | partial | 489-491 | audit.md Scenario Matrix | unchanged | IMPROVEMENT |\n| scenario: 6 Auth/permission edge | pass | pass | 285 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 7 Config/environment difference | pass | pass | 165 | audit.md Scenario Matrix | — | UNCHANGED |\n| scenario: 8 Rollback path | fail | pass | 391-396 | audit.md Scenario Matrix | unchanged | IMPROVEMENT |\n"
+}

@@ -88,6 +88,30 @@ The repository holds the s3 spec at v1 in its first commit together with the gat
 
 Expected under D10: LINT-13 fails on unchanged text and is reported as AUDITOR VARIANCE; LINT-03 fails on changed text and is a regression; LINT-14 is UNMET for that one regression; LINT-15 and LINT-16 improve because the binding now resolves. The scenario is NOT PASS by design. The executor is told none of this.
 
+## s10 — `quick-audit` over a quoted prior gate, on a document revised to fail (run 7)
+
+```
+/toque:quick-audit docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md
+```
+
+The same shape as s8, with the one difference run 7 exists for: the prior gate folder is real and its baseline carries a quote on every matrix row. It is the folder run 6's s9 produced at PASS — 22 lint statuses, 50 matrix rows, `exact_quote` on 50 of 50 — copied into the rig **unedited** as `fixture-run6-gate/`. Nothing in `gate.json`, `audit.md` or `evidence/` is rewritten, including the `doc_copy` field, which holds an absolute path into run 6's scratch directory; the script writes that field and never reads it back (`tq-gate-baseline.js:1923`), so a dangling copy path is an observation to record, not a fixture to repair. The 71-character slug is kept for the same reason. The retained files are pinned `-text -eol` in `.gitattributes`: `doc-at-baseline-2.md` is CRLF as run 6 wrote it, its hash is what `gate.json` records, and the repository-wide `*.md text eol=lf` rule would otherwise normalize it on checkout and break the guard at `tq-gate-baseline.js:1641`.
+
+The repository holds the document at v1 in its first commit together with that gate folder, and at v2 in its second commit. **v1 is `doc-at-baseline-2.md`** — the copy the run-6 baseline was actually taken on, which hashes to the `doc_sha256` its `gate.json` records (`4fd13fb0…`). It is **not** the file run 6 left on disk (`8330b478…`), which carries 29 further lines the reinforcement step appended after the last `snapshot` (stress-test.md, R6-04). Using the on-disk file would fail the script's near-miss guard at `tq-gate-baseline.js:1641` and would misalign every baseline coordinate above line 616. The reinforcement text is therefore absent from the fixture by choice, so it cannot enter run 7's diff.
+
+v2 changes three things in v1 and nothing else. Every coordinate below is a v1 line number, verified against `doc-at-baseline-2.md` (840 lines) before this fixture was built.
+
+| # | Edit | v1 lines | Intended effect |
+| --- | --- | --- | --- |
+| 1 | One bullet added to Phase 2's Exit Criteria: `tests/pricing.test.js` asserts the fractional multi-row total to the bit. | after 267 | A realistic addition, shifting everything below it down by one; no criterion depends on it |
+| 2 | Phase 2's `Rollback:` paragraph deleted entire, with its trailing blank line | 287–292 | LINT-03 loses a deployment phase's rollback plan; the `Rollout/rollback` concern row, quoted at 287–291, loses the text it quotes |
+| 3 | The Mitigation cell of Risk 3 emptied, the rest of the row untouched | 348 | LINT-02 loses the mitigation on a HIGH-impact risk; the `Risk 3: re-association` coverage row, quoted at 348, loses the text it quotes |
+
+Edits 2 and 3 each land on a matrix row that quotes exactly the text they change, so each is expected to flip through the quote route, and each also fails a lint criterion that reaches the same text through its evidence record. The net line shift is five lines up for everything below 292, which puts every surviving baseline coordinate off by five and leaves every quote intact — the condition the anchor is for.
+
+The revision relocates nothing. The ordering rule is not exercised by design, and criterion 4 stays a cost measure, as in run 6.
+
+The scenario is NOT PASS by design. **The executor is told none of this**, and is not told that the prior gate folder came from an earlier run of this rig.
+
 ## Fourth run: what is built and what is not
 
 The critic scoped run 4 to three engineered scenarios (stress-run3-critic.md §6). Built: the PASS-path attempt reuses **s1** under the D9–D11 text, and **s8** above forces a flip on unchanged text. Not built: a scenario where the auditor misses the canary so `inject --exclude` and exit 3 execute, and one where the relaunched subprocess auditor also fails so `auditor-did-not-return` is recorded once.

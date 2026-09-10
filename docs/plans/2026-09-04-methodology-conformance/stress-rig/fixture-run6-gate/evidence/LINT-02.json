@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-02",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 344,
+      "line_end": 351,
+      "exact_quote": "| # | Risk | Likelihood | Impact | Mitigation |\n|---|------|-----------|--------|-----------|\n| 1 | The expression is retyped rather than copied and a `\\|\\|` becomes `??`, or an operand order changes — totals shift for rows with `NaN`, `\"\"` or `false` fields | MEDIUM | HIGH | Copy/paste the line from `src/reports.js:19`; Phase 1 characterization tests cover `NaN`, empty-string and falsy cases and run unmodified in Phase 2 |\n| 2 | Someone \"cleans up\" `0.30000000000000004` with `toFixed(2)` during review, changing every fractional customer total | MEDIUM | HIGH | Design Decision 3 forbids it; the characterization test asserts the literal artifact string, so the change fails CI-equivalent locally |\n| 3 | Summation is re-associated (map+sum, sort, Kahan) and low-order float bits differ | LOW | HIGH | Design Decision 2; the multi-row fractional case (`0.1 + 0.2 → 0.30000000000000004`) is in the test table |\n| 4 | The timing log at `src/reports.js:21` is reflowed, or `computeTotal` is called outside the `started`/`console.log` span, changing the measured duration | MEDIUM | MEDIUM | Explicit exit criterion in Phase 2; verified by `git diff -- src/reports.js` |\n| 5 | Phase 0 cannot resolve dependencies (no lockfile, no `node_modules`, no registry access) and the plan has no green baseline | LOW | HIGH | Phase 0 is first and is a hard gate; the NO-GO criteria stop the plan rather than proceeding on a red suite |\n| 6 | No lockfile means `npm install` resolves `express ^4.19.2` to a newer 4.x than the author had, making the baseline irreproducible | HIGH | LOW | Phase 0 commits `package-lock.json`. Pricing does not touch express, so blast radius is baseline reproducibility only |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 356,
+      "line_end": 356,
+      "exact_quote": "| 11 | Nothing enforces the tests: there is no CI (verified), so a later change can silently break the new coverage | HIGH | MEDIUM | Interim control in place from Phase 3: `README.md` records `npm test` as a required pre-merge step, and the repository owner (Dependencies table) declines any merge to `master` whose review does not quote a `pass N / fail 0` run of the full suite. It is a human gate, not automation, and is named as such; the automated replacement is Open Question 5, owned by the platform team with a decision due 2026-09-25 |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "Every risk rated HIGH on either axis carries a mitigation cell that is populated and specific. Risks 1, 2, 3 and 5 are HIGH impact and name the characterization suite, Design Decision 3, Design Decision 2 and the Phase 0 hard gate respectively. Risks 6 and 11 are HIGH likelihood and name the committed lockfile and the pre-merge human gate. No HIGH risk has an empty or generic mitigation.",
+  "verdict": "MET"
+}

@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-08",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 369,
+      "line_end": 369,
+      "exact_quote": "| 3 | The declared ranges `express ^4.19.2`, `pg ^8.11.3`, `node-cron ^3.0.3` (`package.json:3`) resolve against the public npm registry into a coherent tree | Would have been HIGH: no green baseline, nothing to characterize, Phase 1 cannot start. Now closed. What remains is whether the *engineer's own machine* can reach the registry — a different failure, tracked as Risk 5 and as the first Dependencies row, and recoverable by installing on any reachable machine and committing the lockfile | `npm install --dry-run` (resolves and prints the tree without writing `node_modules/`) | closed at plan time | assigned engineer | **verified** — exit 0, 85 packages resolved, including `express 4.22.2`, `pg 8.23.0`, `node-cron 3.0.3` (run 2026-09-09 on Node v24.12.0; no `node_modules/` or lockfile written, working tree confirmed clean afterwards) |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 374,
+      "line_end": 380,
+      "exact_quote": "**Gate status:** no HIGH-impact assumption is unverified. Assumption 3 was the\none that would have blocked the gate — a dependency set that does not resolve\nstops every later phase — and it was closed at plan time by running the\ndry-run, which cost less than arguing about it. The assumptions still open are\nMEDIUM or lower and are scoped accordingly: 1 and 2 govern how *realistic* the\ntest fixtures are (Risks 8 and 9, both MEDIUM, and neither touches whether the\nextraction is behaviour-preserving), 4 and 5 are Phase 3 confirmations, and 6 is",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The register carries six assumptions. The one whose impact-if-false the plan itself rates HIGH - Assumption 3, dependency resolution, which would block every later phase - is marked verified, closed at plan time by an npm install --dry-run whose result is recorded (exit 0, 85 packages, named resolved versions). The five that remain unverified have impact-if-false statements bounded at MEDIUM or lower and each is anchored to a MEDIUM risk row or a scheduling question: 1 and 2 govern fixture realism and are explicitly argued not to threaten extraction correctness, 4 and 5 are Phase 3 confirmations, 6 is availability. No unverified assumption in the register carries a HIGH impact-if-false.",
+  "verdict": "MET"
+}

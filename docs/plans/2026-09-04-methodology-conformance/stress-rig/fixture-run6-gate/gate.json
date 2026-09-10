@@ -1,0 +1,1457 @@
+{
+  "gate_passed": true,
+  "unmet_criteria": [],
+  "gap_checked": true,
+  "gap_count": 0,
+  "canary_found": true,
+  "canary_class": "owner-strip",
+  "canary_reason": "found",
+  "validator_exit": 0,
+  "mode": "LITE",
+  "baseline": {
+    "run_number": 2,
+    "date": "2026-09-09",
+    "plan_version": "v2",
+    "lint_results": {
+      "LINT-01": "pass",
+      "LINT-02": "pass",
+      "LINT-03": "pass",
+      "LINT-04": "pass",
+      "LINT-05": "pass",
+      "LINT-06": "pass",
+      "LINT-07": "pass",
+      "LINT-08": "pass",
+      "LINT-09": "pass",
+      "LINT-10": "pass",
+      "LINT-13": "pass",
+      "LINT-14": "n_a",
+      "LINT-15": "pass",
+      "LINT-16": "pass",
+      "LINT-17": "pass",
+      "LINT-18": "pass",
+      "LINT-19": "pass",
+      "LINT-20": "pass",
+      "LINT-21": "pass",
+      "LINT-22": "pass",
+      "LINT-23": "pass",
+      "LINT-24": "pass"
+    },
+    "coverage_items": [
+      {
+        "name": "SC1: npm test exits 0, two canView tests pass",
+        "status": "covered",
+        "lines": [
+          [
+            53,
+            53
+          ]
+        ],
+        "exact_quote": "1. `npm test` exits 0 with the pre-existing two `canView` tests still passing.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "SC2: byte-identical HTML for ~20 inputs",
+        "status": "covered",
+        "lines": [
+          [
+            54,
+            56
+          ]
+        ],
+        "exact_quote": "2. For all ~20 characterization inputs in the Testing Strategy, `render()`\n   returns a byte-identical HTML string before and after the extraction —\n   asserted with `assert.strictEqual`, never a tolerance.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "SC3: src/reports.js:21 unchanged in diff",
+        "status": "covered",
+        "lines": [
+          [
+            57,
+            58
+          ]
+        ],
+        "exact_quote": "3. `src/reports.js:21` is unchanged in the diff (verified by\n   `git diff -- src/reports.js` showing that line untouched).",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "SC4: zero require in pricing.js, deps unchanged",
+        "status": "covered",
+        "lines": [
+          [
+            59,
+            60
+          ]
+        ],
+        "exact_quote": "4. `src/pricing.js` contains zero `require` calls and `package.json`\n   dependencies are unchanged.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "SC5: null-row TypeError same message",
+        "status": "covered",
+        "lines": [
+          [
+            61,
+            61
+          ]
+        ],
+        "exact_quote": "5. `render()`'s null-row `TypeError` still throws with the same message.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Desired: src/pricing.js exports a pure function",
+        "status": "covered",
+        "lines": [
+          [
+            41,
+            42
+          ]
+        ],
+        "exact_quote": "- `src/pricing.js` (new) exports a pure function computing the total from a\n  report's rows, with no `require` statements at all.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Desired: tests/pricing.test.js covers the ugly parts",
+        "status": "covered",
+        "lines": [
+          [
+            46,
+            47
+          ]
+        ],
+        "exact_quote": "- `tests/pricing.test.js` (new) covers the arithmetic's real behaviour,\n  including the ugly parts.",
+        "line_source": "audit.md Coverage Matrix (folded into the SC4 and Phase 2 deliverable rows in run 2)"
+      },
+      {
+        "name": "Risk 1: || -> ?? transcription",
+        "status": "covered",
+        "lines": [
+          [
+            346,
+            346
+          ]
+        ],
+        "exact_quote": "| 1 | The expression is retyped rather than copied and a `\\|\\|` becomes `??`, or an operand order changes — totals shift for rows with `NaN`, `\"\"` or `false` fields | MEDIUM | HIGH | Copy/paste the line from `src/reports.js:19`; Phase 1 characterization tests cover `NaN`, empty-string and falsy cases and run unmodified in Phase 2 |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")"
+      },
+      {
+        "name": "Risk 2: toFixed cleanup",
+        "status": "covered",
+        "lines": [
+          [
+            347,
+            347
+          ]
+        ],
+        "exact_quote": "| 2 | Someone \"cleans up\" `0.30000000000000004` with `toFixed(2)` during review, changing every fractional customer total | MEDIUM | HIGH | Design Decision 3 forbids it; the characterization test asserts the literal artifact string, so the change fails CI-equivalent locally |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")"
+      },
+      {
+        "name": "Risk 3: re-association",
+        "status": "covered",
+        "lines": [
+          [
+            348,
+            348
+          ]
+        ],
+        "exact_quote": "| 3 | Summation is re-associated (map+sum, sort, Kahan) and low-order float bits differ | LOW | HIGH | Design Decision 2; the multi-row fractional case (`0.1 + 0.2 → 0.30000000000000004`) is in the test table |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 1-3 (arithmetic drift)\")"
+      },
+      {
+        "name": "Risk 4: timing log reflowed",
+        "status": "covered",
+        "lines": [
+          [
+            349,
+            349
+          ]
+        ],
+        "exact_quote": "| 4 | The timing log at `src/reports.js:21` is reflowed, or `computeTotal` is called outside the `started`/`console.log` span, changing the measured duration | MEDIUM | MEDIUM | Explicit exit criterion in Phase 2; verified by `git diff -- src/reports.js` |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Risk 5: dependencies unresolvable",
+        "status": "covered",
+        "lines": [
+          [
+            350,
+            350
+          ]
+        ],
+        "exact_quote": "| 5 | Phase 0 cannot resolve dependencies (no lockfile, no `node_modules`, no registry access) and the plan has no green baseline | LOW | HIGH | Phase 0 is first and is a hard gate; the NO-GO criteria stop the plan rather than proceeding on a red suite |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Risk 6: no lockfile",
+        "status": "covered",
+        "lines": [
+          [
+            351,
+            351
+          ]
+        ],
+        "exact_quote": "| 6 | No lockfile means `npm install` resolves `express ^4.19.2` to a newer 4.x than the author had, making the baseline irreproducible | HIGH | LOW | Phase 0 commits `package-lock.json`. Pricing does not touch express, so blast radius is baseline reproducibility only |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 6-7\")"
+      },
+      {
+        "name": "Risk 7: node_modules committed",
+        "status": "covered",
+        "lines": [
+          [
+            352,
+            352
+          ]
+        ],
+        "exact_quote": "| 7 | `node_modules/` is committed by accident (no `.gitignore` exists today) | MEDIUM | LOW | Phase 0 deliverable adds `.gitignore` before `npm install` output can be staged |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 6-7\")"
+      },
+      {
+        "name": "Risk 8: unrealistic row shape",
+        "status": "covered",
+        "lines": [
+          [
+            353,
+            353
+          ]
+        ],
+        "exact_quote": "| 8 | Production rows are not shaped `{seats, unit_price}` and the test table is unrealistic — tests pass but exercise cases that never occur | MEDIUM | MEDIUM | Assumption 1, verified in Phase 0 against a real row. Note this does *not* threaten correctness: a verbatim copy is identity-preserving for any input |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 8-9\")"
+      },
+      {
+        "name": "Risk 9: pg returns strings",
+        "status": "covered",
+        "lines": [
+          [
+            354,
+            354
+          ]
+        ],
+        "exact_quote": "| 9 | `pg` returns `NUMERIC` columns as JS strings, so the string-coercion and `NaN` paths are live in production, not theoretical | MEDIUM | MEDIUM | Assumption 2, verified in Phase 0. The test table already covers string operands (`'3' × 10 → 30`, verified) and non-numeric strings (`→ NaN`, verified) |",
+        "line_source": "audit.md Coverage Matrix (row \"Risk 8-9\")"
+      },
+      {
+        "name": "Risk 10: out-of-repo render consumer",
+        "status": "covered",
+        "lines": [
+          [
+            355,
+            355
+          ]
+        ],
+        "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Risk 11: no CI enforcing tests",
+        "status": "partial",
+        "lines": [
+          [
+            356,
+            356
+          ]
+        ],
+        "exact_quote": "| 11 | Nothing enforces the tests: there is no CI (verified), so a later change can silently break the new coverage | HIGH | MEDIUM | Interim control in place from Phase 3: `README.md` records `npm test` as a required pre-merge step, and the repository owner (Dependencies table) declines any merge to `master` whose review does not quote a `pass N / fail 0` run of the full suite. It is a human gate, not automation, and is named as such; the automated replacement is Open Question 5, owned by the platform team with a decision due 2026-09-25 |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: npm registry",
+        "status": "covered",
+        "lines": [
+          [
+            593,
+            593
+          ]
+        ],
+        "exact_quote": "| npm registry reachable to install `express ^4.19.2`, `pg ^8.11.3`, `node-cron ^3.0.3` (`package.json:3`) | platform team | unverified — no `node_modules/` and no lockfile in the repo (verified by `test -f`) |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: Node >= 18",
+        "status": "covered",
+        "lines": [
+          [
+            594,
+            594
+          ]
+        ],
+        "exact_quote": "| Node.js ≥ 18 for the built-in `node:test` runner (`package.json:2`) | platform team | available — v24.12.0 verified in the plan-authoring environment |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: staging schema read access",
+        "status": "partial",
+        "lines": [
+          [
+            595,
+            595
+          ]
+        ],
+        "exact_quote": "| Read access to the staging `reports` table schema, to close Assumptions 1 and 2 | data / platform team | not requested yet |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: product confirmation",
+        "status": "partial",
+        "lines": [
+          [
+            597,
+            597
+          ]
+        ],
+        "exact_quote": "| Product confirmation that current rendered totals are trusted (Assumption 5) | product owner | not requested yet |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: three consecutive engineer-days",
+        "status": "covered",
+        "lines": [
+          [
+            598,
+            598
+          ]
+        ],
+        "exact_quote": "| Three consecutive working days of the assigned engineer (Assumption 6) | engineering manager | not confirmed |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: repo write access",
+        "status": "covered",
+        "lines": [
+          [
+            599,
+            599
+          ]
+        ],
+        "exact_quote": "| Repository write access on `master` (current branch, HEAD `856a0bf`) | repository owner | available — working tree clean, verified |",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Dep: running database for Phase 3 smoke check",
+        "status": "partial",
+        "lines": [
+          [
+            596,
+            596
+          ]
+        ],
+        "exact_quote": "| A reachable database — local Postgres or a staging instance — holding one seeded `reports` row with a populated `rows` column, for the Phase 3 smoke check. `POST /api/reports/:id/send` (`src/server.js:10-16`) calls `reports.get`, which issues a real `SELECT` (`src/reports.js:5`), so the check cannot run without one. The row is seeded from `tests/fixtures/report-real.json` | data / platform team | not requested yet |",
+        "line_source": "audit.md Coverage Matrix (row \"Dep: reachable seeded database for Phase 3\")"
+      },
+      {
+        "name": "Artifact: pre-change render capture",
+        "status": "covered",
+        "lines": [
+          [
+            220,
+            226
+          ]
+        ],
+        "exact_quote": "- **Case 22, the pre-change capture:** an assertion, with `assert.strictEqual`,\n  of the full HTML string that **unmodified** `render()` returns for that\n  fixture. This is the artifact Phase 3 compares against. It lives at a known\n  path in the repository rather than in someone's terminal scrollback, and\n  `node --test tests/render.characterization.test.js` re-runs the comparison on\n  demand — it is created here, in the last phase before any code moves, because\n  this is the state it exists to preserve.",
+        "line_source": "audit.md Criterion Verdicts (LINT-23 record); not a separate Coverage Matrix row in run 2"
+      },
+      {
+        "name": "Non-goal: no rounding / currency formatting",
+        "status": "covered",
+        "lines": [
+          [
+            81,
+            85
+          ]
+        ],
+        "exact_quote": "3. **No rounding, ever, in this change.** Introducing `toFixed`, `Math.round`,\n   integer-cents conversion, or a decimal library would be a *behaviour change\n   with a customer-visible diff*, not a refactor. If the team wants formatted\n   currency, that is a separate change with its own approval and its own test\n   diff. This is recorded in Open Questions, not smuggled in here.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Non-goal: no new dependencies",
+        "status": "covered",
+        "lines": [
+          [
+            59,
+            60
+          ]
+        ],
+        "exact_quote": "4. `src/pricing.js` contains zero `require` calls and `package.json`\n   dependencies are unchanged.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Non-goal: no CI in this change",
+        "status": "covered",
+        "lines": [
+          [
+            767,
+            775
+          ]
+        ],
+        "exact_quote": "5. **Should CI be added?** There is no CI of any kind (verified), which is why\n   a broken `npm test` went unnoticed. It is the highest-value follow-up after\n   this plan, and adding it is not costed into the three days. **Owner: the\n   platform team**, who already own the registry and runtime rows in the\n   Dependencies table. The assigned engineer raises the ticket at Phase 3 close\n   (2026-09-14); the platform team returns a scope and a schedule by\n   **2026-09-25**. Until that lands, the enforcement is the pre-merge `npm test`\n   step written into `README.md` in Phase 3 and honoured by the repository owner\n   at review — see Risk 11.",
+        "line_source": "audit.md Coverage Matrix"
+      },
+      {
+        "name": "Non-goal: no schema/data migration",
+        "status": "covered",
+        "lines": [
+          [
+            398,
+            400
+          ]
+        ],
+        "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+        "line_source": "audit.md Coverage Matrix"
+      }
+    ],
+    "assumption_counts": {
+      "total": 6,
+      "verified": 1,
+      "unverified": 5,
+      "falsified": 0,
+      "waived": 0
+    },
+    "scenario_statuses": [
+      {
+        "id": 1,
+        "name": "Happy path",
+        "status": "covered",
+        "lines": [
+          [
+            498,
+            499
+          ]
+        ],
+        "exact_quote": "| 4 | `{rows:[{seats:3,unit_price:10}]}` | `30` | happy path |\n| 5 | two normal rows | sum | happy path, multi-row |",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 2,
+        "name": "Failure path",
+        "status": "covered",
+        "lines": [
+          [
+            512,
+            515
+          ]
+        ],
+        "exact_quote": "| 18 | `{rows:[{seats:'abc',unit_price:10}]}` | **`NaN`** | renders `Total: NaN` to a customer |\n| 19 | `{rows:[{seats:NaN,unit_price:10}]}` | `0` | `\\|\\|` coerces `NaN` to `0` — this is why `??` is forbidden |\n| 20 | `{rows:[null]}` | **throws `TypeError: Cannot read properties of null (reading 'seats')`** | the message comes from the property access, not from the source text, so it survives extraction verbatim (verified both ways). Pin it with the object matcher `assert.throws(fn, { name: 'TypeError', message: \"Cannot read properties of null (reading 'seats')\" })`. A bare `assert.throws(fn)` passes on *any* thrown value and would not measure Success Criterion 5 |\n| 21 | `{rows:{a:1}}` (non-array) | **throws `TypeError: (report.rows \\|\\| []).reduce is not a function`** | V8 builds this message from the **source text** of the callee, so the extraction necessarily changes it to `(rows \\|\\| []).reduce is not a function` (both strings verified by running them). What must be preserved is the error type and the failure mode, not the literal string: assert `assert.throws(fn, { name: 'TypeError' })` **and** `assert.match(err.message, /\\.reduce is not a function$/)` on the caught error. Written that way from the start, the case needs no edit in Phase 2 — pinning the full message would force one, which the NO-GO criteria forbid |",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 3,
+        "name": "Partial rollout (mixed state)",
+        "status": "covered",
+        "lines": [
+          [
+            393,
+            396
+          ]
+        ],
+        "exact_quote": "operation. Because Phase 1 (tests) and Phase 2 (extraction) are separate\ncommits, reverting the extraction **retains** the characterization tests, which\nthen guard the restored inline code. No redeploy sequencing is required beyond\nthe project's normal deploy of `src/`.",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 4,
+        "name": "Backward compatibility",
+        "status": "covered",
+        "lines": [
+          [
+            355,
+            355
+          ]
+        ],
+        "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 5,
+        "name": "Scale/volume edge",
+        "status": "partial",
+        "lines": [
+          [
+            489,
+            491
+          ]
+        ],
+        "exact_quote": "**Characterization Tests — required cases.** Every expected value below was\nproduced by running the current expression from `src/reports.js:19`, not\npredicted:",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 6,
+        "name": "Auth/permission edge",
+        "status": "covered",
+        "lines": [
+          [
+            285,
+            285
+          ]
+        ],
+        "exact_quote": "- `tests/reports.test.js` — regression check on `canView`.",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 7,
+        "name": "Config/environment difference",
+        "status": "covered",
+        "lines": [
+          [
+            165,
+            165
+          ]
+        ],
+        "exact_quote": "- `node -e \"require('./src/reports')\"` exits 0 with `DATABASE_URL` unset.",
+        "line_source": "audit.md Scenario Matrix"
+      },
+      {
+        "id": 8,
+        "name": "Rollback path",
+        "status": "covered",
+        "lines": [
+          [
+            391,
+            396
+          ]
+        ],
+        "exact_quote": "**Kill Switch:** `git revert <phase-2-commit>`. This restores the inline\nexpression at `src/reports.js:19` and removes `src/pricing.js` in one\noperation. Because Phase 1 (tests) and Phase 2 (extraction) are separate\ncommits, reverting the extraction **retains** the characterization tests, which\nthen guard the restored inline code. No redeploy sequencing is required beyond\nthe project's normal deploy of `src/`.",
+        "line_source": "audit.md Scenario Matrix"
+      }
+    ],
+    "concern_statuses": [
+      {
+        "name": "API contract",
+        "status": "ok",
+        "lines": [
+          [
+            355,
+            355
+          ]
+        ],
+        "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "UI behavior",
+        "status": "ok",
+        "lines": [
+          [
+            203,
+            204
+          ]
+        ],
+        "exact_quote": "- Every case asserts the whole HTML string via `assert.strictEqual`, not the\n  number alone, so `${total}` stringification is pinned too.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Auth/authz",
+        "status": "ok",
+        "lines": [
+          [
+            285,
+            285
+          ]
+        ],
+        "exact_quote": "- `tests/reports.test.js` — regression check on `canView`.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Config",
+        "status": "ok",
+        "lines": [
+          [
+            134,
+            134
+          ]
+        ],
+        "exact_quote": "| **Feature Flag Rollout** | No config plumbing exists; only `process.env` uses in the repo are `DATABASE_URL` (`src/db.js:2`) and `PORT` (`src/server.js:18`) | +1 day, plus flag-retirement debt | Keeps both arithmetic paths alive indefinitely — *increases* the chance of a divergence nobody notices | Flip the flag (fast), then still revert | No |",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "CORS/network/browser",
+        "status": "ok",
+        "lines": [
+          [
+            402,
+            404
+          ]
+        ],
+        "exact_quote": "**Blast Radius:** One HTTP route — `POST /api/reports/:id/send`\n(`src/server.js:10-16`) — and the emailed report body it produces via\n`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Data model/query limits",
+        "status": "ok",
+        "lines": [
+          [
+            398,
+            400
+          ]
+        ],
+        "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Pagination",
+        "status": "ok",
+        "lines": [
+          [
+            404,
+            404
+          ]
+        ],
+        "exact_quote": "`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Caching",
+        "status": "ok",
+        "lines": [
+          [
+            398,
+            400
+          ]
+        ],
+        "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Observability",
+        "status": "ok",
+        "lines": [
+          [
+            260,
+            262
+          ]
+        ],
+        "exact_quote": "- `src/reports.js:21` is untouched — proven by `git diff -- src/reports.js`.\n- The `computeTotal` call sits between the `Date.now()` capture and the\n  `console.log`, so the measured timing span is unchanged.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Migration/backward compat",
+        "status": "ok",
+        "lines": [
+          [
+            398,
+            398
+          ]
+        ],
+        "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Rollout/rollback",
+        "status": "ok",
+        "lines": [
+          [
+            287,
+            291
+          ]
+        ],
+        "exact_quote": "Rollback: `git revert` the extraction commit. `src/reports.js` returns to the\ninline expression; `src/pricing.js` disappears with it. The characterization\ntests from Phase 1 survive the revert and keep guarding the restored code.\nBecause Phase 1 and Phase 2 are separate commits, reverting the extraction does\nnot cost the test coverage.",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      },
+      {
+        "name": "Tests",
+        "status": "ok",
+        "lines": [
+          [
+            436,
+            441
+          ]
+        ],
+        "exact_quote": "| Phase | Methodology | Test Type | Count | Coverage Target |\n|-------|------------|----------|-------|----------------|\n| Phase 0 | Baseline regression detection | Existing suite must go green | 2 (existing) | `canView` only — unchanged from today |\n| Phase 1 | **Characterization / Golden Master** | Golden-master on `render()`'s full HTML output | ~20 | 100% of the arithmetic's input classes; `render()` goes from 0% to covered |\n| Phase 2 | **Characterization (unchanged) + TDD** | Unit tests on `computeTotal` + Phase 1 suite re-run unmodified | ~20 new + 20 re-run + 2 regression | 100% of `src/pricing.js` branches |\n| Phase 3 | Manual smoke / ATDD sign-off | End-to-end through `POST /api/reports/:id/send` | 1 | The real request path (`src/server.js:10-16`) |",
+        "line_source": "audit.md Cross-Cutting Concerns"
+      }
+    ],
+    "infra_gaps": 0,
+    "infra_planned": 6,
+    "doc_sha256": "4fd13fb06eb303d69a6427c235883a912acaeaab6395304a8be76938c2c692eb",
+    "comparison": {
+      "verdict": "MET",
+      "counts": {
+        "regressions": 0,
+        "variance": 0,
+        "improvements": 14,
+        "degradations": 2,
+        "new_items": 0,
+        "dropped": 0,
+        "not_comparable": 0,
+        "unchanged": 55,
+        "uncompared": 0,
+        "unscoped": 0,
+        "regressions_scoped": 0,
+        "regressions_unscoped": 0,
+        "moved_over_anchor": 0,
+        "anchored": 71
+      }
+    },
+    "audit_sha256": "81e3d3e5b92c450b7698dc9b58bfb2282616ff74c4c141bddba52d9acdda300e",
+    "doc_copy": "C:/scratch/toque-run6/logs/s9-prior-records/iter2/doc-at-baseline-2.md"
+  },
+  "history": [
+    {
+      "run_number": 1,
+      "date": "2026-09-09",
+      "plan_version": "v1",
+      "lint_results": {
+        "LINT-01": "pass",
+        "LINT-02": "fail",
+        "LINT-03": "pass",
+        "LINT-04": "fail",
+        "LINT-05": "pass",
+        "LINT-06": "pass",
+        "LINT-07": "pass",
+        "LINT-08": "fail",
+        "LINT-09": "pass",
+        "LINT-10": "pass",
+        "LINT-13": "pass",
+        "LINT-14": "n_a",
+        "LINT-15": "pass",
+        "LINT-16": "pass",
+        "LINT-17": "pass",
+        "LINT-18": "pass",
+        "LINT-19": "fail",
+        "LINT-20": "pass",
+        "LINT-21": "pass",
+        "LINT-22": "pass",
+        "LINT-23": "fail",
+        "LINT-24": "fail"
+      },
+      "coverage_items": [
+        {
+          "name": "SC1: npm test exits 0, two canView tests pass",
+          "status": "covered",
+          "lines": [
+            [
+              53,
+              53
+            ]
+          ],
+          "exact_quote": "1. `npm test` exits 0 with the pre-existing two `canView` tests still passing.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "SC2: byte-identical HTML for ~20 inputs",
+          "status": "covered",
+          "lines": [
+            [
+              54,
+              56
+            ]
+          ],
+          "exact_quote": "2. For all ~20 characterization inputs in the Testing Strategy, `render()`\n   returns a byte-identical HTML string before and after the extraction —\n   asserted with `assert.strictEqual`, never a tolerance.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "SC3: src/reports.js:21 unchanged in diff",
+          "status": "covered",
+          "lines": [
+            [
+              57,
+              58
+            ]
+          ],
+          "exact_quote": "3. `src/reports.js:21` is unchanged in the diff (verified by\n   `git diff -- src/reports.js` showing that line untouched).",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "SC4: zero require in pricing.js, deps unchanged",
+          "status": "covered",
+          "lines": [
+            [
+              59,
+              60
+            ]
+          ],
+          "exact_quote": "4. `src/pricing.js` contains zero `require` calls and `package.json`\n   dependencies are unchanged.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "SC5: null-row TypeError same message",
+          "status": "gap",
+          "lines": [
+            [
+              61,
+              61
+            ]
+          ],
+          "exact_quote": "5. `render()`'s null-row `TypeError` still throws with the same message.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Desired: src/pricing.js exports a pure function",
+          "status": "covered",
+          "lines": [
+            [
+              41,
+              42
+            ]
+          ],
+          "exact_quote": "- `src/pricing.js` (new) exports a pure function computing the total from a\n  report's rows, with no `require` statements at all.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Desired: tests/pricing.test.js covers the ugly parts",
+          "status": "covered",
+          "lines": [
+            [
+              46,
+              47
+            ]
+          ],
+          "exact_quote": "- `tests/pricing.test.js` (new) covers the arithmetic's real behaviour,\n  including the ugly parts.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 1: || -> ?? transcription",
+          "status": "covered",
+          "lines": [
+            [
+              320,
+              320
+            ]
+          ],
+          "exact_quote": "| 1 | The expression is retyped rather than copied and a `\\|\\|` becomes `??`, or an operand order changes — totals shift for rows with `NaN`, `\"\"` or `false` fields | MEDIUM | HIGH | Copy/paste the line from `src/reports.js:19`; Phase 1 characterization tests cover `NaN`, empty-string and falsy cases and run unmodified in Phase 2 |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 2: toFixed cleanup",
+          "status": "covered",
+          "lines": [
+            [
+              321,
+              321
+            ]
+          ],
+          "exact_quote": "| 2 | Someone \"cleans up\" `0.30000000000000004` with `toFixed(2)` during review, changing every fractional customer total | MEDIUM | HIGH | Design Decision 3 forbids it; the characterization test asserts the literal artifact string, so the change fails CI-equivalent locally |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 3: re-association",
+          "status": "covered",
+          "lines": [
+            [
+              322,
+              322
+            ]
+          ],
+          "exact_quote": "| 3 | Summation is re-associated (map+sum, sort, Kahan) and low-order float bits differ | LOW | HIGH | Design Decision 2; the multi-row fractional case (`0.1 + 0.2 → 0.30000000000000004`) is in the test table |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 4: timing log reflowed",
+          "status": "covered",
+          "lines": [
+            [
+              323,
+              323
+            ]
+          ],
+          "exact_quote": "| 4 | The timing log at `src/reports.js:21` is reflowed, or `computeTotal` is called outside the `started`/`console.log` span, changing the measured duration | MEDIUM | MEDIUM | Explicit exit criterion in Phase 2; verified by `git diff -- src/reports.js` |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 5: dependencies unresolvable",
+          "status": "covered",
+          "lines": [
+            [
+              324,
+              324
+            ]
+          ],
+          "exact_quote": "| 5 | Phase 0 cannot resolve dependencies (no lockfile, no `node_modules`, no registry access) and the plan has no green baseline | LOW | HIGH | Phase 0 is first and is a hard gate; the NO-GO criteria stop the plan rather than proceeding on a red suite |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 6: no lockfile",
+          "status": "covered",
+          "lines": [
+            [
+              325,
+              325
+            ]
+          ],
+          "exact_quote": "| 6 | No lockfile means `npm install` resolves `express ^4.19.2` to a newer 4.x than the author had, making the baseline irreproducible | HIGH | LOW | Phase 0 commits `package-lock.json`. Pricing does not touch express, so blast radius is baseline reproducibility only |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 7: node_modules committed",
+          "status": "covered",
+          "lines": [
+            [
+              326,
+              326
+            ]
+          ],
+          "exact_quote": "| 7 | `node_modules/` is committed by accident (no `.gitignore` exists today) | MEDIUM | LOW | Phase 0 deliverable adds `.gitignore` before `npm install` output can be staged |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 8: unrealistic row shape",
+          "status": "covered",
+          "lines": [
+            [
+              327,
+              327
+            ]
+          ],
+          "exact_quote": "| 8 | Production rows are not shaped `{seats, unit_price}` and the test table is unrealistic — tests pass but exercise cases that never occur | MEDIUM | MEDIUM | Assumption 1, verified in Phase 0 against a real row. Note this does *not* threaten correctness: a verbatim copy is identity-preserving for any input |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 9: pg returns strings",
+          "status": "covered",
+          "lines": [
+            [
+              328,
+              328
+            ]
+          ],
+          "exact_quote": "| 9 | `pg` returns `NUMERIC` columns as JS strings, so the string-coercion and `NaN` paths are live in production, not theoretical | MEDIUM | MEDIUM | Assumption 2, verified in Phase 0. The test table already covers string operands (`'3' × 10 → 30`, verified) and non-numeric strings (`→ NaN`, verified) |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 10: out-of-repo render consumer",
+          "status": "covered",
+          "lines": [
+            [
+              329,
+              329
+            ]
+          ],
+          "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Risk 11: no CI enforcing tests",
+          "status": "gap",
+          "lines": [
+            [
+              330,
+              330
+            ]
+          ],
+          "exact_quote": "| 11 | Nothing enforces the tests: there is no CI (verified), so a later change can silently break the new coverage | HIGH | MEDIUM | Out of scope for three days; raised in Open Questions as the highest-value follow-up |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: npm registry",
+          "status": "covered",
+          "lines": [
+            [
+              561,
+              561
+            ]
+          ],
+          "exact_quote": "| npm registry reachable to install `express ^4.19.2`, `pg ^8.11.3`, `node-cron ^3.0.3` (`package.json:3`) | platform team | unverified — no `node_modules/` and no lockfile in the repo (verified by `test -f`) |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: Node >= 18",
+          "status": "covered",
+          "lines": [
+            [
+              562,
+              562
+            ]
+          ],
+          "exact_quote": "| Node.js ≥ 18 for the built-in `node:test` runner (`package.json:2`) | platform team | available — v24.12.0 verified in the plan-authoring environment |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: staging schema read access",
+          "status": "covered",
+          "lines": [
+            [
+              563,
+              563
+            ]
+          ],
+          "exact_quote": "| Read access to the staging `reports` table schema, to close Assumptions 1 and 2 | data / platform team | not requested yet |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: product confirmation",
+          "status": "covered",
+          "lines": [
+            [
+              564,
+              564
+            ]
+          ],
+          "exact_quote": "| Product confirmation that current rendered totals are trusted (Assumption 5) | product owner | not requested yet |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: three consecutive engineer-days",
+          "status": "covered",
+          "lines": [
+            [
+              565,
+              565
+            ]
+          ],
+          "exact_quote": "| Three consecutive working days of the assigned engineer (Assumption 6) | engineering manager | not confirmed |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: repo write access",
+          "status": "covered",
+          "lines": [
+            [
+              566,
+              566
+            ]
+          ],
+          "exact_quote": "| Repository write access on `master` (current branch, HEAD `856a0bf`) | repository owner | available — working tree clean, verified |",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Dep: running database for Phase 3 smoke check",
+          "status": "gap",
+          "lines": [
+            [
+              292,
+              294
+            ],
+            [
+              568,
+              570
+            ]
+          ],
+          "exact_quote": [
+            "- The `POST /api/reports/:id/send` path (`src/server.js:10-16`) is exercised\n  manually or by an added smoke test against a report with rows, and the total\n  in the resulting HTML matches a pre-change capture.",
+            "No external APIs, vendors, licenses, test databases or CI/CD systems are\nrequired. There is no CI to integrate with (verified: no CI config of any kind\nin the repo)."
+          ],
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Artifact: pre-change render capture",
+          "status": "gap",
+          "lines": [
+            [
+              294,
+              294
+            ],
+            [
+              313,
+              314
+            ]
+          ],
+          "exact_quote": [
+            "  in the resulting HTML matches a pre-change capture.",
+            "Go/No-Go: the manually rendered total for a real report matches the value\ncaptured before Phase 2 started, character for character."
+          ],
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Non-goal: no rounding / currency formatting",
+          "status": "covered",
+          "lines": [
+            [
+              81,
+              85
+            ]
+          ],
+          "exact_quote": "3. **No rounding, ever, in this change.** Introducing `toFixed`, `Math.round`,\n   integer-cents conversion, or a decimal library would be a *behaviour change\n   with a customer-visible diff*, not a refactor. If the team wants formatted\n   currency, that is a separate change with its own approval and its own test\n   diff. This is recorded in Open Questions, not smuggled in here.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Non-goal: no new dependencies",
+          "status": "covered",
+          "lines": [
+            [
+              59,
+              60
+            ]
+          ],
+          "exact_quote": "4. `src/pricing.js` contains zero `require` calls and `package.json`\n   dependencies are unchanged.",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Non-goal: no CI in this change",
+          "status": "covered",
+          "lines": [
+            [
+              569,
+              570
+            ]
+          ],
+          "exact_quote": "required. There is no CI to integrate with (verified: no CI config of any kind\nin the repo).",
+          "line_source": "audit.md Coverage Matrix"
+        },
+        {
+          "name": "Non-goal: no schema/data migration",
+          "status": "covered",
+          "lines": [
+            [
+              366,
+              368
+            ]
+          ],
+          "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+          "line_source": "audit.md Coverage Matrix"
+        }
+      ],
+      "assumption_counts": {
+        "total": 8,
+        "verified": 0,
+        "unverified": 8,
+        "falsified": 0,
+        "waived": 0
+      },
+      "scenario_statuses": [
+        {
+          "id": 1,
+          "name": "Happy path",
+          "status": "covered",
+          "lines": [
+            [
+              466,
+              467
+            ]
+          ],
+          "exact_quote": "| 4 | `{rows:[{seats:3,unit_price:10}]}` | `30` | happy path |\n| 5 | two normal rows | sum | happy path, multi-row |",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 2,
+          "name": "Failure path",
+          "status": "covered",
+          "lines": [
+            [
+              480,
+              483
+            ]
+          ],
+          "exact_quote": "| 18 | `{rows:[{seats:'abc',unit_price:10}]}` | **`NaN`** | renders `Total: NaN` to a customer |\n| 19 | `{rows:[{seats:NaN,unit_price:10}]}` | `0` | `\\|\\|` coerces `NaN` to `0` — this is why `??` is forbidden |\n| 20 | `{rows:[null]}` | **throws `TypeError: Cannot read properties of null (reading 'seats')`** | must throw identically; assert with `assert.throws` |\n| 21 | `{rows:{a:1}}` (non-array) | **throws `TypeError: ...reduce is not a function`** | must throw identically |",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 3,
+          "name": "Partial rollout (mixed state)",
+          "status": "covered",
+          "lines": [
+            [
+              272,
+              276
+            ]
+          ],
+          "exact_quote": "Rollback: `git revert` the extraction commit. `src/reports.js` returns to the\ninline expression; `src/pricing.js` disappears with it. The characterization\ntests from Phase 1 survive the revert and keep guarding the restored code.\nBecause Phase 1 and Phase 2 are separate commits, reverting the extraction does\nnot cost the test coverage.",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 4,
+          "name": "Backward compatibility",
+          "status": "covered",
+          "lines": [
+            [
+              329,
+              329
+            ]
+          ],
+          "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 5,
+          "name": "Scale/volume edge",
+          "status": "gap",
+          "lines": [
+            [
+              457,
+              459
+            ]
+          ],
+          "exact_quote": "**Characterization Tests — required cases.** Every expected value below was\nproduced by running the current expression from `src/reports.js:19`, not\npredicted:",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 6,
+          "name": "Auth/permission edge",
+          "status": "covered",
+          "lines": [
+            [
+              270,
+              270
+            ]
+          ],
+          "exact_quote": "- `tests/reports.test.js` — regression check on `canView`.",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 7,
+          "name": "Config/environment difference",
+          "status": "covered",
+          "lines": [
+            [
+              165,
+              165
+            ]
+          ],
+          "exact_quote": "- `node -e \"require('./src/reports')\"` exits 0 with `DATABASE_URL` unset.",
+          "line_source": "audit.md Scenario Matrix"
+        },
+        {
+          "id": 8,
+          "name": "Rollback path",
+          "status": "gap",
+          "lines": [
+            [
+              353,
+              357
+            ]
+          ],
+          "exact_quote": "## Rollback Strategy\n\n**Feature Flag:** None, deliberately. See the Options Analysis — a flag would\nkeep two arithmetic paths live and *increase* the chance of an unnoticed\ndivergence, which is precisely the stated risk. Rollback is by revert.",
+          "line_source": "audit.md Scenario Matrix"
+        }
+      ],
+      "concern_statuses": [
+        {
+          "name": "API contract",
+          "status": "ok",
+          "lines": [
+            [
+              87,
+              90
+            ]
+          ],
+          "exact_quote": "4. **The new module takes rows, not the report.** `computeTotal(rows)` keeps\n   `pricing.js` ignorant of the report shape, HTML, and the DB. The `|| []`\n   guard stays at the boundary inside `pricing.js` so `computeTotal(undefined)`\n   still returns `0` exactly as `(report.rows || [])` does today.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "UI behavior",
+          "status": "ok",
+          "lines": [
+            [
+              203,
+              204
+            ]
+          ],
+          "exact_quote": "- Every case asserts the whole HTML string via `assert.strictEqual`, not the\n  number alone, so `${total}` stringification is pinned too.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Auth/authz",
+          "status": "ok",
+          "lines": [
+            [
+              270,
+              270
+            ]
+          ],
+          "exact_quote": "- `tests/reports.test.js` — regression check on `canView`.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Config",
+          "status": "ok",
+          "lines": [
+            [
+              134,
+              134
+            ]
+          ],
+          "exact_quote": "| **Feature Flag Rollout** | No config plumbing exists; only `process.env` uses in the repo are `DATABASE_URL` (`src/db.js:2`) and `PORT` (`src/server.js:18`) | +1 day, plus flag-retirement debt | Keeps both arithmetic paths alive indefinitely — *increases* the chance of a divergence nobody notices | Flip the flag (fast), then still revert | No |",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "CORS/network/browser",
+          "status": "ok",
+          "lines": [
+            [
+              370,
+              372
+            ]
+          ],
+          "exact_quote": "**Blast Radius:** One HTTP route — `POST /api/reports/:id/send`\n(`src/server.js:10-16`) — and the emailed report body it produces via\n`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Data model/query limits",
+          "status": "ok",
+          "lines": [
+            [
+              367,
+              368
+            ]
+          ],
+          "exact_quote": "writes. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Pagination",
+          "status": "ok",
+          "lines": [
+            [
+              372,
+              372
+            ]
+          ],
+          "exact_quote": "`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Caching",
+          "status": "ok",
+          "lines": [
+            [
+              366,
+              368
+            ]
+          ],
+          "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Observability",
+          "status": "warn",
+          "lines": [
+            [
+              373,
+              375
+            ]
+          ],
+          "exact_quote": "never reaches the pricing arithmetic. If the arithmetic drifts, the visible\nsymptom is a wrong `Total:` in a report emailed to a customer — user-visible,\nexternally sent, and not automatically detectable. That is what makes Risks 1–3",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Migration/backward compat",
+          "status": "ok",
+          "lines": [
+            [
+              366,
+              366
+            ]
+          ],
+          "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Rollout/rollback",
+          "status": "ok",
+          "lines": [
+            [
+              359,
+              360
+            ]
+          ],
+          "exact_quote": "**Kill Switch:** `git revert <phase-2-commit>`. This restores the inline\nexpression at `src/reports.js:19` and removes `src/pricing.js` in one",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        },
+        {
+          "name": "Tests",
+          "status": "gap",
+          "lines": [
+            [
+              292,
+              294
+            ]
+          ],
+          "exact_quote": "- The `POST /api/reports/:id/send` path (`src/server.js:10-16`) is exercised\n  manually or by an added smoke test against a report with rows, and the total\n  in the resulting HTML matches a pre-change capture.",
+          "line_source": "audit.md Cross-Cutting Concerns"
+        }
+      ],
+      "infra_gaps": 0,
+      "infra_planned": 5,
+      "doc_sha256": "4e00826635c27667204211c1d457a98b22ff7b325c496fdd66c04c1d24a0a673",
+      "comparison": {
+        "verdict": "N_A",
+        "counts": {
+          "regressions": 0,
+          "variance": 0,
+          "improvements": 0,
+          "degradations": 0,
+          "new_items": 0,
+          "dropped": 0,
+          "not_comparable": 0,
+          "uncompared": 0,
+          "unchanged": 0,
+          "unscoped": 0
+        }
+      },
+      "audit_sha256": "652055f0ce85dd1f4f3ac655b53b8fbd025ad3b2176c0c8adfd0dea4876d5dc8",
+      "doc_copy": "C:/scratch/toque-run6/logs/s9-prior-records/iter1/doc-at-baseline-1.md"
+    }
+  ],
+  "holistic_pass": {
+    "runs": 1,
+    "candidates_filed": [
+      "stop-condition-forbids-its-own-required-edit",
+      "severity-claim-not-derived-from-the-code",
+      "golden-master-ratchet-with-no-release-valve"
+    ],
+    "candidates": [
+      {
+        "slug": "stop-condition-forbids-its-own-required-edit",
+        "gate_run": 1,
+        "angle": "the registry checks that a control exists, never that it has a sanctioned exit",
+        "finding": "The plan's Phase 2 go/no-go forbids editing the characterization suite to make the extraction pass, and one of the suite's own expected values is guaranteed to fail after the extraction: the runtime builds that TypeError message from the source text of the callee, so it changes when the expression moves. The judge verified both message forms by executing them. Work therefore halts at the one point the plan gives no sanctioned way past.",
+        "maps_to": "none (checked against the registry as of 2026-09-09). The wrong expected value alone maps to LINT-24, a named measurement that does not exercise the property its requirement states; the deadlock between a stop condition and a check the plan itself predicts will fail maps to no rule.",
+        "proposed_rule": "LINT-NN — every stop condition that forbids changing a named artifact states the sanctioned path for the case where that artifact must change, or asserts that no such case exists.",
+        "status": "proposed"
+      },
+      {
+        "slug": "severity-claim-not-derived-from-the-code",
+        "gate_run": 1,
+        "angle": "the registry checks that a risk is named and mitigated, never that its stated severity was derived from the code it rests on",
+        "finding": "The blast radius says a wrong total is emailed to a customer - user-visible, externally sent. The mailer in this repository is a stub that returns { ok: true } and discards the body, so on the code as it stands nothing is sent. Either the severity that justifies the whole safety argument is overstated, or there is an out-of-repo mailer the plan never found, in which case the scope of the out-of-repo-consumer assumption is larger than the plan states. Nothing in the plan resolves which.",
+        "maps_to": "none (checked against the registry as of 2026-09-09)",
+        "proposed_rule": "LINT-NN — every stated blast radius or severity claim cites the code path that makes it true, or is recorded as unverified.",
+        "status": "proposed"
+      },
+      {
+        "slug": "golden-master-ratchet-with-no-release-valve",
+        "gate_run": 1,
+        "angle": "the registry checks that a control exists, never that it has a sanctioned exit",
+        "finding": "The plan concedes in its own open questions that a rendered total of NaN may be reaching customers today, and Phase 1 pins that output as an expected value. The go/no-go then makes editing that test a hard stop. Once this lands, fixing a real customer-visible billing defect trips the plan's own stop condition, and no procedure is defined for changing a pinned expected value - no sign-off, no ticket type, no owner.",
+        "maps_to": "none (checked against the registry as of 2026-09-09)",
+        "proposed_rule": "LINT-NN — every characterization or golden-master baseline that pins a behaviour the plan itself identifies as defective names the procedure by which that expected value may later be changed.",
+        "status": "proposed"
+      }
+    ]
+  },
+  "caller_notes": [
+    "Spawn route was `claude -p` subprocesses through the stress rig launcher, not the Agent tool. Both auditors were therefore told to run their specialist reviews in sequence in their own context rather than fanning out to five subagents, as stage-2-design.md requires on the subprocess route.",
+    "Two gate runs, two independent canary classes. Iteration 1: class test-claim-inject, criterion LINT-15, found (tq-canary.js detected exit 0). Iteration 2: class owner-strip, criterion LINT-04, found (exit 0). No re-run and no --exclude was needed in either iteration; canary_class above records the final iteration.",
+    "In both iterations the planted finding was stripped and re-derived on the committed document before the baseline snapshot: LINT-15 UNMET to MET in iteration 1 (plus one Coverage Matrix row removed as pure artefact and two matrix reasons rewritten with their statuses unchanged), LINT-04 UNMET to MET in iteration 2 (plus one Coverage Matrix row GAP to COVERED and one Top-5-Risks row removed).",
+    "LINT-14 is caller-decided both times: N_A in iteration 1 (no previous baseline; `-` passed in both document positions), and MET in iteration 2 against the run-1 baseline - 0 regressions, 14 improvements, 2 degradations, 0 auditor-variance flips.",
+    "Evidence reinforcement ran once, on the final document, after the loop ended. It added three prose audit notes and a Last reinforced line, carrying no criterion id, verdict token, rule count or gate result. Every record was re-anchored to the reinforced document afterwards - 7 citations moved, 44 kept their position, 0 dropped - and the validator was re-run. validator_exit above is that last run.",
+    "The gate record is written after the pin and is never cited by it. baseline.doc_sha256 and the kept copy doc-at-baseline-2.md are the pre-reinforcement document, which is what snapshot recorded as the last step of iteration 2; the reinforced document hashes to 8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee.",
+    "Nothing was written to the plugin's lint-candidates.md and no lint-candidates.md was created in this repository. The three holistic candidates above are recorded here and nowhere else.",
+    "No commit was made. audit.md, evidence/ and gate.json are uncommitted in the working tree, together with the document they audit."
+  ],
+  "iterations": [
+    {
+      "run": 1,
+      "canary_class": "test-claim-inject",
+      "canary_criterion": "LINT-15",
+      "canary_reason": "found",
+      "validator_exit": 0,
+      "met": 15,
+      "unmet": 6,
+      "n_a": 1,
+      "unmet_criteria": [
+        "LINT-02",
+        "LINT-04",
+        "LINT-08",
+        "LINT-19",
+        "LINT-23",
+        "LINT-24"
+      ],
+      "gap_count": 14,
+      "gap_checked": false,
+      "lint_14": "N_A",
+      "gate_passed": false
+    },
+    {
+      "run": 2,
+      "canary_class": "owner-strip",
+      "canary_criterion": "LINT-04",
+      "canary_reason": "found",
+      "validator_exit": 0,
+      "met": 22,
+      "unmet": 0,
+      "n_a": 0,
+      "unmet_criteria": [],
+      "gap_count": 0,
+      "gap_checked": true,
+      "lint_14": "MET",
+      "gate_passed": true
+    }
+  ]
+}

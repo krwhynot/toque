@@ -1,0 +1,35 @@
+{
+  "criterion_id": "LINT-03",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 182,
+      "line_end": 184,
+      "exact_quote": "Rollback: `rm -rf node_modules package-lock.json .gitignore` and\n`git checkout -- .`. No source file is modified in this phase, so there is\nnothing to revert in `src/`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 237,
+      "line_end": 239,
+      "exact_quote": "Rollback: `git revert` the single commit, or delete\n`tests/render.characterization.test.js`. Zero production impact — this phase\nadds only a test file.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 287,
+      "line_end": 291,
+      "exact_quote": "Rollback: `git revert` the extraction commit. `src/reports.js` returns to the\ninline expression; `src/pricing.js` disappears with it. The characterization\ntests from Phase 1 survive the revert and keep guarding the restored code.\nBecause Phase 1 and Phase 2 are separate commits, reverting the extraction does\nnot cost the test coverage.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 334,
+      "line_end": 335,
+      "exact_quote": "Rollback: `git revert` the documentation commit. Nothing in this phase affects\nruntime behaviour, so rollback is cosmetic.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "All four phases carry a rollback paragraph. Phase 0 names the exact files to remove and notes no source file is modified; Phase 1 is a git revert of a test-only commit; Phase 2 is a git revert of the extraction commit with an explicit note that the Phase 1 safety net survives it; Phase 3 is a documentation revert. Each names the reversal mechanism and the state it restores.",
+  "verdict": "MET"
+}

@@ -1,0 +1,42 @@
+{
+  "criterion_id": "LINT-19",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 642,
+      "line_end": 644,
+      "exact_quote": "**Reference:** [Test runner | Node.js Documentation](https://nodejs.org/api/test.html)\n— fetched and verified at plan time; confirms both the `node:test` module and\nthe `--test` flag, and the Stability 2 designation.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 676,
+      "line_end": 683,
+      "exact_quote": "**Reference:** `${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/10-testing-methodology-selection.md`,\n§3 \"Characterization / Golden Master Testing [ENTERPRISE-VALIDATED]\" — read on\ndisk at plan time and quoted verbatim above; it carries both the trigger\n(\"Refactoring legacy code, extracting from monolith, behavior unknown\") and the\nkey principle, and lists the enterprise evidence (Feathers 2004, ThoughtWorks\ntest-first modernization, Mechanical Orchard's Imogen). The underlying primary\nsource is the print reference Michael Feathers, *Working Effectively with Legacy\nCode*, Prentice Hall, 2004 — a book, so there is no URL to verify.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 716,
+      "line_end": 724,
+      "exact_quote": "**Reference:** Martin Fowler, \"Extract Function\", in *Refactoring: Improving the\nDesign of Existing Code*, 2nd ed., Addison-Wesley, 2018 — a print reference, so\nthere is no URL to verify. The behaviour-preservation claim is not left resting\non the catalogue's authority either: both forms of the expression — inline as\n`(report.rows || []).reduce(...)` and extracted as `(rows || []).reduce(...)` —\nwere executed over all 21 cases of the Testing Strategy table at plan time, and\nagree on 20 of 21. The one divergence is case 21's source-text-derived `TypeError`\nmessage, which is why that case is pinned by error type and message suffix\nrather than by literal string.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 740,
+      "line_end": 741,
+      "exact_quote": "**Impact:** LOW — documented because it is the runner-up and the plan states the\ncondition for revisiting it, not because it is used.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 751,
+      "line_end": 753,
+      "exact_quote": "**Reference:** Martin Fowler, \"Parallel Change\",\nhttps://martinfowler.com/bliki/ParallelChange.html [URL VERIFICATION DEFERRED]\n— fetch was attempted at plan time and not completed.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The confidence brief carries five entries, each with an explicit Impact rating. The three rated HIGH (node:test, Characterization / Golden Master, Refactor-in-Place) all carry resolved references: a fetched-and-verified URL, an on-disk plugin document quoted verbatim, and print references whose lack of a URL is stated rather than marked unresolved - and the Refactor-in-Place behaviour-preservation claim is additionally backed by executing both forms of the expression over all 21 cases. No HIGH-impact entry carries [SOURCE NEEDED], [LINK DEAD] or [UNVERIFIED]. The one unresolved marker in the brief, [URL VERIFICATION DEFERRED], sits on the Parallel Change entry, which is rated Impact LOW - a warning under the registry gate behaviour, not a block.",
+  "verdict": "MET"
+}

@@ -1,0 +1,35 @@
+{
+  "criterion_id": "LINT-10",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 186,
+      "line_end": 188,
+      "exact_quote": "Go/No-Go: `npm test` prints `pass 2` and `fail 0`. If dependencies cannot be\nresolved offline, stop — see the NO-GO criteria; the whole plan is blocked\nwithout a green baseline.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 241,
+      "line_end": 244,
+      "exact_quote": "Go/No-Go: all characterization tests pass against unmodified `src/reports.js`,\nand `git diff -- src/` returns empty output. A characterization test that fails\nhere means the expected value in this plan is wrong — fix the *expectation*\nafter re-deriving it from the running code, never the source.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 293,
+      "line_end": 295,
+      "exact_quote": "Go/No-Go: all three test files pass with zero edits to\n`tests/render.characterization.test.js`, **and** `git diff -- src/reports.js`\nshows the timing log line unchanged. Either condition failing is a hard stop.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 337,
+      "line_end": 340,
+      "exact_quote": "Go/No-Go: the total rendered through `POST /api/reports/:id/send` for the seeded\nfixture report is byte-identical, character for character, to the string pinned\nin case 22 of `tests/render.characterization.test.js`, and that file passes with\nzero edits.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "All four phases carry a Go/No-Go line and each states a binary, checkable condition rather than a sentiment: Phase 0 requires the literal pass 2 / fail 0 output, Phase 1 requires the characterization suite green against unmodified source plus an empty git diff -- src/, Phase 2 requires all three test files green with zero edits to the characterization file plus an unchanged timing log line, Phase 3 requires byte-identical agreement with case 22.",
+  "verdict": "MET"
+}

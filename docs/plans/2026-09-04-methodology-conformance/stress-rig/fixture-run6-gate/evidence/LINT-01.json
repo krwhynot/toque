@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-01",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 53,
+      "line_end": 61,
+      "exact_quote": "1. `npm test` exits 0 with the pre-existing two `canView` tests still passing.\n2. For all ~20 characterization inputs in the Testing Strategy, `render()`\n   returns a byte-identical HTML string before and after the extraction —\n   asserted with `assert.strictEqual`, never a tolerance.\n3. `src/reports.js:21` is unchanged in the diff (verified by\n   `git diff -- src/reports.js` showing that line untouched).\n4. `src/pricing.js` contains zero `require` calls and `package.json`\n   dependencies are unchanged.\n5. `render()`'s null-row `TypeError` still throws with the same message.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 258,
+      "line_end": 267,
+      "exact_quote": "- `src/pricing.js` (new) exists, contains zero `require` statements, exports via\n  a trailing `module.exports = { ... }`.\n- `src/reports.js:21` is untouched — proven by `git diff -- src/reports.js`.\n- The `computeTotal` call sits between the `Date.now()` capture and the\n  `console.log`, so the measured timing span is unchanged.\n- `tests/pricing.test.js` (new) mirrors the characterization table as unit\n  tests on `computeTotal` directly.\n- The **entire** suite is green: `tests/reports.test.js`,\n  `tests/render.characterization.test.js`, `tests/pricing.test.js`.\n- `package.json` dependencies are byte-identical to `856a0bf`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The five Success Criteria are the goals in Lite mode, and each maps to a named phase exit criterion: SC1 to Phase 0 (\"npm test exits 0 with pass 2 / fail 0\"), SC2 to Phase 1 and to the Phase 2 requirement that the characterization suite pass unmodified, SC3 and SC4 to the two Phase 2 exit criteria quoted here, SC5 to characterization case 20. No goal is left without a phase.",
+  "verdict": "MET"
+}

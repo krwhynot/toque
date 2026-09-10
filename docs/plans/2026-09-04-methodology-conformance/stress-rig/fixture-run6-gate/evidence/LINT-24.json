@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-24",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 55,
+      "line_end": 58,
+      "exact_quote": "   returns a byte-identical HTML string before and after the extraction —\n   asserted with `assert.strictEqual`, never a tolerance.\n3. `src/reports.js:21` is unchanged in the diff (verified by\n   `git diff -- src/reports.js` showing that line untouched).",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 514,
+      "line_end": 514,
+      "exact_quote": "| 20 | `{rows:[null]}` | **throws `TypeError: Cannot read properties of null (reading 'seats')`** | the message comes from the property access, not from the source text, so it survives extraction verbatim (verified both ways). Pin it with the object matcher `assert.throws(fn, { name: 'TypeError', message: \"Cannot read properties of null (reading 'seats')\" })`. A bare `assert.throws(fn)` passes on *any* thrown value and would not measure Success Criterion 5 |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 517,
+      "line_end": 521,
+      "exact_quote": "**Assertion style: `assert.strictEqual`, never a tolerance.** The stated risk is\n\"a total changes for a customer.\" An epsilon comparison would pass\n`0.3` against `0.30000000000000004` — which is exactly the bug class this plan\nexists to prevent. Note `assert.equal(NaN, NaN)` passes in Node's assert\n(verified), so case 18 is assertable normally.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "Each named measurement exercises the property its requirement states, and the two places where a plausible-looking measurement would not are caught explicitly. Success Criterion 5 requires the null-row TypeError to throw the same message, and case 20 measures it with an object matcher on name and message, with the note that a bare assert.throws passes on any thrown value and would not measure that criterion. Success Criterion 2 requires byte-identical HTML, and the assertion-style paragraph rules out the tolerance comparison that would pass a changed total. Case 21 is pinned by error type plus a message-suffix match because V8 derives that message from the callee source text - I ran both forms and confirmed the messages differ exactly as stated, so a literal-string pin would have forced the Phase 2 test edit the NO-GO criteria forbid. Success Criterion 3 is measured by git diff -- src/reports.js, which does test the property (that line untouched).",
+  "verdict": "MET"
+}

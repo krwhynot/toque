@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-20",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 628,
+      "line_end": 649,
+      "exact_quote": "#### `node:test` (Node.js built-in test runner) — Node.js ≥ 18, Stability 2 (Stable) since v20\n\n**Impact:** HIGH — the entire safety argument rests on this runner executing the\ncharacterization suite; if it is unavailable or unstable, there is no net.\n**What it is:** Node.js's built-in testing module and its `node --test` CLI\nrunner, requiring no third-party framework, plugin, or configuration file.\n**Who uses it at scale:** It ships in every Node.js LTS release and is marked\n*Stability: 2 – Stable* as of v20.0.0 — the Node.js project's highest\nnon-experimental designation, meaning API compatibility is maintained across\nmajors.\n**Why it works:** Zero dependencies means zero supply-chain surface and zero\nversion drift between the test harness and the runtime under test. For a repo\nwith no lockfile and no CI, the fewer moving parts between \"I wrote a test\" and\n\"the test ran\", the better.\n**Reference:** [Test runner | Node.js Documentation](https://nodejs.org/api/test.html)\n— fetched and verified at plan time; confirms both the `node:test` module and\nthe `--test` flag, and the Stability 2 designation.\n**Connection to this plan:** Already the project's runner\n(`package.json:2`: `\"test\": \"node --test tests/\"`) and already the style of\n`tests/reports.test.js:1-2`. Phases 1 and 2 add files to `tests/` in that same\nstyle, so no tooling change is needed to satisfy the no-new-dependency\nconstraint.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 758,
+      "line_end": 774,
+      "exact_quote": "#### Separate Test Authorship\n\n**Impact:** MEDIUM — it shapes the phase ordering and the Phase 2 stop\ncondition, but with one engineer it can only be enforced temporally.\n**What it is:** The rule that whoever (or whatever) writes the implementation\ndoes not write the tests that verify it.\n**Origin:** Long-standing QA practice; codified for AI-assisted work as LINT-18\nin the plugin's methodology framework, citing Anthropic's multi-agent code\nreview pattern.\n**Why it works:** A single author converges on self-consistency — the test\nencodes the same misunderstanding as the code. Separating authorship keeps the\ntest an independent statement of intent. The tradeoff is coordination cost.\n**Reference:** `${CLAUDE_PLUGIN_ROOT}/docs/planning-techniques/10-testing-methodology-selection.md`,\n§\"Separate Test Authorship\" and LINT-18 — read at plan time.\n**Connection to this plan:** Why Phase 1 must be committed green *before* Phase\n2 starts, and why \"a characterization test had to be edited\" is a NO-GO rather\nthan a nuisance.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The Evidence section is the confidence brief, it exists, and it has five entries (node:test, Characterization / Golden Master, Refactor-in-Place, Parallel Change / Strangler Fig, Separate Test Authorship). Each entry carries all three required fields - \"What it is\", \"Why it works\" and \"Connection to this plan\" - as the first and last entries quoted here show in full. The rule counts entries and fields, not subsections.",
+  "verdict": "MET"
+}

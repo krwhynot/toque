@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-05",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 263,
+      "line_end": 264,
+      "exact_quote": "- `tests/pricing.test.js` (new) mirrors the characterization table as unit\n  tests on `computeTotal` directly.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 402,
+      "line_end": 404,
+      "exact_quote": "**Blast Radius:** One HTTP route — `POST /api/reports/:id/send`\n(`src/server.js:10-16`) — and the emailed report body it produces via\n`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The change introduces no new HTTP endpoint - the blast radius is the one existing route POST /api/reports/:id/send. The one new module-level API, computeTotal, has an explicit test entry: tests/pricing.test.js is a named Phase 2 deliverable and exit criterion, mirroring the characterization table as unit tests on computeTotal directly.",
+  "verdict": "MET"
+}

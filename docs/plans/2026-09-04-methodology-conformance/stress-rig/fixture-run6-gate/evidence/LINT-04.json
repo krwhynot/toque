@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-04",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 591,
+      "line_end": 599,
+      "exact_quote": "| Dependency | Owner | Status |\n| --- | --- | --- |\n| npm registry reachable to install `express ^4.19.2`, `pg ^8.11.3`, `node-cron ^3.0.3` (`package.json:3`) | platform team | unverified — no `node_modules/` and no lockfile in the repo (verified by `test -f`) |\n| Node.js ≥ 18 for the built-in `node:test` runner (`package.json:2`) | platform team | available — v24.12.0 verified in the plan-authoring environment |\n| Read access to the staging `reports` table schema, to close Assumptions 1 and 2 | data / platform team | not requested yet |\n| A reachable database — local Postgres or a staging instance — holding one seeded `reports` row with a populated `rows` column, for the Phase 3 smoke check. `POST /api/reports/:id/send` (`src/server.js:10-16`) calls `reports.get`, which issues a real `SELECT` (`src/reports.js:5`), so the check cannot run without one. The row is seeded from `tests/fixtures/report-real.json` | data / platform team | not requested yet |\n| Product confirmation that current rendered totals are trusted (Assumption 5) | product owner | not requested yet |\n| Three consecutive working days of the assigned engineer (Assumption 6) | engineering manager | not confirmed |\n| Repository write access on `master` (current branch, HEAD `856a0bf`) | repository owner | available — working tree clean, verified |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "Caller re-derivation on the unmutated document (design gate, canary step 2). The auditor returned UNMET on a single witness - an empty Owner cell in the first Dependencies row - and that blank cell was the planted canary (class owner-strip); it does not exist in this document, and the citation was dropped in re-anchoring. Re-derived here against the document: the Dependencies table has an Owner column and seven rows, and every one of the seven names an owning team - platform team (npm registry), platform team (Node >= 18), data / platform team (staging schema read access), data / platform team (the seeded database for the Phase 3 smoke check), product owner (confirmation that current totals are trusted), engineering manager (three consecutive engineer-days) and repository owner (write access on master). No external dependency named anywhere else in the document is absent from this table: the paragraph below it enumerates what is NOT required and names the Phase 3 database as the one external system that is. Every external dependency has an owner.",
+  "verdict": "MET"
+}

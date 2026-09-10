@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-18",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 459,
+      "line_end": 467,
+      "exact_quote": "**Separate Test Authorship (LINT-18):** The characterization tests in Phase 1\nmust be authored from *observed behaviour of the running code* — by executing\nthe expression and recording actual output — before the extraction exists, and\ncommitted separately. If an AI agent performs the Phase 2 extraction, the\nPhase 1 suite is the human-owned gate it must satisfy, and the agent must not\nbe permitted to edit `tests/render.characterization.test.js` to make its own\nchange pass. With one engineer, the separation is temporal and by commit\nboundary rather than by person; this is the achievable form of the rule at this\nteam size and is called out rather than silently skipped.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 479,
+      "line_end": 481,
+      "exact_quote": "- *Tautological tests* — the Phase 2 unit tests must assert the ~20 values\n  listed below (derived from the *old* code), not values re-derived by reading\n  the new `computeTotal`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The rule is addressed explicitly and by name. The load-bearing suite is authored from observed behaviour of the running code before the implementation exists, and committed separately. For the AI case the rule targets, the plan states the condition directly: if an AI agent performs the Phase 2 extraction, the Phase 1 suite is the human-owned gate it must satisfy and the agent must not be permitted to edit it - so implementation author and test author are not the same agent. The Phase 2 unit test values are additionally fixed outside the implementer, by the table in this document derived from the old code. The plan states the by-person separation is unachievable at one engineer and that the achievable form is temporal and by commit boundary, calling it out rather than skipping it. A test author is named for every code deliverable, so this is not the unspecified-authorship case that Lite mode marks UNMET.",
+  "verdict": "MET"
+}

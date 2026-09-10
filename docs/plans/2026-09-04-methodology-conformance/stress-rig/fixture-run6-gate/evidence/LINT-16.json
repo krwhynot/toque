@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-16",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 356,
+      "line_end": 356,
+      "exact_quote": "| 11 | Nothing enforces the tests: there is no CI (verified), so a later change can silently break the new coverage | HIGH | MEDIUM | Interim control in place from Phase 3: `README.md` records `npm test` as a required pre-merge step, and the repository owner (Dependencies table) declines any merge to `master` whose review does not quote a `pass N / fail 0` run of the full suite. It is a human gate, not automation, and is named as such; the automated replacement is Open Question 5, owned by the platform team with a decision due 2026-09-25 |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 405,
+      "line_end": 408,
+      "exact_quote": "never reaches the pricing arithmetic. If the arithmetic drifts, the visible\nsymptom is a wrong `Total:` in a report emailed to a customer — user-visible,\nexternally sent, and not automatically detectable. That is what makes Risks 1–3\nworth the characterization suite.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The plan claims no monitoring infrastructure it does not have. It states there is no CI of any kind (which I confirmed: no .github, .travis.yml, .circleci, .gitlab-ci.yml or Jenkinsfile in the repo) and labels its Risk 11 control a human gate, not automation, in the mitigation text itself. The Blast Radius paragraph goes further and states the failure is not automatically detectable, so no Monitored claim is left standing unbacked.",
+  "verdict": "MET"
+}

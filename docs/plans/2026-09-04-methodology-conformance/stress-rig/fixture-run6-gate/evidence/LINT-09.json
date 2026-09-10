@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-09",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 398,
+      "line_end": 408,
+      "exact_quote": "**Data Rollback:** Not applicable. No data migration, no schema change, no\nwrites. The only DB access in the whole repo is two `SELECT` statements\n(`src/reports.js:3`, `src/reports.js:5`) and this change touches neither.\n\n**Blast Radius:** One HTTP route — `POST /api/reports/:id/send`\n(`src/server.js:10-16`) — and the emailed report body it produces via\n`send()` (`src/reports.js:11-15`). `GET /api/reports` (`src/server.js:6-9`)\nnever reaches the pricing arithmetic. If the arithmetic drifts, the visible\nsymptom is a wrong `Total:` in a report emailed to a customer — user-visible,\nexternally sent, and not automatically detectable. That is what makes Risks 1–3\nworth the characterization suite.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 484,
+      "line_end": 487,
+      "exact_quote": "\n**Database Migration Testing:** Not applicable. No schema change, no migration\nscript, no data movement. The only DB access is two `SELECT`s\n(`src/reports.js:3`, `:5`), untouched by this plan.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "Cross-cutting concerns are addressed for the in-scope feature rather than skipped. API contract: render signature preserved (Risk 10). UI/output: full HTML string pinned byte-for-byte. Auth: unchanged, with the canView regression tests re-run in Phase 2. Config: the only env surface is DATABASE_URL and PORT, and Phase 0 exit proves the module loads with DATABASE_URL unset. Data model and migration: no schema change, no data movement, the two SELECTs untouched. Observability: the timing log is a named byte-identical constraint. Rollout/rollback and tests: covered per phase. Blast radius is scoped to one route and the emailed body, with the detectability limit stated.",
+  "verdict": "MET"
+}

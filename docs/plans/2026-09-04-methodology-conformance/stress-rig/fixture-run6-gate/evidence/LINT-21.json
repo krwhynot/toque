@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-21",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 346,
+      "line_end": 348,
+      "exact_quote": "| 1 | The expression is retyped rather than copied and a `\\|\\|` becomes `??`, or an operand order changes — totals shift for rows with `NaN`, `\"\"` or `false` fields | MEDIUM | HIGH | Copy/paste the line from `src/reports.js:19`; Phase 1 characterization tests cover `NaN`, empty-string and falsy cases and run unmodified in Phase 2 |\n| 2 | Someone \"cleans up\" `0.30000000000000004` with `toFixed(2)` during review, changing every fractional customer total | MEDIUM | HIGH | Design Decision 3 forbids it; the characterization test asserts the literal artifact string, so the change fails CI-equivalent locally |\n| 3 | Summation is re-associated (map+sum, sort, Kahan) and low-order float bits differ | LOW | HIGH | Design Decision 2; the multi-row fractional case (`0.1 + 0.2 → 0.30000000000000004`) is in the test table |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 489,
+      "line_end": 491,
+      "exact_quote": "**Characterization Tests — required cases.** Every expected value below was\nproduced by running the current expression from `src/reports.js:19`, not\npredicted:",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 517,
+      "line_end": 521,
+      "exact_quote": "**Assertion style: `assert.strictEqual`, never a tolerance.** The stated risk is\n\"a total changes for a customer.\" An epsilon comparison would pass\n`0.3` against `0.30000000000000004` — which is exactly the bug class this plan\nexists to prevent. Note `assert.equal(NaN, NaN)` passes in Node's assert\n(verified), so case 18 is assertable normally.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The silent-failure risks here are 1, 2 and 3: a wrong total renders as a plausible number in an email that nothing inspects. Their mitigation names a signal derived from a different source than the failure - expected values produced by executing the current expression before any code moves, recorded in this document and pinned as literal strings, so the change detector does not read from the changed code. The assertion-style paragraph closes the remaining way the signal could be filtered into agreement: an epsilon comparison would pass 0.3 against 0.30000000000000004, so strictEqual is mandated and tolerance forbidden. I reproduced all of the pinned values, including both TypeError messages, by execution.",
+  "verdict": "MET"
+}

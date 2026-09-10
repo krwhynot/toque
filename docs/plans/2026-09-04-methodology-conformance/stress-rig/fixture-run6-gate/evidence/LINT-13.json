@@ -1,0 +1,14 @@
+{
+  "criterion_id": "LINT-13",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 130,
+      "line_end": 140,
+      "exact_quote": "| Pattern | Implementation ease here | Timeline | Risk profile | Rollback complexity | Proportionate to a 70-line repo? |\n|---|---|---|---|---|---|\n| **Refactor-in-Place (chosen)** | Trivial — 1 line moved, 1 call site (`src/reports.js:13` is the only caller of `render`) | ~0.75 day for the cutover | Low: behaviour-identical by construction if the expression is copied verbatim; the residual risk is human transcription, which the characterization tests catch | `git revert` of one commit | Yes |\n| **Strangler Fig** (runner-up) | Needs an old/new coexistence seam and a migration window for a function with exactly one call site | +1 day of scaffolding | Lower divergence risk in theory, but doubles the live code paths and the surface where totals can drift | Remove the seam, then revert | No — no monolith to strangle |\n| **Feature Flag Rollout** | No config plumbing exists; only `process.env` uses in the repo are `DATABASE_URL` (`src/db.js:2`) and `PORT` (`src/server.js:18`) | +1 day, plus flag-retirement debt | Keeps both arithmetic paths alive indefinitely — *increases* the chance of a divergence nobody notices | Flip the flag (fast), then still revert | No |\n| **New Component** | No service or interface boundary to justify one; risks disturbing the log line at `src/reports.js:21` | +1.5 days | Over-abstracts a 90-character expression | High | No |\n\n**Winner: Refactor-in-Place.** The extraction is behaviour-identical by\nconstruction, the blast radius is one line with one caller, and the undo is a\nsingle `git revert`. Any coexistence mechanism costs more than the risk it\nremoves at this codebase size.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The Options Analysis table evaluates four patterns - the chosen Refactor-in-Place plus three alternatives (Strangler Fig, Feature Flag Rollout, New Component) - across five comparable columns including timeline delta, risk profile and rollback complexity, and states a winner with rationale. Three alternatives exceeds the minimum of two, and each rejection rests on a repository fact rather than preference.",
+  "verdict": "MET"
+}

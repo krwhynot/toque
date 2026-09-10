@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-06",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 355,
+      "line_end": 355,
+      "exact_quote": "| 10 | An out-of-repo consumer imports `render` from `src/reports.js:25` and depends on internals | LOW | MEDIUM | The extraction does not change `render`'s signature or return type, so any external caller is unaffected. `[CODEBASE-CLAIM-NOT-VERIFIED]` — only this repository was searched |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 393,
+      "line_end": 396,
+      "exact_quote": "operation. Because Phase 1 (tests) and Phase 2 (extraction) are separate\ncommits, reverting the extraction **retains** the characterization tests, which\nthen guard the restored inline code. No redeploy sequencing is required beyond\nthe project's normal deploy of `src/`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 523,
+      "line_end": 525,
+      "exact_quote": "**Shadow Mode:** Not applicable, and not proportionate. There is one call site\nand the change is a verbatim expression move; the characterization suite gives\nthe same divergence signal for a fraction of the cost.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "Backward compatibility is claimed (Risk 10: render signature and return type unchanged, so any external caller is unaffected), and the plan addresses mixed state rather than leaving it implicit. The one mixed state the plan can actually produce - Phase 1 committed but Phase 2 reverted - is described explicitly: the characterization tests survive the revert and guard the restored inline code. Coexistence mixed states are ruled out by construction and argued for, not skipped: one call site, no flag, no shadow mode, one atomic deploy of src/.",
+  "verdict": "MET"
+}

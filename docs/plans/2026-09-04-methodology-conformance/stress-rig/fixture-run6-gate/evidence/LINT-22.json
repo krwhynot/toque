@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-22",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 254,
+      "line_end": 256,
+      "exact_quote": "**Entry Criteria:** Phase 1 green and committed. The characterization suite is\nthe safety net for this phase and must exist before it starts.\n",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 421,
+      "line_end": 424,
+      "exact_quote": "**Critical Path:** Fully sequential — 0 → 1 → 2 → 3. Nothing parallelises,\nbecause there is one engineer and each phase's exit criterion is the next\nphase's entry criterion. Phase 1 *must* precede Phase 2: characterization tests\nwritten after the extraction only prove the new code agrees with itself.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 583,
+      "line_end": 585,
+      "exact_quote": "- A characterization test has to be *edited* in Phase 2 to make the extraction\n  pass. Editing the change-detector to accept the change defeats the entire\n  exercise.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The plan states one ordering that matters - Phase 1 characterization tests must precede the Phase 2 extraction - and names three enforcing mechanisms rather than asserting the order. Phase 2 Entry Criteria require Phase 1 green and committed; the Critical Path paragraph makes each phase exit criterion the next phase entry criterion and gives the reason the order is load-bearing; and the NO-GO criteria make editing a characterization test in Phase 2 a hard stop, which is what enforces that the earlier artifact governs the later one. The commit-per-phase structure is the mechanical carrier.",
+  "verdict": "MET"
+}

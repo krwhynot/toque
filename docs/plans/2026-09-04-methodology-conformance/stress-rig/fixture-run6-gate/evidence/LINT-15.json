@@ -1,0 +1,28 @@
+{
+  "criterion_id": "LINT-15",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 32,
+      "line_end": 35,
+      "exact_quote": "- **The test suite is red today.** `npm test` fails with\n  `Error: Cannot find module 'pg'` (verified by running it: `tests 1 / pass 0 /\n  fail 1`, Node v24.12.0). There is no `node_modules/`, no `package-lock.json`\n  and no `.gitignore` in the repo (all verified by `test -f`).",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 179,
+      "line_end": 180,
+      "exact_quote": "**Tests Required:** No new tests. The gate is the *existing* suite —\n`tests/reports.test.js` — going green for the first time.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 265,
+      "line_end": 266,
+      "exact_quote": "- The **entire** suite is green: `tests/reports.test.js`,\n  `tests/render.characterization.test.js`, `tests/pricing.test.js`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The plan makes no false claim about test infrastructure existing today. It states the current suite is red and gives the reproduction (Cannot find module pg, pass 0 / fail 1) - I re-ran npm test and reproduced exactly that. The only test file it relies on as existing is tests/reports.test.js, which is present in the repo. Every other test path (render.characterization.test.js, pricing.test.js, fixtures/report-real.json) is a named deliverable of the phase that creates it, and no phase relies on a path created by a later phase: Phase 0 uses the existing suite, Phase 1 creates the characterization file and fixture, Phase 2 and 3 consume them.",
+  "verdict": "MET"
+}

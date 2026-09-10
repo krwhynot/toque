@@ -1,0 +1,21 @@
+{
+  "criterion_id": "LINT-07",
+  "evidence": [
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 279,
+      "line_end": 285,
+      "exact_quote": "**Tests Required:**\n- `tests/pricing.test.js` (new) — unit tests on `computeTotal`, same input\n  table.\n- `tests/render.characterization.test.js` — must still pass **unmodified**.\n  This is the load-bearing check: if a characterization test needs editing to\n  pass, the extraction changed behaviour and the change is wrong.\n- `tests/reports.test.js` — regression check on `canView`.",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    },
+    {
+      "artifact": "docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests.md",
+      "line_start": 438,
+      "line_end": 441,
+      "exact_quote": "| Phase 0 | Baseline regression detection | Existing suite must go green | 2 (existing) | `canView` only — unchanged from today |\n| Phase 1 | **Characterization / Golden Master** | Golden-master on `render()`'s full HTML output | ~20 | 100% of the arithmetic's input classes; `render()` goes from 0% to covered |\n| Phase 2 | **Characterization (unchanged) + TDD** | Unit tests on `computeTotal` + Phase 1 suite re-run unmodified | ~20 new + 20 re-run + 2 regression | 100% of `src/pricing.js` branches |\n| Phase 3 | Manual smoke / ATDD sign-off | End-to-end through `POST /api/reports/:id/send` | 1 | The real request path (`src/server.js:10-16`) |",
+      "sha256": "8330b478aa24271d14189b066045116e8edaa644e13e548e13af0018695437ee"
+    }
+  ],
+  "reasoning": "The only new behaviour is computeTotal in src/pricing.js, and it carries a test delta on both sides: new unit tests in tests/pricing.test.js over the same input table, plus the Phase 1 characterization suite re-run unmodified as the load-bearing check. The Testing Strategy table assigns counts per phase (~20 new, 20 re-run, 2 regression). Non-behavioural deliverables (lockfile, .gitignore, README) correctly carry no test delta.",
+  "verdict": "MET"
+}
