@@ -30,6 +30,24 @@ The command judges the objective vague and asks three clarifying questions (`com
 
 These are the answers run 3's executor chose. Fixing them keeps the resulting spec's constraints, and every finding that derives from them (the engineer-day squeeze, the permission-drift risk), comparable across runs.
 
+## s9 — `quick-plan` on an objective the repository can close (run 6)
+
+Command, verbatim:
+
+```
+/toque:quick-plan "move the pricing arithmetic out of render into its own module, with tests"
+```
+
+Same fixture bytes as s1. The difference is the objective: s1's plan needs HIGH-impact assumptions verified against a production database the fixture does not have, so s1 cannot PASS however many iterations it runs (stress-test.md, fifth run). s9's objective touches only `src/reports.js` and `tests/`, both of which the fixture contains, so every assumption a plan for it would rate HIGH is one the scaffolder can verify by reading the repository — the shape of `report.rows`, the `node --test` runner, the render timing log. This fixture is PASS-capable; it is not a fixture that must PASS, and a NOT PASS on it is a result to record, not a failure of the run.
+
+If the command asks its clarifying questions, the executor answers with exactly these, and records that they are fixture answers:
+
+| Question | Fixed answer |
+| --- | --- |
+| Desired end state | Pricing is computed in `src/pricing.js`; `render()` calls it; the total in the rendered HTML is unchanged for every existing report; the render timing log line stays exactly as it is. |
+| Constraints | One engineer, three days, no new dependencies, no database change. |
+| Biggest risk | A rounding or missing-field difference (a row without `seats` or `unit_price`) changes a customer's total between the old inline arithmetic and the new module. |
+
 ## s3 — `quick-audit` on a standalone template-shaped spec
 
 ```

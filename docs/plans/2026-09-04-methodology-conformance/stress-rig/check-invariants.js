@@ -63,7 +63,8 @@ out.git_status = git.out.trim().split('\n').filter(Boolean);
 out.stray_canary_dirs = run('git ls-files --others --ignored --exclude-standard --directory').out.split('\n').filter(l => l.includes('.canary')).concat(run('git ls-files --others --exclude-standard').out.split('\n').filter(l => l.includes('.canary')));
 
 switch (scenario) {
-  case 's1': { // quick-plan happy path
+  case 's1':   // quick-plan happy path
+  case 's9': { // run 6: quick-plan on the PASS-capable objective; same on-disk shape as s1
     const specs = newSpec();
     out.checks.spec_files = specs;
     const name = specs[0] ? specs[0].replace(/\.md$/, '') : null;

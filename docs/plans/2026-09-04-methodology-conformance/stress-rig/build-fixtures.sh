@@ -15,7 +15,7 @@ mkdir -p "$ST"
 RIG="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN="$SRC/plugins/toque"
 PLAN="docs/plans/2026-09-03-plan-centerpiece-alignment"
-rm -rf "$ST/s1" "$ST/s2" "$ST/s3" "$ST/s4" "$ST/s5" "$ST/s6" "$ST/s8" "$ST/base-small" "$ST/base-toque"
+rm -rf "$ST/s1" "$ST/s2" "$ST/s3" "$ST/s4" "$ST/s5" "$ST/s6" "$ST/s8" "$ST/s9" "$ST/base-small" "$ST/base-toque"
 
 sha() { node -e "const f=require('fs'),c=require('crypto');console.log(c.createHash('sha256').update(f.readFileSync(process.argv[1],'utf8').replace(/\r\n/g,'\n')).digest('hex'))" "$1"; }
 gitinit() { (cd "$1" && git init -q && git config core.longpaths true && git add -A 2>/dev/null && git -c user.name=stress -c user.email=stress@example.invalid commit -qm "fixture" && printf '.stress-baseline/\n' >> .git/info/exclude); }
@@ -111,6 +111,16 @@ EOF
 
 cp -r "$ST/base-small" "$ST/s1"; gitinit "$ST/s1"
 cp -r "$ST/base-small" "$ST/s6"; gitinit "$ST/s6"
+
+# s9 (run 6): quick-plan on the same small project with an objective whose
+# HIGH-impact assumptions are closable from inside the repository. s1's cannot
+# be: its plan needs three assumptions verified against a production database
+# the fixture does not have, so PASS is structurally unreachable there
+# (stress-test.md, fifth run). s9's objective is confined to src/reports.js
+# and tests/, where the node --test runner and the render timing log already
+# exist for LINT-15/16 to bind to. The on-disk fixture is identical to s1; the
+# objective and the fixed clarifying answers are in scenario-inputs.md.
+cp -r "$ST/base-small" "$ST/s9"; gitinit "$ST/s9"
 
 # s3: a standalone template-shaped spec beside which quick-audit must write its
 # gate folder. The spec describes this small project (its pricing arithmetic sits
