@@ -1,0 +1,8 @@
+253a254,258
+> **Also in scope:** `src/pricing.js` additionally exports `lineTotal(row)`,
+> returning `row.seats * row.unit_price` for a single row, so the invoice export
+> planned for next quarter can price one line without re-implementing the
+> arithmetic. `render()` does not call it.
+> 
+356a362
+> | 12 | `lineTotal` and `computeTotal` disagree on a row with a missing or non-numeric field, so the invoice export and the rendered report price the same line differently | MEDIUM | HIGH | TBD |

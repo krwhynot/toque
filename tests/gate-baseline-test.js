@@ -2500,6 +2500,55 @@ console.log('\n18. A surviving quote yields to a relocated block, and to nothing
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n19. A failure that rests on deleted text, and where D10 can see it');
+// ---------------------------------------------------------------------------
+
+{
+  // A criterion can fail because the revision deleted its satisfying text.
+  // changedLines marks both current-side neighbours, so an unquoted citation
+  // of the join reaches changed through coordinates. A quote that survives
+  // verbatim in both documents, including either surviving neighbour or the
+  // line beside the gap, instead reaches unchanged and books VARIANCE. Only
+  // an unquoted citation of the join or a multi-line quote spanning the join
+  // reaches changed: the latter is text the revision created.
+  //
+  // tests/expected-failures.txt forbids asserting a defect as correct or
+  // tolerating a failure. The two open-defect diagnostics below therefore
+  // count as neither pass, fail, nor skip. A fix should turn them into
+  // assertions of the corrected behaviour.
+  const prev = ['# Plan', '## Phase 2', 'Scope: extract the module.', '',
+    'Rollback: git revert the extraction commit.', '', 'Go/No-Go: all tests pass.', '## End'].join('\n') + '\n';
+  const cur = ['# Plan', '## Phase 2', 'Scope: extract the module.', '',
+    'Go/No-Go: all tests pass.', '## End'].join('\n') + '\n';
+  const d = gb.changedLines(prev, cur);
+  check('a deleted paragraph marks both current-side neighbours of the gap and nothing else',
+    [...d.touched].sort((a, b) => a - b).join(',') === '4,5' && d.moved.size === 0,
+    `touched=${[...d.touched].join(',')} moved=${d.moved.size}`);
+
+  const flip = (lines, quote) => gb.compare(
+    baseline({ concern_statuses: [{ name: 'Rollout/rollback', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'Rollout/rollback', status: 'gap', lines, ...(quote ? { exact_quote: quote } : {}), line_source: 'audit.md' }] }),
+    d, {},
+  ).rows[0];
+
+  const joinBare = flip([[5, 5]], null);
+  check('an UNQUOTED citation of the line beside the gap is a REGRESSION (coordinate route)',
+    joinBare.klass === 'REGRESSION' && joinBare.scope === 'changed', `${joinBare.klass} | ${joinBare.scope_reason}`);
+  const farBare = flip([[2, 2]], null);
+  check('an unquoted citation away from the gap is VARIANCE',
+    farBare.klass === 'VARIANCE', `${farBare.klass} | ${farBare.scope_reason}`);
+  const spanningQuote = flip([[3, 5]], 'Scope: extract the module.\n\nGo/No-Go: all tests pass.');
+  check('a quote spanning the deletion join is changed and REGRESSION, written by this revision',
+    spanningQuote.scope === 'changed' && spanningQuote.klass === 'REGRESSION'
+      && /written by this revision/.test(spanningQuote.scope_reason),
+    `${spanningQuote.klass} | ${spanningQuote.scope_reason}`);
+  const joinQuoted = flip([[5, 5]], 'Go/No-Go: all tests pass.');
+  console.log(`[DIAGNOSTIC: OPEN DEFECT] quoted join line: ${joinQuoted.klass} | ${joinQuoted.scope_reason}`);
+  const farQuoted = flip([[2, 2]], '## Phase 2');
+  console.log(`[DIAGNOSTIC: OPEN DEFECT] quoted section heading: ${farQuoted.klass} | ${farQuoted.scope_reason}`);
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }

@@ -6,7 +6,11 @@ const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 
-const [scenario, repo, plugin] = process.argv.slice(2);
+const [scenario, repo, pluginArg] = process.argv.slice(2);
+// Absolute, because run() executes with cwd set to the scenario repository: a
+// relative plugin root such as `plugins/toque` would resolve inside it, and the
+// embedded validator call would fail (review of September 10).
+const plugin = pluginArg ? path.resolve(pluginArg) : pluginArg;
 const out = { scenario, repo, checks: {} };
 const abs = (p) => path.join(repo, p);
 const exists = (p) => fs.existsSync(abs(p));
@@ -160,7 +164,9 @@ switch (scenario) {
     const v1 = run(`git show HEAD~1:${doc}`);
     out.checks.v1_in_history = v1.code === 0;
     out.checks.v1_sha = v1.code === 0 ? crypto.createHash('sha256').update(v1.out.replace(/\r\n/g, '\n')).digest('hex') : null;
-    out.checks.spec_commits = run(`git log --format=%h -- ${doc}`).out.trim().split('\n').filter(Boolean).length;
+    const commits = run(`git log --format=%h -- ${doc}`);
+    out.checks.spec_commits = commits.code === 0 ? commits.out.trim().split('\n').filter(Boolean).length : null;
+    if (commits.code !== 0) out.checks.spec_commits_error = commits.out.trim();
     break;
   }
   case 's6': { // quick-audit with pasted text
@@ -170,5 +176,56 @@ switch (scenario) {
     if (name) out.checks.gate = gateFolderChecks(`docs/specs/${name}`, `docs/specs/${name}.md`);
     break;
   }
+  case 's10': { // run 7: quick-audit over run 6's quoted gate, on a v2 with two added plants
+    const slug = 'move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests';
+    const doc = `docs/specs/${slug}.md`;
+    const gateDir = `docs/specs/${slug}`;
+    out.checks.doc_sha_unchanged = sha(doc) === fs.readFileSync(path.join(repo, '.stress-baseline', 'doc.sha'), 'utf8').trim();
+    out.checks.gate = gateFolderChecks(gateDir, doc);
+    const v1 = run(`git show HEAD~1:${doc}`);
+    out.checks.v1_in_history = v1.code === 0;
+    out.checks.v1_sha = v1.code === 0 ? crypto.createHash('sha256').update(v1.out.replace(/\r\n/g, '\n')).digest('hex') : null;
+    out.checks.fresh = {
+      audit_replaced: sha(`${gateDir}/audit.md`) !== null && sha(`${gateDir}/audit.md`) !== sha(path.relative(repo, path.join(__dirname, 'fixture-run6-gate', 'audit.md'))),
+      comparison_on_v2: false,
+      comparison_prev_is_v1: false,
+    };
+    out.checks.observation_note = 'Audit and style observations are run-7 candidates only if fresh.audit_replaced; comparison observations require fresh.comparison_on_v2 and fresh.comparison_prev_is_v1. Otherwise they are stale or unestablished. Verdicts are on-disk evidence observations; individual evidence-record freshness is not established.';
+    const audit = read(`${gateDir}/audit.md`);
+    out.checks.baseline_comparison_section = /## Baseline comparison/.test(audit);
+    out.checks.audit_reports_line = (audit.match(/Baseline comparison: [^\n]*/) || [null])[0];
+    // R6-01's plugin half, observed rather than tested: the style the operator's
+    // settings used to inject into every subprocess.
+    out.checks.audit_style_residue = {
+      confidence_block: /\[Confidence:\s*\d+%/.test(audit),
+      risk_line: /^\*{0,2}Risk:\*{0,2}\s/m.test(audit),
+    };
+    const verdictOf = (id) => { try { return JSON.parse(read(`${gateDir}/evidence/${id}.json`)).verdict; } catch (e) { return null; } };
+    // LINT-02 and LINT-07 carry the plants; LINT-14 is the gate's own reading.
+    out.checks.verdicts = { 'LINT-02': verdictOf('LINT-02'), 'LINT-07': verdictOf('LINT-07'), 'LINT-14': verdictOf('LINT-14') };
+    try {
+      const g = JSON.parse(read(`${gateDir}/gate.json`));
+      out.checks.baseline_run_number = g.baseline && g.baseline.run_number;
+      out.checks.history_run_numbers = Array.isArray(g.history) ? g.history.map(h => (h && typeof h === 'object' ? h.run_number : null)) : null;
+      out.checks.prior_run_in_history = Array.isArray(out.checks.history_run_numbers) && out.checks.history_run_numbers.includes(2);
+      out.checks.canary_class = g.canary_class || null;
+    } catch (e) { out.checks.gate_json = 'unparseable'; }
+    try {
+      const cmp = JSON.parse(read(`${gateDir}/baseline-comparison.json`));
+      out.checks.fresh.comparison_on_v2 = Boolean(cmp.meta && cmp.meta.doc_sha256 && cmp.meta.doc_sha256 === sha(doc));
+      out.checks.fresh.comparison_prev_is_v1 = Boolean(cmp.meta && cmp.meta.previous_doc_sha256 && cmp.meta.previous_doc_sha256 === out.checks.v1_sha);
+      out.checks.comparison_counts = cmp.counts || null;
+      out.checks.comparison_meta_prev_doc = cmp.meta ? (cmp.meta.previous_doc_file || null) : null;
+    } catch (e) { out.checks.comparison = exists(`${gateDir}/baseline-comparison.json`) ? 'unparseable' : 'absent'; }
+    const commits = run(`git log --format=%h -- ${doc}`);
+    out.checks.spec_commits = commits.code === 0 ? commits.out.trim().split('\n').filter(Boolean).length : null;
+    if (commits.code !== 0) out.checks.spec_commits_error = commits.out.trim();
+    break;
+  }
+  default:
+    // An unknown scenario used to fall through to `checks: {}` and exit 0, which
+    // reads as a clean pass (review of September 10, F5). Say it and fail.
+    console.error(`check-invariants: no checks are defined for scenario "${scenario}"`);
+    process.exit(2);
 }
 console.log(JSON.stringify(out, null, 2));

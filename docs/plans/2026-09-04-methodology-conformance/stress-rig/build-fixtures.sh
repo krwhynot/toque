@@ -3,8 +3,8 @@
 #
 # Set two variables before running:
 #   ST  a scratch directory OUTSIDE this repository; the scenario repos are
-#       created as $ST/s1 .. $ST/s6 and $ST/s8 (run 4) and nothing is written
-#       anywhere else.
+#       created as $ST/s1 .. $ST/s6, $ST/s8 (run 4), $ST/s9 (run 6) and
+#       $ST/s10 (run 7), and nothing is written anywhere else.
 #   SRC a checkout of this repository (scenarios s2 and s5 audit a copy of it;
 #       s1, s3, s4 and s6 use the small invented Node project below).
 # Run with Git Bash. Requires node, git, tar.
@@ -15,7 +15,7 @@ mkdir -p "$ST"
 RIG="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN="$SRC/plugins/toque"
 PLAN="docs/plans/2026-09-03-plan-centerpiece-alignment"
-rm -rf "$ST/s1" "$ST/s2" "$ST/s3" "$ST/s4" "$ST/s5" "$ST/s6" "$ST/s8" "$ST/s9" "$ST/base-small" "$ST/base-toque"
+rm -rf "$ST/s1" "$ST/s2" "$ST/s3" "$ST/s4" "$ST/s5" "$ST/s6" "$ST/s8" "$ST/s9" "$ST/s10" "$ST/base-small" "$ST/base-toque"
 
 sha() { node -e "const f=require('fs'),c=require('crypto');console.log(c.createHash('sha256').update(f.readFileSync(process.argv[1],'utf8').replace(/\r\n/g,'\n')).digest('hex'))" "$1"; }
 gitinit() { (cd "$1" && git init -q && git config core.longpaths true && git add -A 2>/dev/null && git -c user.name=stress -c user.email=stress@example.invalid commit -qm "fixture" && printf '.stress-baseline/\n' >> .git/info/exclude); }
@@ -153,6 +153,25 @@ cp "$RIG/fixture-template-spec-v2.md" "$ST/s8/docs/specs/pricing-engine.md"
 (cd "$ST/s8" && git add -A && git -c user.name=stress -c user.email=stress@example.invalid commit -qm "spec: revise Phase 2 to add promotional codes")
 mkdir -p "$ST/s8/.stress-baseline"; sha "$ST/s8/docs/specs/pricing-engine.md" > "$ST/s8/.stress-baseline/doc.sha"
 
+# s10 (run 7): s8's shape on the gate folder run 6's s9 produced at PASS, whose
+# baseline carries an exact_quote on every matrix row, retained unedited in
+# fixture-run6-gate/. Commit 1 is s9's project plus v1 and that gate folder; v1
+# is doc-at-baseline-2.md, the copy the baseline was taken on, not the file run
+# 6 left on disk. Commit 2 is v2, which make-s10-v2.js builds from v1 with the
+# charter's two additions: a lineTotal export in Phase 2's scope with no test
+# (LINT-07) and a HIGH-impact Risk 12 whose mitigation is TBD (LINT-02). Both
+# plants add text, and neither criterion is one a canary class targets. The
+# previous document is reachable from git history by doc_sha256, as in s8.
+S10DOC="docs/specs/move-the-pricing-arithmetic-out-of-render-into-its-own-module-with-tests"
+cp -r "$ST/base-small" "$ST/s10"; mkdir -p "$ST/s10/$S10DOC"
+cp "$RIG/fixture-run6-gate/doc-at-baseline-2.md" "$ST/s10/$S10DOC.md"
+cp "$RIG/fixture-run6-gate/audit.md" "$RIG/fixture-run6-gate/gate.json" "$RIG/fixture-run6-gate/baseline-current.json" "$RIG/fixture-run6-gate/baseline-comparison.json" "$ST/s10/$S10DOC/"
+cp -r "$RIG/fixture-run6-gate/evidence" "$ST/s10/$S10DOC/"
+gitinit "$ST/s10"
+node "$RIG/make-s10-v2.js" "$RIG/fixture-run6-gate/doc-at-baseline-2.md" "$ST/s10/$S10DOC.md"
+(cd "$ST/s10" && git add -A && git -c user.name=stress -c user.email=stress@example.invalid commit -qm "spec: add a lineTotal export to Phase 2")
+mkdir -p "$ST/s10/.stress-baseline"; sha "$ST/s10/$S10DOC.md" > "$ST/s10/.stress-baseline/doc.sha"
+
 # s4: a prose ADR with none of the canary shapes
 cp -r "$ST/base-small" "$ST/s4"; mkdir -p "$ST/s4/docs/adr"
 cat > "$ST/s4/docs/adr/ADR-reporting-pipeline.md" <<'EOF'
@@ -226,6 +245,48 @@ grep -q 'Rollback: feature flag' "$RIG/fixture-template-spec.md" || { echo "FIXT
 [ "$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).baseline.lint_results['LINT-13'])" "$ST/s8/docs/specs/pricing-engine/gate.json")" = "pass" ] || { echo "FIXTURE CHECK FAILED: s8 prior gate does not record LINT-13 pass"; exit 1; }
 echo "s8: baseline sha names v1 in git history, v2 changes Phase 2 only, LINT-13 prior miss planted"
 
+# s10's three fixture properties, the run-7 charter's procedure in s10 form:
+# the baseline's doc_sha256 names v1; HEAD~1 holds that exact v1 and the gate
+# folder did not move between the commits; the v1->v2 diff is exactly the two
+# named additions: the full diff must match s10-v1-v2.diff byte for byte
+# (hunks 253a254,258 and 356a362), checking all added text and its position.
+# Then the facts the plants rest on: both criteria are
+# recorded pass in the prior gate, neither is a criterion any canary class
+# targets, and every matrix row carries a quote.
+s10v1="$RIG/fixture-run6-gate/doc-at-baseline-2.md"
+s10v1sha="$(sha "$s10v1")"
+s10base="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).baseline.doc_sha256)" "$ST/s10/$S10DOC/gate.json")"
+[ "$s10v1sha" = "$s10base" ] || { echo "FIXTURE CHECK FAILED: s10 baseline doc_sha256 $s10base != v1 $s10v1sha"; exit 1; }
+(cd "$ST/s10" && git show "HEAD~1:$S10DOC.md" > "$ST/s10-v1.tmp")
+[ "$(sha "$ST/s10-v1.tmp")" = "$s10v1sha" ] || { echo "FIXTURE CHECK FAILED: s10 HEAD~1 does not hold v1"; exit 1; }
+rm -f "$ST/s10-v1.tmp"
+(cd "$ST/s10" && git diff --quiet HEAD~1 HEAD -- "$S10DOC/") || { echo "FIXTURE CHECK FAILED: s10 gate folder differs between the v1 and v2 commits"; exit 1; }
+s10diff="$ST/s10-v1-v2.actual.diff"
+# diff exits 1 for the expected additions; an operational error is a failed check.
+diff "$s10v1" "$ST/s10/$S10DOC.md" > "$s10diff" || { rc=$?; [ "$rc" -eq 1 ] || { echo "FIXTURE CHECK FAILED: s10 diff exited $rc"; exit 1; }; }
+if ! cmp -s "$RIG/s10-v1-v2.diff" "$s10diff"; then
+  echo "FIXTURE CHECK FAILED: s10 v1->v2 diff does not match s10-v1-v2.diff"
+  diff -u "$RIG/s10-v1-v2.diff" "$s10diff" || true
+  exit 1
+fi
+rm -f "$s10diff"
+node -e '
+const fs = require("fs");
+const b = JSON.parse(fs.readFileSync(process.argv[1], "utf8")).baseline;
+const { CLASSES } = require(process.argv[2]);
+const canary = new Set(Object.values(CLASSES).map((c) => c.criterion));
+const bad = [];
+for (const id of ["LINT-02", "LINT-07"]) {
+  if (b.lint_results[id] !== "pass") bad.push(id + " is not pass in the prior gate");
+  if (canary.has(id)) bad.push(id + " is a criterion a canary class targets");
+}
+const rows = [...b.coverage_items, ...b.scenario_statuses, ...b.concern_statuses];
+const quoted = rows.filter((r) => typeof r.exact_quote === "string" && r.exact_quote.length).length;
+if (quoted !== 50 || rows.length !== 50) bad.push("matrix rows quoted " + quoted + " of " + rows.length + ", expected 50 of 50");
+if (bad.length) { console.log("FIXTURE CHECK FAILED: s10 " + bad.join("; ")); process.exit(1); }
+' "$ST/s10/$S10DOC/gate.json" "$PLUGIN/scripts/tq-canary.js"
+echo "s10: baseline sha names v1 in git history, v2 is exactly the two additions, both plants on non-canary criteria recorded pass"
+
 set +e
 s4out="$(node "$PLUGIN/scripts/tq-canary.js" inject "$ST/s4/docs/adr/ADR-reporting-pipeline.md" "$ST/cdry/" 2>&1)"; s4rc=$?
 set -e
@@ -234,4 +295,4 @@ echo "s4: ${s4out%%$'\n'*}"
 echo "s4 inject exit=$s4rc (expected 2: no class applies)"
 [ "$s4rc" -eq 2 ] || { echo "FIXTURE CHECK FAILED: s4 must have no applicable canary class"; exit 1; }
 
-for s in s1 s2 s3 s4 s5 s6 s8; do printf '%s: %s files, HEAD %s\n' "$s" "$(cd "$ST/$s" && git ls-files | wc -l | tr -d ' ')" "$(cd "$ST/$s" && git rev-parse --short HEAD)"; done
+for s in s1 s2 s3 s4 s5 s6 s8 s10; do printf '%s: %s files, HEAD %s\n' "$s" "$(cd "$ST/$s" && git ls-files | wc -l | tr -d ' ')" "$(cd "$ST/$s" && git rev-parse --short HEAD)"; done
