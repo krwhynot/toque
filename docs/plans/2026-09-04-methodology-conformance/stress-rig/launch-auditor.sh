@@ -14,6 +14,17 @@
 #     classifier, and so tested a differently-equipped auditor from the one the
 #     plugin ships. The dangerous flag is not used here and is not accepted.
 #
+# One thing run 6 learned (R6-01): the subprocess reads the operator's
+# ~/.claude/settings.json, and its outputStyle rode into every auditor's system
+# prompt, so the auditor under test was not the one the plugin ships. Fixed by
+# --settings '{"outputStyle":"default"}', which overrides that one key and
+# nothing else. --setting-sources project,local was measured and rejected: it
+# strips the style but also drops every toque: skill, because the plugin is
+# enabled in the same user settings file (10 of 10 skills present with
+# --settings, 0 with --setting-sources). --output-style does not exist in CLI
+# 2.1.267. The .meta records the override so the isolation is provable from
+# disk.
+#
 #   bash launch-auditor.sh <prompt-file> <scenario-repo> <out-file>
 #
 # The executor composes the prompt file: the frozen agent text, the bindings
@@ -33,12 +44,15 @@ REPO="${2:?usage: launch-auditor.sh <prompt-file> <scenario-repo> <out-file>}"
 OUT="${3:?usage: launch-auditor.sh <prompt-file> <scenario-repo> <out-file>}"
 MODEL="${MODEL:-opus}"
 TOOLS="Bash,Read,Write,Grep,Glob,Agent,Skill"
+# R6-01: override the operator's outputStyle only; every other user setting
+# (the plugin enablement above all) still loads.
+SETTINGS='{"outputStyle":"default"}'
 
 [ -f "$PROMPT" ] || { echo "launch-auditor: no prompt file at $PROMPT"; exit 64; }
 [ -d "$REPO" ] || { echo "launch-auditor: no scenario repo at $REPO"; exit 64; }
 [ "$#" -eq 3 ] || { echo "launch-auditor: takes exactly three arguments; extra CLI flags are not accepted"; exit 64; }
 
-ARGV="claude -p --model $MODEL --permission-mode acceptEdits --allowedTools \"$TOOLS\" < $PROMPT"
+ARGV="claude -p --model $MODEL --permission-mode acceptEdits --allowedTools \"$TOOLS\" --settings '$SETTINGS' < $PROMPT"
 START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date -u +%s)"
 # Generated before the launch, recorded after it. Its only job is to make two
@@ -49,7 +63,7 @@ if [ "${DRY_RUN:-0}" = "1" ]; then
   echo "DRY RUN: (cd $REPO && $ARGV) > $OUT"
 else
   set +e
-  (cd "$REPO" && claude -p --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" < "$PROMPT") > "$OUT" 2>&1 &
+  (cd "$REPO" && claude -p --model "$MODEL" --permission-mode acceptEdits --allowedTools "$TOOLS" --settings "$SETTINGS" < "$PROMPT") > "$OUT" 2>&1 &
   CHILD=$!
   wait "$CHILD"
   RC=$?
@@ -60,6 +74,7 @@ END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "ROUTE claude-p (subprocess, prompt on stdin)"
   echo "ARGV $ARGV"
   echo "CWD $REPO"
+  echo "SETTINGS_OVERRIDE $SETTINGS"
   echo "PROMPT_SHA256 $(node -e "const f=require('fs'),c=require('crypto');console.log(c.createHash('sha256').update(f.readFileSync(process.argv[1])).digest('hex'))" "$PROMPT")"
   echo "START $START"
   echo "END $END"
