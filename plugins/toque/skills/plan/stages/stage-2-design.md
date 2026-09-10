@@ -1076,7 +1076,7 @@ lines, verbatim.
     "plan_version": "v1",
     "lint_results": {
       "LINT-01": "pass",
-      "LINT-03": { "status": "fail", "lines": [[100, 103]], "line_source": "evidence/LINT-03.json" }
+      "LINT-03": "fail"
     },
     "coverage_items": [{ "name": "...", "status": "covered|partial|ok-excluded|gap", "lines": [[40, 52]], "exact_quote": "{doc lines 40-52, verbatim}", "line_source": "audit.md Coverage Matrix" }],
     "assumption_counts": { "total": N, "verified": N, "unverified": N, "falsified": N, "waived": N },
@@ -1090,11 +1090,15 @@ lines, verbatim.
 ```
 
 `lines` accepts `[[100, 103]]`, `[100, 103]`, `496` or `"100-103"`. A LINT
-element may omit `lines` and `line_source`: `compare --evidence` fills them from
-`evidence/{criterion_id}.json`, using only citations that point at {doc} — a
-record may also cite a test file, and a change there is not a change to the
-document being diffed. A MATRIX ROW has no record and must carry them itself;
-the auditor's coverage, scenario and concern matrices are where you read them.
+element carries its status ONLY — no `lines`, no `line_source`, no quote:
+`compare --evidence` fills all three from `evidence/{criterion_id}.json`, using
+only citations that point at {doc} — a record may also cite a test file, and a
+change there is not a change to the document being diffed. The fill runs only
+for an element that carries no `lines`, so a LINT row written with its own
+lines keeps them and takes NO anchor from its record, which puts it back on the
+coordinate test the anchor exists to replace.
+A MATRIX ROW has no record and must carry them itself; the auditor's coverage,
+scenario and concern matrices are where you read them.
 
 A MATRIX ROW MUST ALSO CARRY `exact_quote`: the text of {doc} at each range in
 `lines`, copied verbatim — a string for one range, an array with one entry per

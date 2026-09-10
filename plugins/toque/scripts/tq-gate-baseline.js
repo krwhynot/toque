@@ -222,10 +222,27 @@ const LCS_CELL_LIMIT = 12000000;
  * over-reports rather than under-reports, in the same direction as the fallback
  * above and for the same reason.
  *
- * Returns { touched, coarse, changed, total, prevLines, curLines }. The two line
- * arrays are what lets scopeByAnchor ask whether cited TEXT survived, rather than
- * only whether its line number was disturbed.
+ * Returns { touched, moved, coarse, changed, total, prevLines, curLines }. The
+ * two line arrays are what lets scopeByAnchor ask whether cited TEXT survived,
+ * rather than only whether its line number was disturbed. `moved` is the subset
+ * of `touched` that crossedByMovedBlocks marked, kept apart because scopeOf
+ * consults it AFTER an anchor has answered: a quote that survived verbatim
+ * settles a seam or an edit above it, and does not settle a block that was
+ * carried across it.
  */
+/**
+ * The written record carries the diff's numbers, not its sets or line arrays:
+ * a Set serialises as `{}` and the two line arrays are the whole document
+ * twice over. `moved` is the count of touched lines a relocated block marked.
+ */
+function diffResult(d) {
+  Object.defineProperty(d, 'toJSON', {
+    enumerable: false,
+    value: () => ({ coarse: d.coarse, changed: d.changed, moved: d.moved ? d.moved.size : 0, total: d.total }),
+  });
+  return d;
+}
+
 function changedLines(prevText, curText) {
   const prev = splitLines(prevText);
   const cur = splitLines(curText);
@@ -249,14 +266,15 @@ function changedLines(prevText, curText) {
   const n = prevMid.length;
   const m = curMid.length;
 
+  const moved = new Set();
   if (n === 0 && m === 0) {
-    return { touched, coarse: false, changed: 0, total: cur.length, prevLines: prev, curLines: cur };
+    return diffResult({ touched, moved, coarse: false, changed: 0, total: cur.length, prevLines: prev, curLines: cur });
   }
 
   if ((n + 1) * (m + 1) > LCS_CELL_LIMIT) {
     for (let j = 0; j < m; j++) touched.add(p + j + 1);
     if (n > 0 && m === 0) markDeletion(0);
-    return { touched, coarse: true, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur };
+    return diffResult({ touched, moved, coarse: true, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur });
   }
 
   const w = m + 1;
@@ -342,9 +360,10 @@ function changedLines(prevText, curText) {
   // Lines a MOVED block passed over count as touched, interior included.
   for (const cj of crossedByMovedBlocks(matched, prevMid, curMid, prev, cur)) {
     touched.add(p + cj + 1);
+    moved.add(p + cj + 1);
   }
 
-  return { touched, coarse: false, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur };
+  return diffResult({ touched, moved, coarse: false, changed: touched.size, total: cur.length, prevLines: prev, curLines: cur });
 }
 
 /**
@@ -767,6 +786,34 @@ function scopeOf(el, diff) {
   // "cannot show a retained line was unaffected". It cannot, from position
   // alone. From content it can.
   const anchorScope = scopeByAnchor(el, diff);
+
+  // A surviving quote settles displacement, not reordering.
+  //
+  // "Displacement is not modification" (scopeByAnchor) and "a moved block is a
+  // regression for the concern that cites it" (crossedByMovedBlocks) were each
+  // written for a different failure, and the anchor rule as first written
+  // answered `unchanged` before the block marks were consulted, so a quoted row
+  // on a line a relocated block crossed was VARIANCE where the same row
+  // unquoted was REGRESSION. The anchor's justification covers the three run-5
+  // shapes — a re-wrapped line above, an insertion inside the range, prose
+  // restructured around a requirement — none of which relocates anything. The
+  // block rule was written after a review found the reordered-phases regression
+  // let through, and its comment says the ordering IS what the concern is
+  // about. So the anchor yields to `moved` and to nothing else: a seam under a
+  // surviving quote stays variance, because a seam is exactly the displacement
+  // the quote is there to see past. Decided in the R5-01 design before run 6.
+  if (anchorScope && anchorScope.scope === 'unchanged' && diff.moved) {
+    for (const [a, b] of el.lines) {
+      for (let l = a; l <= b; l++) {
+        if (diff.moved.has(l)) {
+          return {
+            scope: 'changed',
+            reason: `the text cited at ${formatLines(el.lines)} survived verbatim, but a relocated block crossed line ${l}: the revision reordered it`,
+          };
+        }
+      }
+    }
+  }
   if (anchorScope) return anchorScope;
 
   // The coordinate route says so in its reason. Every false positive run 5
@@ -982,6 +1029,11 @@ function compare(prevBaseline, curBaseline, diff, opts) {
     // round needs before it can change the verdict rule for either.
     regressions_scoped: rows.filter((r) => r.klass === 'REGRESSION' && !r.unscoped).length,
     regressions_unscoped: rows.filter((r) => r.klass === 'REGRESSION' && r.unscoped).length,
+    // Rows a relocated block decided against a surviving quote. Counted apart so
+    // a run can report how often the ordering rule overrode the anchor rule,
+    // with the anchored-row total as its denominator.
+    moved_over_anchor: rows.filter((r) => r.scope_reason && r.scope_reason.includes('relocated block crossed')).length,
+    anchored: rows.filter((r) => r.scope_reason && (r.scope_reason.includes('byte-identical in both') || r.scope_reason.includes('was written by this revision') || r.scope_reason.includes('was removed by this revision') || r.scope_reason.includes('relocated block crossed'))).length,
   };
 
   let verdict;
@@ -1101,6 +1153,7 @@ function renderSection(cmp, meta) {
       + 'so no line can be inside it and every flip below is auditor variance.');
   } else if (cmp.diff) {
     out.push(`- Diff: ${cmp.diff.changed} of ${cmp.diff.total} current lines changed`
+      + `${cmp.diff.moved && cmp.diff.moved.size ? `, ${cmp.diff.moved.size} of them crossed by a relocated block` : ''}`
       + `${cmp.diff.coarse ? ' (coarse fallback: the changed region was too large to align line by line, so all of it counts as changed)' : ''}`);
   } else {
     out.push('- Diff: NOT AVAILABLE — no copy of the previous baseline\'s document could be found, '
@@ -1570,10 +1623,10 @@ function cmdCompare(argv) {
     // resolves "in both" and every flip is variance — the rule this branch has
     // always applied, now reached by the anchor test as well as the empty diff.
     const same = splitLines(docText);
-    diff = {
-      touched: new Set(), coarse: false, changed: 0, total: same.length,
+    diff = diffResult({
+      touched: new Set(), moved: new Set(), coarse: false, changed: 0, total: same.length,
       prevLines: same, curLines: same,
-    };
+    });
   } else if (prevDocArg !== '-' && fs.existsSync(prevDocArg)) {
     // The supplied previous document must BE the one the previous baseline was
     // taken on. The baseline records doc_sha256 and this used to read it only

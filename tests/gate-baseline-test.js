@@ -2426,6 +2426,80 @@ console.log('\n17. The CLI reaches the anchor — a second review of part B');
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n18. A surviving quote yields to a relocated block, and to nothing else');
+// ---------------------------------------------------------------------------
+
+{
+  // The R5-01 design decision, taken before run 6. scopeByAnchor answered
+  // `unchanged` the moment a quote was found in both documents, before the
+  // relocated-block marks were consulted, so a quoted row on a line a block
+  // move carried was VARIANCE where §1's moved-block test requires REGRESSION
+  // for the same row unquoted. The anchor now yields to `diff.moved` only.
+  const before = 'header\nA\nB\nC\nD\nx\ny\nfooter\n';
+  const after = 'header\nx\ny\nA\nB\nC\nD\nfooter\n';
+  const d = gb.changedLines(before, after);
+  check('changedLines returns the move-crossed lines apart from the touched set',
+    d.moved instanceof Set && [4, 5, 6, 7].every((l) => d.moved.has(l)) && !d.moved.has(1),
+    [...(d.moved || [])].join(','));
+  check('and every moved line is also touched',
+    [...d.moved].every((l) => d.touched.has(l)), 'moved not a subset of touched');
+
+  const quoted = (l, q) => gb.compare(
+    baseline({ concern_statuses: [{ name: 'ordering', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'ordering', status: 'gap', lines: [[l, l]], exact_quote: q, line_source: 'audit.md' }] }),
+    d, {},
+  ).rows[0];
+  const r5 = quoted(5, 'B');
+  check('a QUOTED row citing a moved block\'s interior is a REGRESSION',
+    r5.klass === 'REGRESSION' && /relocated block crossed line 5/.test(r5.scope_reason), `${r5.klass} | ${r5.scope_reason}`);
+  const r1 = quoted(1, 'header');
+  check('a quoted row on a line no block crossed is still VARIANCE',
+    r1.klass === 'VARIANCE', `${r1.klass} | ${r1.scope_reason}`);
+
+  // The reordered-phases regression the fourth review found, in the run-6 shape.
+  const prev = [
+    '# Payment capture', '## Ordered steps', '## Validate request',
+    'Check the idempotency key.', 'Reject invalid signatures.', 'Verify available balance.',
+    '## Commit payment', 'Write the ledger entry.', 'Send the receipt.', '## End',
+  ].join('\n') + '\n';
+  const cur = [
+    '# Payment capture', '## Ordered steps', '## Commit payment',
+    'Write the ledger entry.', 'Send the receipt.', '## Validate request',
+    'Check the idempotency key.', 'Reject invalid signatures.', 'Verify available balance.',
+    '## End',
+  ].join('\n') + '\n';
+  const c = gb.compare(
+    baseline({ concern_statuses: [{ name: 'Authorization before commit', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'Authorization before commit', status: 'gap', lines: [[8, 8]], exact_quote: 'Reject invalid signatures.', line_source: 'audit.md concern table' }] }),
+    gb.changedLines(prev, cur), {},
+  );
+  check('a quoted concern about an ordering the revision reversed is a REGRESSION, LINT-14 UNMET',
+    c.rows[0].klass === 'REGRESSION' && c.verdict === 'UNMET', `${c.rows[0].klass} ${c.verdict}`);
+  check('the comparison counts the rows the ordering rule decided against a surviving quote',
+    c.counts.moved_over_anchor === 1 && c.counts.anchored === 1, JSON.stringify(c.counts));
+
+  // A seam under a surviving quote stays variance: the anchor yields to moved
+  // blocks and to nothing else. The fixture is §17's route-1 shape — a line
+  // inserted above the citation and an edit below it — so the surviving line
+  // lands on a seam the coordinate test marks (R5-02).
+  const seamPrev = ['line1', 'line2 unchanged', 'line3', 'line4', 'line5', 'line6'].join('\n') + '\n';
+  const seamCur = ['line1', 'inserted', 'line2 unchanged', 'line3', 'line4 NEW', 'line5', 'line6'].join('\n') + '\n';
+  const sd = gb.changedLines(seamPrev, seamCur);
+  const seamRow = gb.compare(
+    baseline({ concern_statuses: [{ name: 'req', status: 'ok' }] }),
+    baseline({ concern_statuses: [{ name: 'req', status: 'gap', lines: [[3, 3]], exact_quote: 'line2 unchanged', line_source: 'audit.md' }] }),
+    sd, {},
+  ).rows[0];
+  check('a quoted row on a seam is still VARIANCE (the anchor yields only to moved blocks)',
+    sd.touched.has(3) && !sd.moved.has(3) && seamRow.klass === 'VARIANCE',
+    `touched=${sd.touched.has(3)} moved=${sd.moved.has(3)} ${seamRow.klass}`);
+
+  check('the written diff carries counts, not sets or line arrays',
+    JSON.stringify(JSON.parse(JSON.stringify(d))) === JSON.stringify({ coarse: false, changed: d.changed, moved: 4, total: d.total }),
+    JSON.stringify(d));
+}
+
+// ---------------------------------------------------------------------------
 for (const d of tmpRoots) {
   try { fs.rmSync(d, { recursive: true, force: true }); } catch (err) { /* best effort */ }
 }
