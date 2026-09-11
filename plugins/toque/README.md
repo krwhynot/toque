@@ -175,7 +175,7 @@ pass without them.
 
 See the monorepo [CHANGELOG](https://github.com/krwhynot/toque/blob/main/CHANGELOG.md).
 
-Current: v11.2.0
+Current: v11.3.0
 
 ## License
 

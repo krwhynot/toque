@@ -157,6 +157,6 @@ interop.md                      Optional external input contract
 
 Plans live under `docs/plans/YYYY-MM-DD-{name}/`. Optional `docs/audit/` inputs can add context; Toque neither requires nor produces those external analyses.
 
-Current: v11.2.0
+Current: v11.3.0
 
 [Version history](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
