@@ -148,7 +148,7 @@ The waiver skips a human check of meaning and relevance. It does **not** waive a
 
 > **A real citation can still be irrelevant.** A quote of a closing brace can pass byte-level checks. That does not make it evidence for a rollout strategy.
 
-The auditor can access criterion files and the canary defect table. Isolation is an instruction, not a capability boundary. The canary is a check against an inattentive audit, not a guarantee against an adversarial one.
+The auditor can access criterion files and the canary defect table. Isolation is an instruction, not a capability boundary. The auditor and the holistic judge are told not to read the audited document's own version history, but Claude Code places a git snapshot — recent commit subjects and the git user — in every agent's starting context, so a commit subject describing the latest revision reaches them anyway; the rule asks them to disclose it and set it aside. The canary is a check against an inattentive audit, not a guarantee against an adversarial one.
 
 Evidence validation establishes citation integrity, not semantic truth, requirement completeness, or successful execution of tests. This release does not calibrate judge correctness against a known-good/known-bad plan set.
 

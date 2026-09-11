@@ -805,9 +805,12 @@ counts describe this review, not externally measured false-positive rates.
 **Implementation:** [plugins/toque/agents/plan-auditor.md](plugins/toque/agents/plan-auditor.md) (Step 4.5). **Verification:** [tests/layer1-core.sh](tests/layer1-core.sh); structural checks do not establish agent compliance.
 
 Design also requests a fresh rubric-free judge. Findings outside the current
-criteria become candidates in [plugins/toque/docs/planning-techniques/lint-candidates.md](plugins/toque/docs/planning-techniques/lint-candidates.md).
-This is advisory feedback for owner review; it neither changes the current gate
-nor automatically installs new rules.
+criteria are recorded as candidates under `holistic_pass.candidates[]` in the
+gate record (`status.json` for a plan folder, `gate.json` for a standalone
+document); the owner promotes them into
+[plugins/toque/docs/planning-techniques/lint-candidates.md](plugins/toque/docs/planning-techniques/lint-candidates.md),
+which the pass never writes. This is advisory feedback for owner review; it
+neither changes the current gate nor automatically installs new rules.
 
 ### Plan Audit Sources
 
@@ -1024,7 +1027,8 @@ agents listed here in earlier versions are retired.
 ### Why Fresh Context Per Agent
 
 Design requests a new auditor each iteration, withholding generation rationale,
-prior verdicts, author identity and gate thresholds. Deploy requests a worker
+prior verdicts, author identity, gate thresholds and the audited document's own
+version history. Deploy requests a worker
 that did not implement the change. This reduces information carried into review
 by instruction; shared file access and related models remain. “Fresh” does not
 mean confidential, statistically independent or immune to bias.
